@@ -1,30 +1,29 @@
 // frontend/assets/app.js
 
-// ANTES: const API_BASE = "http://localhost:4000";
-// AHORA:
+// URL DE PRODUCCIÓN ACTUALIZADA
 const API_BASE = "https://sistema-colegio-mfc-production.up.railway.app";
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 /* =========================
-   UTILIDADES Y SESIÓN
+    UTILIDADES Y SESIÓN
 ========================= */
 
 function getToken() {
-  // CORRECCIÓN: Usar el mismo nombre que en login.js
+  // Sincronizado con login.js
   return localStorage.getItem("mfc_token");
 }
 
 function getUser() {
-  // CORRECCIÓN: Usar el mismo nombre que en login.js
+  // Sincronizado con login.js
   return JSON.parse(localStorage.getItem("mfc_user") || "null");
 }
 
 function logout() {
   localStorage.removeItem("mfc_token");
   localStorage.removeItem("mfc_user");
-  window.location.href = "./index.html"; // Redirige al login
+  window.location.href = "./index.html"; 
 }
 
 function parseJWT(token) {
@@ -38,7 +37,7 @@ function parseJWT(token) {
 }
 
 /* =========================
-   COMUNICACIÓN CON API
+    COMUNICACIÓN CON API
 ========================= */
 
 async function api(path, options = {}) {
@@ -61,7 +60,7 @@ async function api(path, options = {}) {
 }
 
 /* =========================
-   INTERFAZ DE USUARIO (UI)
+    INTERFAZ DE USUARIO (UI)
 ========================= */
 
 function showAlert(type, msg) {
@@ -93,16 +92,16 @@ function fillUserUI() {
     return;
   }
 
-  $("#pillRole").textContent = decoded.rol;
+  if($("#pillRole")) $("#pillRole").textContent = decoded.rol;
 
   const user = getUser();
   const nombres = user?.nombres || "Admin";
   const apellidos = user?.apellidos || "";
   const cedula = user?.cedula || decoded.cedula || "-";
 
-  $("#userName").textContent = `${nombres} ${apellidos}`.trim();
-  $("#userCedula").textContent = `Cédula: ${cedula}`;
-  $("#avatar").textContent = (nombres?.[0] || "A").toUpperCase();
+  if($("#userName")) $("#userName").textContent = `${nombres} ${apellidos}`.trim();
+  if($("#userCedula")) $("#userCedula").textContent = `Cédula: ${cedula}`;
+  if($("#avatar")) $("#avatar").textContent = (nombres?.[0] || "A").toUpperCase();
 }
 
 function setActiveView(view) {
@@ -124,18 +123,19 @@ function setActiveView(view) {
     usuarios: ["Usuarios", "Administración de personal (Docentes/Admin)"],
   };
   const [t, s] = titles[view] || ["Panel", ""];
-  $("#pageTitle").textContent = t;
-  $("#pageSubtitle").textContent = s;
+  if($("#pageTitle")) $("#pageTitle").textContent = t;
+  if($("#pageSubtitle")) $("#pageSubtitle").textContent = s;
 }
 
 /* =========================
-   LÓGICA DE USUARIOS
+    LÓGICA DE USUARIOS
 ========================= */
 
 async function cargarUsuarios() {
   try {
     const rows = await api("/admin/usuarios", { method: "GET" });
     const tbody = $("#tblUsuarios tbody");
+    if(!tbody) return;
     tbody.innerHTML = "";
 
     if (!rows?.length) {
@@ -185,14 +185,14 @@ async function crearUsuario(form) {
 }
 
 /* =========================
-   CONFIGURACIÓN INICIAL
+    CONFIGURACIÓN INICIAL
 ========================= */
 
 function setupInteractions() {
-  $("#year").textContent = new Date().getFullYear();
+  if($("#year")) $("#year").textContent = new Date().getFullYear();
 
   // Sidebar móvil
-  $("#btnToggleSidebar").addEventListener("click", () => {
+  $("#btnToggleSidebar")?.addEventListener("click", () => {
     $("#sidebar").classList.toggle("open");
   });
 
@@ -200,7 +200,7 @@ function setupInteractions() {
   $$(".menu-item[data-view]").forEach(btn => {
     btn.addEventListener("click", () => {
       setActiveView(btn.dataset.view);
-      $("#sidebar").classList.remove("open");
+      $("#sidebar")?.classList.remove("open");
     });
   });
 
@@ -212,8 +212,8 @@ function setupInteractions() {
   });
 
   // Logout
-  $("#btnLogoutSide").addEventListener("click", logout);
-  $("#btnLogoutTop").addEventListener("click", logout);
+  $("#btnLogoutSide")?.addEventListener("click", logout);
+  $("#btnLogoutTop")?.addEventListener("click", logout);
 
   // Mostrar/Ocultar contraseña en formulario
   $$("[data-toggle-pass]").forEach(btn => {
@@ -239,10 +239,11 @@ function setupInteractions() {
 
   // Demos visuales (Temporales)
   $("#btnDemoMatriculas")?.addEventListener("click", () => {
-    $("#tblMatriculas tbody").innerHTML = `
-      <tr><td>1</td><td>Erick Abad</td><td>3ero de Básica</td><td><span class="badge ok">MATRICULADO</span></td></tr>
-    `;
-    showAlert("ok", "Vista previa cargada");
+    const tb = $("#tblMatriculas tbody");
+    if(tb) {
+        tb.innerHTML = `<tr><td>1</td><td>Erick Abad</td><td>3ero de Básica</td><td><span class="badge ok">MATRICULADO</span></td></tr>`;
+        showAlert("ok", "Vista previa cargada");
+    }
   });
 }
 
