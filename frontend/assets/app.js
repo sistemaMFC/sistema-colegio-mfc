@@ -1,6 +1,8 @@
 // frontend/assets/app.js
 
-const API_BASE = "http://localhost:4000";
+// ANTES: const API_BASE = "http://localhost:4000";
+// AHORA:
+const API_BASE = "https://sistema-colegio-mfc-production.up.railway.app";
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
