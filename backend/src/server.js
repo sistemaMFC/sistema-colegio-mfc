@@ -37,7 +37,8 @@ app.use("/enrollments", enrollmentsRoutes);
        app.html
        assets/
 =========================== */
-const FRONTEND_PATH = path.join(__dirname, "..", "..", "frontend");
+// Cambia la línea de FRONTEND_PATH por esta:
+const FRONTEND_PATH = path.join(process.cwd(), "frontend");
 app.use(express.static(FRONTEND_PATH));
 
 /**
