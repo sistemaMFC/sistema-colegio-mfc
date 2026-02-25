@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sistema Académico - MFC</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <!-- Fondo animado -->
+  <canvas id="bg"></canvas>
+
+  <main class="wrap">
+    <section class="card">
+      <!-- Columna izquierda (logo / identidad) -->
+      <aside class="brand">
+        <!-- Coloca tu logo aquí: -->
+        <img class="logo" src="./LOGO.jpeg" alt="Unidad Educativa Miguel Febres Cordero" />
+        <h2>Unidad Educativa</h2>
+        <h1>Miguel Febres Cordero</h1>
+        <p class="subtitle">Sistema Académico</p>
+
+        <div class="badges">
+          <span class="badge">Seguro</span>
+          <span class="badge">Rápido</span>
+          <span class="badge">Trimestral</span>
+        </div>
+      </aside>
+
+      <!-- Columna derecha (formulario) -->
+      <section class="panel">
+        <header class="panel__header">
+          <h3>Ingresar</h3>
+          <p>Accede con tu <b>cédula</b> y tu <b>contraseña</b>.</p>
+        </header>
+
+        <form id="loginForm" class="form" autocomplete="on">
+          <label class="field">
+            <span class="field__label">Cédula</span>
+            <div class="field__control">
+              <span class="icon">👤</span>
+              <input
+                id="cedula"
+                name="cedula"
+                inputmode="numeric"
+                placeholder="Ej: 0931441141"
+                maxlength="10"
+                required
+              />
+            </div>
+            <small class="hint">10 dígitos</small>
+          </label>
+
+          <label class="field">
+            <span class="field__label">Contraseña</span>
+            <div class="field__control">
+              <span class="icon">🔒</span>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="••••••••"
+                required
+              />
+              <button id="togglePass" type="button" class="toggle" aria-label="Mostrar u ocultar contraseña">
+                👁️
+              </button>
+            </div>
+          </label>
+
+          <button class="btn" type="submit">
+            <span>Ingresar</span>
+            <span class="btnGlow"></span>
+          </button>
+
+          <div class="status" id="status"></div>
+
+          <footer class="foot">
+            <span>© <span id="year"></span> Sistema Educativo MFC</span>
+          </footer>
+        </form>
+      </section>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>

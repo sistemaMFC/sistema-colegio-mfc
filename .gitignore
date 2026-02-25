@@ -1,0 +1,10 @@
+# Ignorar dependencias (son muy pesadas y se instalan en el servidor)
+node_modules/
+
+# Ignorar archivos de configuración personal (donde está tu clave de BD)
+.env
+
+# Ignorar archivos temporales del sistema
+.DS_Store
+Thumbs.db
+dist/
