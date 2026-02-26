@@ -2,29 +2,30 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 /**
- * CONFIGURACIÓN DE BASE DE DATOS PARA EL COLEGIO MFC
- * Conexión desde Render hacia Railway
+ * CONFIGURACIÓN DE BASE DE DATOS - COLEGIO MFC
+ * Objetivo: Conexión directa a Railway
  */
 const pool = mysql.createPool({
-    // Usamos las variables de entorno o los valores directos de su Railway como respaldo
-    host: process.env.DB_HOST || 'tramway.proxy.rlwy.net',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'rKgcXCzZQsmLNYSWrvXDSDfePhaKFrLf',
-    database: process.env.DB_NAME || 'railway', 
-    port: process.env.DB_PORT || 26000, // Puerto público vital para Render
+    host: 'tramway.proxy.rlwy.net',
+    user: 'root',
+    password: 'rKgcXCzZQsmLNYSWrvXDSDfePhaKFrLf',
+    database: 'sistema_educativo', // El nombre donde están sus tablas
+    port: 26000,                    // Puerto público para conectar desde afuera
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
 });
 
-// Verificación de salud de la conexión
-pool.getConnection()
-    .then(connection => {
-        console.log('✅ Conexión establecida con la base de datos en Railway (Puerto 26000)');
+// PRUEBA DE CONEXIÓN
+(async () => {
+    try {
+        const connection = await pool.getConnection();
+        console.log('✅ ¡CONEXIÓN EXITOSA!');
+        console.log('El archivo src/db.js ha conectado con sistema_educativo en Railway.');
         connection.release();
-    })
-    .catch(err => {
-        console.error('❌ Error crítico de conexión a la base de datos:', err.message);
-    });
+    } catch (err) {
+        console.error('❌ ERROR DE CONEXIÓN:', err.message);
+    }
+})();
 
 module.exports = pool;
