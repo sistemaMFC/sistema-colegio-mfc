@@ -4,7 +4,6 @@ const path = require("path");
 require("dotenv").config();
 
 // IMPORTACIÓN DE RUTAS
-// Nota: Verifique que estos archivos existan en su carpeta 'routes'
 const authRoutes = require("./routes/auth.routes");
 const setupRoutes = require("./routes/setup.routes");
 const adminRoutes = require("./routes/admin.routes");
@@ -16,7 +15,6 @@ const app = express();
 /* ===========================
     CONFIGURACIÓN DE SEGURIDAD
 =========================== */
-// Permitimos que su frontend en Render se comunique con este servidor
 app.use(cors({
   origin: "https://sistema-colegio-mfc.onrender.com",
   credentials: true
@@ -36,17 +34,17 @@ app.use("/enrollments", enrollmentsRoutes);
     SERVIR FRONTEND (ESTÁTICO)
 =========================== */
 /**
- * SOLUCIÓN PARA RENDER:
- * Como el 'Root Directory' es 'backend', subimos un nivel para encontrar 'frontend'.
+ * CORREGIDO: Busca los archivos directamente en la raíz del backend
+ * ya que no existe la carpeta 'frontend'
  */
-const FRONTEND_PATH = path.resolve(process.cwd(), "..", "frontend");
+const FRONTEND_PATH = path.resolve(process.cwd());
 
 // Servir archivos estáticos (CSS, JS, Imágenes)
 app.use(express.static(FRONTEND_PATH));
 
-// Ruta principal - Login
+// Ruta principal - Login (usando index.html en lugar de login.html)
 app.get("/", (req, res) => {
-  res.sendFile(path.join(FRONTEND_PATH, "login.html"));
+  res.sendFile(path.join(FRONTEND_PATH, "index.html"));
 });
 
 // Ruta de la aplicación administrativa
@@ -76,7 +74,6 @@ app.use((err, req, res, next) => {
 /* ===========================
     INICIO DEL SERVIDOR
 =========================== */
-// Render asigna el puerto automáticamente en process.env.PORT
 const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
