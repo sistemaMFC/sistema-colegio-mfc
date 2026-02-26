@@ -1,7 +1,7 @@
 // frontend/assets/app.js
 
-// URL DE PRODUCCIÓN ACTUALIZADA A RENDER
-const API_BASE = "https://sistema-colegio-mfc.onrender.com";
+// URL DE PRODUCCIÓN ACTUALIZADA
+const API_BASE = "https://sistema-colegio-mfc-production.up.railway.app";
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -249,10 +249,7 @@ function setupInteractions() {
 
 // Inicialización al cargar la página
 (function init() {
-  // Verificamos que los elementos de UI existan antes de llenar
-  document.addEventListener("DOMContentLoaded", () => {
-    fillUserUI();
-    setupInteractions();
-    setActiveView("dashboard");
-  });
+  fillUserUI();
+  setupInteractions();
+  setActiveView("dashboard");
 })();
