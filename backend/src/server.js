@@ -13,9 +13,9 @@ const enrollmentsRoutes = require("./routes/enrollments.routes");
 const app = express();
 
 /* ===========================
-    CONFIGURACIÓN GENERAL
+    CONFIGURACIÓN DE SEGURIDAD
 =========================== */
-// Permitimos que el frontend en Render se comunique con el backend
+// Permitir que el frontend en Render acceda al backend
 app.use(cors({
   origin: "https://sistema-colegio-mfc.onrender.com",
   credentials: true
@@ -23,7 +23,7 @@ app.use(cors({
 app.use(express.json());
 
 /* ===========================
-    RUTAS API
+    RUTAS DEL SISTEMA
 =========================== */
 app.use("/auth", authRoutes);
 app.use("/setup", setupRoutes);
@@ -32,47 +32,38 @@ app.use("/students", studentsRoutes);
 app.use("/enrollments", enrollmentsRoutes);
 
 /* ===========================
-    SERVIR FRONTEND (STATIC)
+    CONTROL DE ARCHIVOS (FRONTEND)
 =========================== */
-// Subimos dos niveles desde 'src' para encontrar la carpeta 'frontend'
+// Localiza la carpeta frontend subiendo dos niveles desde backend/src
 const FRONTEND_PATH = path.join(__dirname, "../../frontend");
 app.use(express.static(FRONTEND_PATH));
 
-/**
- * Rutas de navegación
- */
+// Ruta para el Login
 app.get("/", (req, res) => {
   res.sendFile(path.join(FRONTEND_PATH, "login.html"));
 });
 
+// Ruta para la aplicación principal
 app.get("/app", (req, res) => {
   res.sendFile(path.join(FRONTEND_PATH, "app.html"));
 });
 
-app.get("/api", (req, res) => {
-  res.json({
-    message: "Sistema Colegio Miguel Febres Cordero API funcionando 🚀",
-    version: "1.0.0",
-  });
-});
-
 /* ===========================
     MANEJO DE ERRORES
-========================== */
+=========================== */
 app.use((req, res) => {
   res.status(404).json({ error: "Ruta no encontrada" });
 });
 
 app.use((err, req, res, next) => {
-  console.error("Error global detectado:", err);
+  console.error("Error en el servidor:", err);
   res.status(500).json({ error: "Error interno del servidor" });
 });
 
 /* ===========================
-    SERVIDOR
+    INICIO DEL SERVIDOR
 =========================== */
 const PORT = process.env.PORT || 4000;
-
 app.listen(PORT, () => {
-    console.log(`Servidor corriendo en el puerto ${PORT}`);
+    console.log(`Servidor del Colegio MFC corriendo en puerto ${PORT}`);
 });

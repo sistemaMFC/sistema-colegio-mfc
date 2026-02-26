@@ -1,3 +1,5 @@
+// frontend/assets/app.js
+
 // URL DE PRODUCCIÓN ACTUALIZADA A RENDER
 const API_BASE = "https://sistema-colegio-mfc.onrender.com";
 
@@ -9,10 +11,12 @@ const $$ = (sel) => document.querySelectorAll(sel);
 ========================= */
 
 function getToken() {
+  // Sincronizado con login.js
   return localStorage.getItem("mfc_token");
 }
 
 function getUser() {
+  // Sincronizado con login.js
   return JSON.parse(localStorage.getItem("mfc_user") || "null");
 }
 
@@ -81,6 +85,7 @@ function fillUserUI() {
     return;
   }
 
+  // Seguridad: Solo ADMIN entra a app.html
   if (decoded.rol !== "ADMIN") {
     alert("Acceso denegado: Se requiere rol de Administrador.");
     logout();
@@ -100,14 +105,17 @@ function fillUserUI() {
 }
 
 function setActiveView(view) {
+  // Actualizar menú lateral
   $$(".menu-item").forEach(b => b.classList.remove("active"));
   const btn = document.querySelector(`.menu-item[data-view="${view}"]`);
   if (btn) btn.classList.add("active");
 
+  // Cambiar visibilidad de secciones
   $$(".view").forEach(v => v.hidden = true);
   const section = $(`#view-${view}`);
   if (section) section.hidden = false;
 
+  // Actualizar títulos de página
   const titles = {
     dashboard: ["Dashboard", "Resumen general del sistema"],
     matriculas: ["Matrículas", "Gestión de alumnos y periodos lectivos"],
@@ -183,10 +191,12 @@ async function crearUsuario(form) {
 function setupInteractions() {
   if($("#year")) $("#year").textContent = new Date().getFullYear();
 
+  // Sidebar móvil
   $("#btnToggleSidebar")?.addEventListener("click", () => {
     $("#sidebar").classList.toggle("open");
   });
 
+  // Navegación del Menú
   $$(".menu-item[data-view]").forEach(btn => {
     btn.addEventListener("click", () => {
       setActiveView(btn.dataset.view);
@@ -194,15 +204,18 @@ function setupInteractions() {
     });
   });
 
+  // Botones de acceso rápido
   $$(".quick-btn[data-view]").forEach(btn => {
     btn.addEventListener("click", () => {
       setActiveView(btn.dataset.view);
     });
   });
 
+  // Logout
   $("#btnLogoutSide")?.addEventListener("click", logout);
   $("#btnLogoutTop")?.addEventListener("click", logout);
 
+  // Mostrar/Ocultar contraseña en formulario
   $$("[data-toggle-pass]").forEach(btn => {
     btn.addEventListener("click", () => {
       const input = btn.parentElement.querySelector("input");
@@ -213,6 +226,7 @@ function setupInteractions() {
     });
   });
 
+  // Formulario de usuarios
   const formUser = $("#formCrearUsuario");
   if (formUser) {
     formUser.addEventListener("submit", (e) => {
@@ -223,6 +237,7 @@ function setupInteractions() {
 
   $("#btnCargarUsuarios")?.addEventListener("click", cargarUsuarios);
 
+  // Demos visuales (Temporales)
   $("#btnDemoMatriculas")?.addEventListener("click", () => {
     const tb = $("#tblMatriculas tbody");
     if(tb) {
@@ -232,8 +247,12 @@ function setupInteractions() {
   });
 }
 
+// Inicialización al cargar la página
 (function init() {
-  fillUserUI();
-  setupInteractions();
-  setActiveView("dashboard");
+  // Verificamos que los elementos de UI existan antes de llenar
+  document.addEventListener("DOMContentLoaded", () => {
+    fillUserUI();
+    setupInteractions();
+    setActiveView("dashboard");
+  });
 })();
