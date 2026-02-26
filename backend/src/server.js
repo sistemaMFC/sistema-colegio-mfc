@@ -15,7 +15,11 @@ const app = express();
 /* ===========================
     CONFIGURACIÓN GENERAL
 =========================== */
-app.use(cors());
+// Configuración de CORS corregida para Render
+app.use(cors({
+  origin: "https://sistema-colegio-mfc.onrender.com",
+  credentials: true
+}));
 app.use(express.json());
 
 /* ===========================
@@ -30,13 +34,7 @@ app.use("/enrollments", enrollmentsRoutes);
 /* ===========================
     SERVIR FRONTEND (STATIC)
 =========================== */
-/**
- * CORRECCIÓN PARA RENDER: 
- * __dirname es 'backend/src'. 
- * Usamos '../../' para salir de 'src' y de 'backend' y llegar a la carpeta 'frontend'.
- */
 const FRONTEND_PATH = path.join(__dirname, "../../frontend");
-
 app.use(express.static(FRONTEND_PATH));
 
 /**
