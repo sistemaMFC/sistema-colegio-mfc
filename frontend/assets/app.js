@@ -1,5 +1,3 @@
-// frontend/assets/app.js
-
 // URL DE PRODUCCIÓN ACTUALIZADA A RENDER
 const API_BASE = "https://sistema-colegio-mfc.onrender.com";
 

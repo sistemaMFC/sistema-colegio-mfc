@@ -15,7 +15,7 @@ const app = express();
 /* ===========================
     CONFIGURACIÓN GENERAL
 =========================== */
-// Configuración de CORS corregida para Render
+// Permitimos que el frontend en Render se comunique con el backend
 app.use(cors({
   origin: "https://sistema-colegio-mfc.onrender.com",
   credentials: true
@@ -34,6 +34,7 @@ app.use("/enrollments", enrollmentsRoutes);
 /* ===========================
     SERVIR FRONTEND (STATIC)
 =========================== */
+// Subimos dos niveles desde 'src' para encontrar la carpeta 'frontend'
 const FRONTEND_PATH = path.join(__dirname, "../../frontend");
 app.use(express.static(FRONTEND_PATH));
 
@@ -57,13 +58,13 @@ app.get("/api", (req, res) => {
 
 /* ===========================
     MANEJO DE ERRORES
-=========================== */
+========================== */
 app.use((req, res) => {
   res.status(404).json({ error: "Ruta no encontrada" });
 });
 
 app.use((err, req, res, next) => {
-  console.error("Error global:", err);
+  console.error("Error global detectado:", err);
   res.status(500).json({ error: "Error interno del servidor" });
 });
 
