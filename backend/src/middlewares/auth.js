@@ -1,53 +1,26 @@
-// POST /auth/login
-router.post("/login", async (req, res) => {
-  const { cedula, password } = req.body;
+const jwt = require('jsonwebtoken');
 
-  try {
-    // 1. Buscamos al usuario por CÉDULA (como pide su doc)
-    const [rows] = await pool.query(
-      "SELECT id, nombres, apellidos, cedula, password_hash, rol, estado FROM usuarios WHERE cedula = ? LIMIT 1",
-      [cedula]
-    );
+const authRequired = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'No hay token, acceso denegado' });
 
-    if (rows.length === 0) {
-      return res.status(401).json({ error: "Usuario no encontrado" });
+    const token = authHeader.split(' ')[1];
+    try {
+        // Usamos la misma clave que configuró en Render
+        const secreto = process.env.JWT_SECRET || 'mfc_secreto_2026';
+        const decoded = jwt.verify(token, secreto);
+        req.user = decoded;
+        next();
+    } catch (err) {
+        return res.status(401).json({ error: 'Sesión expirada o token inválido' });
     }
+};
 
-    const user = rows[0];
-
-    // 2. Verificamos si está ACTIVO
-    if (user.estado !== 'ACTIVO') {
-      return res.status(403).json({ error: "Usuario inactivo. Contacte al administrador." });
+const onlyAdmin = (req, res, next) => {
+    if (req.user.rol !== 'ADMIN') {
+        return res.status(403).json({ error: 'Acceso restringido: Solo Administradores' });
     }
+    next();
+};
 
-    // 3. Validamos contraseña
-    const validPass = await bcrypt.compare(password, user.password_hash);
-    if (!validPass) {
-      return res.status(401).json({ error: "Contraseña incorrecta" });
-    }
-
-    // 4. Actualizamos último login
-    await pool.query("UPDATE usuarios SET ultimo_login = NOW() WHERE id = ?", [user.id]);
-
-    // 5. Generamos Token JWT
-    const token = jwt.sign(
-      { id: user.id, rol: user.rol, cedula: user.cedula },
-      process.env.JWT_SECRET,
-      { expiresIn: "8h" }
-    );
-
-    res.json({
-      token,
-      user: {
-        id: user.id,
-        nombres: user.nombres,
-        apellidos: user.apellidos,
-        rol: user.rol
-      }
-    });
-
-  } catch (error) {
-    console.error("Error en login:", error);
-    res.status(500).json({ error: "Error en el servidor" });
-  }
-});
+module.exports = { authRequired, onlyAdmin };
