@@ -8,31 +8,25 @@
 </head>
 <body>
 
+  <!-- Topbar móvil -->
   <header class="topbar">
-    <div style="display: flex; align-items: center; gap: 15px;">
-      <button class="icon-btn" id="btnToggleSidebar" aria-label="Abrir menú">☰</button>
-      <div class="topbar-title">
-        <span class="brand-mini">MFC</span>
-        <span>Panel Administrativo</span>
-      </div>
+    <button class="icon-btn" id="btnToggleSidebar" aria-label="Abrir menú">☰</button>
+    <div class="topbar-title">
+      <span class="brand-mini">MFC</span>
+      <span>Panel Administrativo</span>
     </div>
-
     <div class="topbar-right">
-      <select id="themeSwitcher" class="theme-select">
-        <option value="tech">🌐 Tecnológico</option>
-        <option value="light">☀️ Modo Claro</option>
-        <option value="dark">🌙 Modo Oscuro</option>
-      </select>
-
       <span class="pill" id="pillRole">ROL</span>
       <button class="btn-outline" id="btnLogoutTop">Salir</button>
     </div>
   </header>
 
   <div class="layout">
+    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="brand">
         <div class="brand-logo">
+          <!-- Cambia el archivo por tu logo real -->
           <img src="./assets/logo-mfc.png" alt="Logo MFC" onerror="this.style.display='none'">
           <div class="brand-fallback">MFC</div>
         </div>
@@ -71,6 +65,7 @@
       </div>
     </aside>
 
+    <!-- Contenido -->
     <main class="content">
       <div class="content-header">
         <div>
@@ -87,8 +82,10 @@
         </div>
       </div>
 
+      <!-- ALERTA -->
       <div class="alert" id="alert" hidden></div>
 
+      <!-- VISTAS -->
       <section class="view" id="view-dashboard">
         <div class="grid-cards">
           <div class="card kpi">
@@ -133,7 +130,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr><td colspan="4" class="muted">Sin datos aún</td></tr>
+                  <tr><td colspan="4" class="muted">Sin datos aún (conectaremos API luego)</td></tr>
                 </tbody>
               </table>
             </div>
@@ -155,7 +152,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr><td colspan="4" class="muted">Sin datos aún</td></tr>
+                  <tr><td colspan="4" class="muted">Sin datos aún (conectaremos API luego)</td></tr>
                 </tbody>
               </table>
             </div>
@@ -166,6 +163,7 @@
           <div class="card-head">
             <h3>Accesos Rápidos</h3>
           </div>
+
           <div class="quick">
             <button class="quick-btn" data-view="usuarios">
               <span class="qb-ico">➕</span>
@@ -174,6 +172,7 @@
                 <div class="muted qb-sub">Admins / Profesores</div>
               </div>
             </button>
+
             <button class="quick-btn" data-view="matriculas">
               <span class="qb-ico">🧾</span>
               <div>
@@ -181,6 +180,7 @@
                 <div class="muted qb-sub">Registrar estudiante</div>
               </div>
             </button>
+
             <button class="quick-btn" data-view="pagos">
               <span class="qb-ico">💳</span>
               <div>
@@ -192,12 +192,15 @@
         </div>
       </section>
 
+      <!-- Matriculas -->
       <section class="view" id="view-matriculas" hidden>
         <div class="card">
           <div class="card-head">
             <h3>Matrículas</h3>
             <button class="btn" id="btnDemoMatriculas">Cargar demo</button>
           </div>
+          <p class="muted">Aquí conectaremos luego: estudiantes + curso + periodo + estado.</p>
+
           <div class="table-wrap">
             <table class="table" id="tblMatriculas">
               <thead>
@@ -216,11 +219,17 @@
         </div>
       </section>
 
+      <!-- Pagos -->
       <section class="view" id="view-pagos" hidden>
         <div class="card">
           <div class="card-head">
             <h3>Pagos</h3>
+            <button class="btn" id="btnDemoPagos">Cargar demo</button>
           </div>
+          <p class="muted">
+            Aquí registraremos pagos/abonos. El botón “Crear factura SRI” quedará desactivado por ahora.
+          </p>
+
           <div class="table-wrap">
             <table class="table" id="tblPagos">
               <thead>
@@ -231,35 +240,41 @@
                   <th>Mes</th>
                   <th>Valor</th>
                   <th>Estado</th>
+                  <th>Factura SRI</th>
                 </tr>
               </thead>
               <tbody>
-                <tr><td colspan="6" class="muted">Sin datos aún</td></tr>
+                <tr><td colspan="7" class="muted">Sin datos aún</td></tr>
               </tbody>
             </table>
           </div>
         </div>
       </section>
 
+      <!-- Usuarios -->
       <section class="view" id="view-usuarios" hidden>
         <div class="grid-2">
           <div class="card">
-            <div class="card-head"><h3>Crear Usuario</h3></div>
+            <div class="card-head">
+              <h3>Crear Usuario</h3>
+            </div>
+
             <form id="formCrearUsuario" class="form">
               <div class="form-row">
                 <div class="form-group">
                   <label>Nombres</label>
-                  <input type="text" name="nombres" required />
+                  <input type="text" name="nombres" placeholder="Ej: Juan" required />
                 </div>
                 <div class="form-group">
                   <label>Apellidos</label>
-                  <input type="text" name="apellidos" required />
+                  <input type="text" name="apellidos" placeholder="Ej: Pérez" required />
                 </div>
               </div>
+
               <div class="form-row">
                 <div class="form-group">
                   <label>Cédula</label>
-                  <input type="text" name="cedula" maxlength="10" required />
+                  <input type="text" name="cedula" placeholder="10 dígitos" maxlength="10" required />
                 </div>
                 <div class="form-group">
                   <label>Rol</label>
@@ -269,14 +284,19 @@
                   </select>
                 </div>
               </div>
-              <div class="form-group">
-                <label>Contraseña</label>
-                <div class="pass-wrap">
-                  <input type="password" name="password" required />
-                  <button type="button" class="pass-toggle" data-toggle-pass>👁</button>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Contraseña</label>
+                  <div class="pass-wrap">
+                    <input type="password" name="password" placeholder="******" required />
+                    <button type="button" class="pass-toggle" data-toggle-pass>👁</button>
+                  </div>
                 </div>
               </div>
-              <button class="btn" type="submit" style="margin-top: 10px;">Crear Usuario</button>
+
+              <button class="btn" type="submit">Crear usuario</button>
+              <p class="muted small">Este endpoint requiere token ADMIN (Bearer).</p>
             </form>
           </div>
 
@@ -285,6 +305,7 @@
               <h3>Lista de Usuarios</h3>
               <button class="btn-soft" id="btnCargarUsuarios">Actualizar</button>
             </div>
+
             <div class="table-wrap">
               <table class="table" id="tblUsuarios">
                 <thead>
@@ -297,16 +318,20 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr><td colspan="5" class="muted">Cargue la lista...</td></tr>
+                  <tr><td colspan="5" class="muted">Clic en “Actualizar”</td></tr>
                 </tbody>
               </table>
             </div>
+
+            <p class="muted small">
+              Conecta con: <code>GET /admin/usuarios</code>
+            </p>
           </div>
         </div>
       </section>
 
       <footer class="footer">
-        <small>Unidad Educativa Miguel Febres Cordero — Sistema MFC</small>
+        <small>Desarrollado por Erick Abad Monserrate — Sistema Educativo MFC</small>
       </footer>
     </main>
   </div>
