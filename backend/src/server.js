@@ -25,29 +25,32 @@ app.use("/students", studentsRoutes);
 app.use("/enrollments", enrollmentsRoutes);
 
 /* ===========================
-    SERVIR FRONTEND (STATIC)
+    SERVIR FRONTEND (ESTÁTICO)
 =========================== */
 // __dirname es 'backend/src'. Subimos dos niveles para llegar a la raíz y entrar a 'frontend'
 const FRONTEND_PATH = path.resolve(__dirname, "..", "..", "frontend");
 
 app.use(express.static(FRONTEND_PATH));
 
+// CORRECCIÓN: Usamos index.html (que es el que usted sí tiene)
 app.get("/", (req, res) => {
-  res.sendFile(path.join(FRONTEND_PATH, "index.html")); // Su archivo principal es index.html
+  res.sendFile(path.join(FRONTEND_PATH, "index.html"));
 });
 
 app.get("/app", (req, res) => {
   res.sendFile(path.join(FRONTEND_PATH, "app.html"));
 });
 
-// MANEJO DE ERRORES
+/* ===========================
+    MANEJO DE ERRORES
+========================== */
 app.use((err, req, res, next) => {
   console.error("❌ Error detectado:", err.message);
-  res.status(500).json({ error: "Error interno del servidor" });
+  res.status(500).json({ error: "Error interno" });
 });
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
     console.log(`✅ Servidor MFC corriendo en el puerto ${PORT}`);
-    console.log(`📂 Frontend cargado desde: ${FRONTEND_PATH}`);
+    console.log(`📂 Frontend detectado en: ${FRONTEND_PATH}`);
 });
