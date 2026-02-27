@@ -6,7 +6,7 @@ const router = express.Router();
 
 /**
  * POST /auth/login
- * Body: { cedula, password }
+ * Acceso directo sin encriptación (bcrypt eliminada)
  */
 router.post('/login', async (req, res) => {
   try {
@@ -18,7 +18,7 @@ router.post('/login', async (req, res) => {
 
     const cedulaLimpia = String(cedula).trim();
 
-    // 1. Buscamos al usuario
+    // 1. Buscamos al usuario en la base de datos
     const [rows] = await pool.query(
       `SELECT id, nombres, apellidos, cedula, password_hash, rol, estado 
        FROM usuarios 
@@ -38,8 +38,8 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ error: 'Usuario inactivo' });
     }
 
-    // 3. VALIDACIÓN TEMPORAL (Sin Bcrypt)
-    // Comparamos el texto directamente. Asegúrese de que en la DB diga '123456'
+    // 3. COMPARACIÓN DIRECTA (Sin seguridad de encriptación)
+    // Comparamos el texto plano enviado con lo que hay en la columna password_hash
     if (password !== user.password_hash) {
       return res.status(401).json({ error: 'Contraseña incorrecta' });
     }
@@ -47,7 +47,7 @@ router.post('/login', async (req, res) => {
     // 4. Actualizamos último login
     await pool.query('UPDATE usuarios SET ultimo_login = NOW() WHERE id = ?', [user.id]);
 
-    // 5. Generamos Token JWT
+    // 5. Generamos Token JWT para que el frontend pueda navegar
     const token = jwt.sign(
       { id: user.id, rol: user.rol, cedula: user.cedula },
       process.env.JWT_SECRET || 'secret_mfc_2026',
