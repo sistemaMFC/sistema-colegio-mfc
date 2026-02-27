@@ -15,7 +15,11 @@ const app = express();
 /* ===========================
     CONFIGURACIÓN GENERAL
 =========================== */
-app.use(cors());
+// Permitimos que su URL de Render tenga acceso total
+app.use(cors({
+  origin: "https://sistema-colegio-mfc.onrender.com",
+  credentials: true
+}));
 app.use(express.json());
 
 /* ===========================
@@ -31,17 +35,14 @@ app.use("/enrollments", enrollmentsRoutes);
     SERVIR FRONTEND (STATIC)
 =========================== */
 /**
- * CORRECCIÓN PARA RENDER: 
- * __dirname es 'backend/src'. 
- * Usamos '../../' para salir de 'src' y de 'backend' y llegar a la carpeta 'frontend'.
+ * SOLUCIÓN PARA RENDER:
+ * Usamos path.resolve para encontrar la carpeta frontend subiendo niveles
+ * desde la carpeta donde se ejecuta el proceso.
  */
-const FRONTEND_PATH = path.join(__dirname, "../../frontend");
+const FRONTEND_PATH = path.resolve(process.cwd(), "..", "frontend");
 
 app.use(express.static(FRONTEND_PATH));
 
-/**
- * Rutas de navegación
- */
 app.get("/", (req, res) => {
   res.sendFile(path.join(FRONTEND_PATH, "login.html"));
 });
@@ -53,19 +54,14 @@ app.get("/app", (req, res) => {
 app.get("/api", (req, res) => {
   res.json({
     message: "Sistema Colegio Miguel Febres Cordero API funcionando 🚀",
-    version: "1.0.0",
   });
 });
 
 /* ===========================
     MANEJO DE ERRORES
 =========================== */
-app.use((req, res) => {
-  res.status(404).json({ error: "Ruta no encontrada" });
-});
-
 app.use((err, req, res, next) => {
-  console.error("Error global:", err);
+  console.error("Error detectado:", err.message);
   res.status(500).json({ error: "Error interno del servidor" });
 });
 
@@ -75,5 +71,6 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
-    console.log(`Servidor corriendo en el puerto ${PORT}`);
+    console.log(`✅ Servidor MFC corriendo en el puerto ${PORT}`);
+    console.log(`📂 Carpeta frontend buscada en: ${FRONTEND_PATH}`);
 });
