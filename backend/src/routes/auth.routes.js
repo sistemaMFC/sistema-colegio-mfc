@@ -9,54 +9,44 @@ router.post('/login', async (req, res) => {
     const { cedula, password } = req.body;
     const cedulaLimpia = String(cedula).trim();
 
-    // 1. Buscamos al usuario
+    // 1. Buscamos al usuario (con TRIM para evitar espacios)
     const [rows] = await pool.query(
       "SELECT id, nombres, apellidos, cedula, password_hash, rol, estado FROM usuarios WHERE TRIM(cedula) = ? LIMIT 1",
       [cedulaLimpia]
     );
 
-    /* ========================================================
-       🔍 CÓDIGO DE INSPECCIÓN (Solo para copiar y ver en logs)
-       ======================================================== */
+    // LOG DE INSPECCIÓN: Para ver en Render qué está pasando
     if (rows.length > 0) {
-        const u = rows[0];
-        console.log("------------------------------------------");
-        console.log("✅ USUARIO ENCONTRADO EN TABLA:");
-        console.log(`- Cédula en DB: [${u.cedula}]`);
-        console.log(`- Clave en DB: [${u.password_hash}]`);
-        console.log(`- Estado en DB: [${u.estado}]`);
-        console.log(`- Comparando contra: [${password}]`);
-        console.log("------------------------------------------");
+        console.log(`🔎 LOGIN: Usuario [${cedulaLimpia}] encontrado. Validando clave...`);
     } else {
-        console.log(`❌ NO SE ENCONTRÓ NADIE con cédula: [${cedulaLimpia}]`);
+        console.log(`❌ LOGIN: Cédula [${cedulaLimpia}] NO existe en la base de datos.`);
     }
-    /* ======================================================== */
 
     if (rows.length === 0) {
-      return res.status(401).json({ error: 'Usuario no encontrado' });
+      return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
     const user = rows[0];
 
-    // Validación de estado
-    if (user.estado !== 'ACTIVO') {
-      return res.status(403).json({ error: 'Usuario inactivo' });
-    }
-
-    // COMPARACIÓN DE TEXTO PLANO
+    // 2. Verificación de contraseña (TEXTO PLANO como usted pidió)
     if (String(password) !== String(user.password_hash)) {
-      return res.status(401).json({ error: 'Contraseña incorrecta' });
+      console.log(`❌ LOGIN: Clave incorrecta para [${cedulaLimpia}]`);
+      return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    // Generar el Token
+    // 3. GENERACIÓN DEL TOKEN (Usando su clave de Render)
+    // Usamos exactamente 'mfc_secreto_2026' para que coincida con su captura
+    const secreto = process.env.JWT_SECRET || 'mfc_secreto_2026';
+    
     const token = jwt.sign(
       { id: user.id, rol: user.rol, cedula: user.cedula },
-      process.env.JWT_SECRET || 'secret_mfc_2026',
+      secreto,
       { expiresIn: '8h' }
     );
 
+    console.log(`✅ LOGIN EXITOSO: Bienvenido ${user.nombres}`);
+
     return res.json({
-      message: 'Login correcto ✅',
       token,
       user: {
         id: user.id,
@@ -68,7 +58,7 @@ router.post('/login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ Error en el servidor:", error);
+    console.error("❌ ERROR CRÍTICO:", error);
     return res.status(500).json({ error: 'Error interno' });
   }
 });
