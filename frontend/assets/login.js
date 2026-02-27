@@ -4,7 +4,7 @@ const cedulaInput = document.getElementById("cedula");
 const passInput = document.getElementById("password");
 const togglePassword = document.getElementById("togglePassword");
 
-const API = window.APP_CONFIG?.API_BASE_URL || "https://sistema-colegio-mfc-production.up.railway.app";
+const API = "https://sistema-colegio-mfc.onrender.com";
 
 // Limpia mensaje
 function setMsg(text, ok = false) {
