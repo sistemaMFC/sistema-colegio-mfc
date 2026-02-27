@@ -1,125 +1,249 @@
-/* ========================================================
+ /* ========================================================
+
    DEFINICIÓN DE VARIABLES POR TEMA
+
    ======================================================== */
+
 :root {
+
   /* MODO TECNOLÓGICO (Default) */
+
   --bg: #0b1020;
+
   --panel: #0f1730;
+
   --card: rgba(255, 255, 255, 0.06);
+
   --stroke: rgba(255, 255, 255, 0.10);
+
   --txt: #eaf0ff;
+
   --muted: rgba(234, 240, 255, 0.65);
+
   --accent: #26ff7a; /* Verde Neón */
+
   --accent-2: #2e7bff; /* Azul Eléctrico */
+
   --shadow: 0 20px 60px rgba(0,0,0,0.35);
+
 }
+
+
 
 [data-theme="light"] {
+
   /* MODO CLARO (Educativo) */
+
   --bg: #f1f5f9;
+
   --panel: #ffffff;
+
   --card: #f8fafc;
+
   --stroke: #e2e8f0;
+
   --txt: #0f172a;
+
   --muted: #64748b;
+
   --accent: #059669; /* Verde Bosque */
+
   --accent-2: #2563eb;
+
   --shadow: 0 10px 30px rgba(0,0,0,0.05);
+
 }
+
+
 
 [data-theme="dark"] {
+
   /* MODO OSCURO (Confort) */
+
   --bg: #0f172a;
+
   --panel: #1e293b;
+
   --card: rgba(255, 255, 255, 0.03);
+
   --stroke: #334155;
+
   --txt: #f8fafc;
+
   --muted: #94a3b8;
+
   --accent: #10b981;
+
   --accent-2: #3b82f6;
+
   --shadow: 0 20px 50px rgba(0,0,0,0.4);
+
 }
+
+
 
 /* ========================================================
+
    ESTILOS BASE REESTRUCTURADOS
+
    ======================================================== */
+
 *{ box-sizing:border-box; transition: background 0.3s ease, border 0.3s ease, color 0.3s ease; }
+
 html,body{ height:100%; margin:0; }
 
+
+
 body{
+
   font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+
   color: var(--txt);
+
   background: var(--bg);
+
 }
+
+
 
 /* Gradientes dinámicos solo en modo tech */
+
 body:not([data-theme="light"]):not([data-theme="dark"]) {
-  background: 
+
+  background:
+
     radial-gradient(1200px 600px at 20% -10%, rgba(38,255,122,0.12), transparent 55%),
+
     radial-gradient(900px 520px at 80% 0%, rgba(46,123,255,0.10), transparent 55%),
+
     linear-gradient(180deg, #070a14, #0b1020 35%, #070a14);
+
 }
+
+
 
 /* Layout Responsivo */
+
 .topbar {
+
   position: sticky; top:0; z-index: 100;
+
   display: flex; align-items: center; justify-content: space-between;
+
   padding: 12px 20px;
+
   background: var(--panel);
+
   border-bottom: 1px solid var(--stroke);
+
   backdrop-filter: blur(10px);
+
 }
+
+
 
 .layout {
+
   display: grid;
+
   grid-template-columns: 280px 1fr;
+
   min-height: calc(100vh - 64px);
+
 }
+
+
 
 .sidebar {
+
   background: var(--panel);
+
   border-right: 1px solid var(--stroke);
+
   padding: 20px;
+
 }
+
+
 
 /* Estilo de los KPI Cards */
+
 .card {
+
   background: var(--card);
+
   border: 1px solid var(--stroke);
+
   border-radius: 20px;
+
   padding: 20px;
+
   box-shadow: var(--shadow);
+
 }
+
+
 
 .kpi-value {
+
   font-size: 32px;
+
   font-weight: 800;
+
   color: var(--accent);
+
 }
+
+
 
 /* Selector de Temas Estilizado */
+
 .theme-select {
+
   background: var(--card);
+
   color: var(--txt);
+
   border: 1px solid var(--stroke);
+
   border-radius: 10px;
+
   padding: 5px 10px;
+
   font-size: 13px;
+
   cursor: pointer;
+
 }
+
+
 
 /* Tablas Modernas */
+
 .table th {
+
   text-transform: uppercase;
+
   font-size: 11px;
+
   letter-spacing: 1px;
+
   color: var(--muted);
+
   border-bottom: 2px solid var(--stroke);
+
 }
 
+
+
 /* Responsive */
+
 @media (max-width: 900px) {
+
   .layout { grid-template-columns: 1fr; }
+
   .sidebar { position: fixed; left: -280px; z-index: 200; height: 100%; transition: 0.3s; }
+
   .sidebar.open { left: 0; }
+
 }
