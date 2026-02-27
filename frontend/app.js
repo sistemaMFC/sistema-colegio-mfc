@@ -41,7 +41,7 @@ form.addEventListener("submit", async (e) => {
   const password = passInput.value;
 
   try {
-    const res = await fetch("https://sistema-colegio-mfc-production.up.railway.app/auth/login", {
+    const res = await fetch("https://sistema-colegio-mfc.onrender.com/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ cedula, password })

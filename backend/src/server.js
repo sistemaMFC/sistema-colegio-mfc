@@ -27,14 +27,14 @@ app.use("/enrollments", enrollmentsRoutes);
 /* ===========================
     SERVIR FRONTEND (ESTÁTICO)
 =========================== */
-// __dirname es 'backend/src'. Subimos dos niveles para llegar a la raíz y entrar a 'frontend'
 const FRONTEND_PATH = path.resolve(__dirname, "..", "..", "frontend");
 
 app.use(express.static(FRONTEND_PATH));
 
-// CORRECCIÓN: Usamos index.html (que es el que usted sí tiene)
+// Aquí es donde matamos el error ENOENT:
 app.get("/", (req, res) => {
-  res.sendFile(path.join(FRONTEND_PATH, "index.html"));
+  // Cambiamos 'login.html' por 'index.html'
+  res.sendFile(path.join(FRONTEND_PATH, "index.html")); 
 });
 
 app.get("/app", (req, res) => {
