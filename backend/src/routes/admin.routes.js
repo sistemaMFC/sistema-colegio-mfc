@@ -7,15 +7,35 @@ const { authRequired, onlyAdmin } = require("../middlewares/auth");
 const router = express.Router();
 
 /**
+ * ==========================================
+ * NUEVA RUTA: ESTADÍSTICAS DE CURSOS
+ * Para las tarjetas del frontend
+ * ==========================================
+ */
+router.get("/cursos/estadisticas", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    // Consulta que cuenta estudiantes por curso de forma segura
+    const [rows] = await db.query(`
+      SELECT 
+        c.id, 
+        c.nombre, 
+        COUNT(e.id) AS total_matriculados
+      FROM cursos c
+      LEFT JOIN estudiantes e ON c.id = e.curso_id
+      GROUP BY c.id, c.nombre
+      ORDER BY c.orden ASC
+    `);
+
+    return res.json(rows);
+  } catch (err) {
+    console.error("Error cargando estadísticas de cursos:", err);
+    return res.status(500).json({ error: "Error al obtener datos de cursos" });
+  }
+});
+
+/**
  * POST /admin/usuarios
- * Body:
- * {
- *  "nombres": "Juan",
- *  "apellidos": "Perez",
- *  "cedula": "0912345678",
- *  "password": "123456",
- *  "rol": "PROFESOR"  // o "ADMIN"
- * }
+ * Crea administradores o profesores
  */
 router.post("/usuarios", authRequired, onlyAdmin, async (req, res) => {
   try {

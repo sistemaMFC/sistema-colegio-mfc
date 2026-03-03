@@ -1,26 +1,22 @@
-const pool = require('../db');
+import { pool } from '../db.js';
 
-const obtenerEstadisticasCursos = async (req, res) => {
+export const getEstadisticasCursos = async (req, res) => {
     try {
-        // Consultamos los cursos y contamos los estudiantes activos en cada uno
+        // Consulta robusta: Cuenta estudiantes vinculados por curso_id
         const [rows] = await pool.query(`
             SELECT 
-                curso, 
-                COUNT(id) as total_matriculados,
-                CASE 
-                    WHEN curso LIKE 'Inicial%' THEN 'inicial'
-                    WHEN curso LIKE '%Grado%' THEN 'basica'
-                    ELSE 'superior'
-                END as categoria
-            FROM estudiantes 
-            WHERE estado = 'ACTIVO'
-            GROUP BY curso
+                c.id, 
+                c.nombre, 
+                COUNT(e.id) AS total_matriculados
+            FROM cursos c
+            LEFT JOIN estudiantes e ON c.id = e.curso_id
+            GROUP BY c.id, c.nombre
+            ORDER BY c.orden ASC
         `);
+
         res.json(rows);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Error al obtener cursos" });
+        console.error("Error en getEstadisticasCursos:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
     }
 };
-
-module.exports = { obtenerEstadisticasCursos };

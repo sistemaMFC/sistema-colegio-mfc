@@ -1,40 +1,29 @@
-/* ========================================================
-   LÓGICA DE RENDERIZADO DE CURSOS - MÓDULO MATRÍCULAS
-   ======================================================== */
-
 async function renderizarCursos() {
-    // Usamos el selector exacto de tu HTML
-    const contenedor = document.querySelector('#view-matriculas .grid-cursos-mfc');
-    
-    if(!contenedor) {
-        console.warn("No se encontró el contenedor .grid-cursos-mfc en la vista de matrículas");
-        return;
-    }
+    const contenedor = document.querySelector('.grid-cursos-mfc');
+    if(!contenedor) return;
 
     try {
-        // Llamada a la API
+        // Llamamos a la API (Note que usamos la ruta exacta)
         const respuesta = await api('/api/cursos/estadisticas'); 
         
-        // --- VALIDACIÓN ANTI-ERROR (IMPORTANTE) ---
-        // Si 'respuesta' no es una lista, la convertimos en una lista vacía para que forEach no falle
+        // Validamos que sea un array
         const cursos = Array.isArray(respuesta) ? respuesta : [];
         
         contenedor.innerHTML = "";
 
         if (cursos.length === 0) {
-            contenedor.innerHTML = `<p class="muted">No hay cursos configurados en la base de datos o la respuesta es inválida.</p>`;
+            contenedor.innerHTML = `<p class="muted">No hay cursos registrados en la base de datos.</p>`;
             return;
         }
 
         cursos.forEach((c) => {
-            // Nota: He usado c.nombre porque en tu SQL usamos 'nombre' para el curso
             contenedor.innerHTML += `
-                <div class="curso-card-mfc" onclick="abrirFormularioMatricula('${c.nombre || c.curso}')">
+                <div class="curso-card-mfc" onclick="abrirFormularioMatricula('${c.id}', '${c.nombre}')">
                     <div class="curso-numero-wrapper">
                         ${c.total_matriculados || 0}
                     </div>
                     <div class="curso-info-mfc">
-                        <h3 class="curso-nombre-mfc">${c.nombre || c.curso}</h3>
+                        <h3 class="curso-nombre-mfc">${c.nombre}</h3>
                         <span class="curso-detalle-mfc">Haga clic para matricular</span>
                     </div>
                 </div>
@@ -43,22 +32,13 @@ async function renderizarCursos() {
 
     } catch (err) {
         console.error("Error al cargar cursos:", err);
-        contenedor.innerHTML = `
-            <div style="padding: 20px; color: #ff6b6b; border: 1px solid #ff6b6b; border-radius: 10px;">
-                <strong>Error al conectar con el servidor:</strong><br>
-                ${err.message}
-            </div>
-        `;
+        contenedor.innerHTML = `<p class="danger">Error: No se pudo conectar con el servidor.</p>`;
     }
 }
 
-/**
- * Función que se dispara al hacer clic en un curso
- */
-function abrirFormularioMatricula(nombreCurso) {
-    console.log("Abriendo matrícula para:", nombreCurso);
-    alert(`Preparando inscripción para: ${nombreCurso}`);
+function abrirFormularioMatricula(id, nombre) {
+    console.log(`Iniciando matrícula para ID: ${id} - ${nombre}`);
+    alert(`Preparando inscripción para: ${nombre}`);
 }
 
-// Hacemos que la función esté disponible globalmente
 window.renderizarCursos = renderizarCursos;
