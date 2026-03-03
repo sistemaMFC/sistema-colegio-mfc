@@ -1,56 +1,55 @@
-const express = require("express");
-const bcrypt = require("bcryptjs");
-const db = require("../db");
-const { authRequired, onlyAdmin } = require("../middlewares/auth");
-
+const express = require('express');
+const jwt = require('jsonwebtoken');
+const pool = require('../db');
 const router = express.Router();
 
-// --- RUTAS DE USUARIOS (SUS RUTAS ORIGINALES) ---
-
-router.post("/usuarios", authRequired, onlyAdmin, async (req, res) => {
-  try {
-    const { nombres, apellidos, cedula, password, rol } = req.body;
-    if (!nombres || !apellidos || !cedula || !password) {
-      return res.status(400).json({ error: "Faltan datos" });
-    }
-    const password_hash = await bcrypt.hash(password, 10);
-    const [result] = await db.query(
-      `INSERT INTO usuarios (nombres, apellidos, cedula, password_hash, rol, estado)
-       VALUES (?, ?, ?, ?, ?, 'ACTIVO')`,
-      [nombres, apellidos, cedula, password_hash, rol || 'PROFESOR']
-    );
-    return res.status(201).json({ message: "Usuario creado ✅", id: result.insertId });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Error creando usuario" });
-  }
-});
-
-router.get("/usuarios", authRequired, onlyAdmin, async (req, res) => {
-  try {
-    const [rows] = await db.query("SELECT id, nombres, apellidos, cedula, rol, estado FROM usuarios");
-    return res.json(rows);
-  } catch (err) {
-    return res.status(500).json({ error: "Error listando" });
-  }
-});
-
-// --- NUEVA RUTA: ESTADÍSTICAS DE CURSOS (PARA LAS TARJETAS) ---
-
-router.get("/cursos/estadisticas", authRequired, onlyAdmin, async (req, res) => {
+router.post('/login', async (req, res) => {
     try {
-        const [rows] = await db.query(`
-            SELECT 
-                c.id, 
-                c.nombre, 
-                (SELECT COUNT(*) FROM estudiantes e WHERE e.curso_id = c.id) AS total_matriculados
-            FROM cursos c
-            ORDER BY c.orden ASC
-        `);
-        return res.json(rows);
+        const { cedula, password } = req.body;
+        const cedulaLimpia = String(cedula).trim();
+
+        // Buscamos al usuario (con TRIM para ser exactos)
+        const [rows] = await pool.query(
+            "SELECT id, nombres, apellidos, cedula, password_hash, rol, estado FROM usuarios WHERE TRIM(cedula) = ? LIMIT 1",
+            [cedulaLimpia]
+        );
+
+        if (rows.length === 0) {
+            return res.status(401).json({ error: 'Cédula no registrada' });
+        }
+
+        const user = rows[0];
+
+        if (user.estado !== 'ACTIVO') {
+            return res.status(403).json({ error: 'Usuario inactivo' });
+        }
+
+        // Comparación de texto plano (123456 == 123456)
+        if (String(password) !== String(user.password_hash)) {
+            return res.status(401).json({ error: 'Contraseña incorrecta' });
+        }
+
+        // Generar Token con la clave de Render
+        const secreto = process.env.JWT_SECRET || 'mfc_secreto_2026';
+        const token = jwt.sign(
+            { id: user.id, rol: user.rol, cedula: user.cedula },
+            secreto,
+            { expiresIn: '8h' }
+        );
+
+        return res.json({
+            message: 'Login correcto ✅',
+            token,
+            user: {
+                id: user.id,
+                nombres: user.nombres,
+                apellidos: user.apellidos,
+                rol: user.rol
+            }
+        });
     } catch (err) {
-        console.error("Error en cursos:", err);
-        return res.status(500).json({ error: "Error al leer cursos" });
+        console.error(err);
+        return res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
 
