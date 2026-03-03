@@ -3,7 +3,7 @@
    ======================================================== */
 
 async function renderizarCursos() {
-    // Usamos el nuevo contenedor con la clase de tu diseño modular
+    // Usamos el selector exacto de tu HTML
     const contenedor = document.querySelector('#view-matriculas .grid-cursos-mfc');
     
     if(!contenedor) {
@@ -12,25 +12,29 @@ async function renderizarCursos() {
     }
 
     try {
-        // Llamada a la API para traer los cursos y cuántos alumnos hay en cada uno
-        const cursos = await api('/api/cursos/estadisticas'); 
+        // Llamada a la API
+        const respuesta = await api('/api/cursos/estadisticas'); 
+        
+        // --- VALIDACIÓN ANTI-ERROR (IMPORTANTE) ---
+        // Si 'respuesta' no es una lista, la convertimos en una lista vacía para que forEach no falle
+        const cursos = Array.isArray(respuesta) ? respuesta : [];
         
         contenedor.innerHTML = "";
 
         if (cursos.length === 0) {
-            contenedor.innerHTML = `<p class="muted">No hay cursos configurados en la base de datos.</p>`;
+            contenedor.innerHTML = `<p class="muted">No hay cursos configurados en la base de datos o la respuesta es inválida.</p>`;
             return;
         }
 
         cursos.forEach((c) => {
-            // Aplicamos la estructura de "Verde Difuminado" que creamos en matricula-estilo.css
+            // Nota: He usado c.nombre porque en tu SQL usamos 'nombre' para el curso
             contenedor.innerHTML += `
-                <div class="curso-card-mfc" onclick="abrirFormularioMatricula('${c.curso}')">
+                <div class="curso-card-mfc" onclick="abrirFormularioMatricula('${c.nombre || c.curso}')">
                     <div class="curso-numero-wrapper">
-                        ${c.total_matriculados}
+                        ${c.total_matriculados || 0}
                     </div>
                     <div class="curso-info-mfc">
-                        <h3 class="curso-nombre-mfc">${c.curso}</h3>
+                        <h3 class="curso-nombre-mfc">${c.nombre || c.curso}</h3>
                         <span class="curso-detalle-mfc">Haga clic para matricular</span>
                     </div>
                 </div>
@@ -39,22 +43,21 @@ async function renderizarCursos() {
 
     } catch (err) {
         console.error("Error al cargar cursos:", err);
-        contenedor.innerHTML = `<p class="danger">Error al conectar con el servidor.</p>`;
+        contenedor.innerHTML = `
+            <div style="padding: 20px; color: #ff6b6b; border: 1px solid #ff6b6b; border-radius: 10px;">
+                <strong>Error al conectar con el servidor:</strong><br>
+                ${err.message}
+            </div>
+        `;
     }
 }
 
 /**
  * Función que se dispara al hacer clic en un curso
- * @param {string} nombreCurso 
  */
 function abrirFormularioMatricula(nombreCurso) {
     console.log("Abriendo matrícula para:", nombreCurso);
-    
-    // Aquí es donde luego llamaremos al modal o formulario modular
-    // Por ahora, lanzamos un aviso para confirmar que funciona el clic
     alert(`Preparando inscripción para: ${nombreCurso}`);
-    
-    // El siguiente paso será: setActiveView('formulario-inscripcion');
 }
 
 // Hacemos que la función esté disponible globalmente
