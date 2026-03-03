@@ -1,4 +1,3 @@
-// backend/src/routes/admin.routes.js
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const db = require("../db");
@@ -6,33 +5,7 @@ const { authRequired, onlyAdmin } = require("../middlewares/auth");
 
 const router = express.Router();
 
-/**
- * RUTA DE ESTADÍSTICAS (Corregida para asegurar lectura de Railway)
- */
-router.get("/cursos/estadisticas", authRequired, onlyAdmin, async (req, res) => {
-  try {
-    // Forzamos una consulta simple primero para verificar conexión
-    const [rows] = await db.query(`
-      SELECT 
-        c.id, 
-        c.nombre, 
-        (SELECT COUNT(*) FROM estudiantes e WHERE e.curso_id = c.id) AS total_matriculados
-      FROM cursos c
-      WHERE c.estado = 'ACTIVO'
-      ORDER BY c.orden ASC
-    `);
-
-    // DEBUG: Imprimimos en la consola de Render para ver qué llega
-    console.log("Cursos encontrados en DB:", rows.length);
-
-    return res.json(rows);
-  } catch (err) {
-    console.error("ERROR CRÍTICO EN DB:", err.message);
-    return res.status(500).json({ error: "Error al leer la tabla cursos" });
-  }
-});
-
-// --- RESTO DE SUS RUTAS DE USUARIOS (Mantenidas íntegras) ---
+// --- RUTAS DE USUARIOS (SUS RUTAS ORIGINALES) ---
 
 router.post("/usuarios", authRequired, onlyAdmin, async (req, res) => {
   try {
@@ -60,6 +33,25 @@ router.get("/usuarios", authRequired, onlyAdmin, async (req, res) => {
   } catch (err) {
     return res.status(500).json({ error: "Error listando" });
   }
+});
+
+// --- NUEVA RUTA: ESTADÍSTICAS DE CURSOS (PARA LAS TARJETAS) ---
+
+router.get("/cursos/estadisticas", authRequired, onlyAdmin, async (req, res) => {
+    try {
+        const [rows] = await db.query(`
+            SELECT 
+                c.id, 
+                c.nombre, 
+                (SELECT COUNT(*) FROM estudiantes e WHERE e.curso_id = c.id) AS total_matriculados
+            FROM cursos c
+            ORDER BY c.orden ASC
+        `);
+        return res.json(rows);
+    } catch (err) {
+        console.error("Error en cursos:", err);
+        return res.status(500).json({ error: "Error al leer cursos" });
+    }
 });
 
 module.exports = router;
