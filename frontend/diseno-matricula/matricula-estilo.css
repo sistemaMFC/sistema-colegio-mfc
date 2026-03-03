@@ -1,76 +1,118 @@
-/* VARIABLES DE COLOR - VERDE TECNOLÓGICO */
+/* ========================================================
+   ESTILOS DE MATRÍCULAS - COLEGIO MIGUEL FEBRES CORDERO
+   DISEÑO: CRISTAL NEÓN RESPONSIVO
+   ======================================================== */
+
 :root {
-    --verde-primario: #00f2fe; /* Azul cian para difuminado */
-    --verde-mfc: #4facfe;      /* Verde brillante */
-    --gradiente-verde: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-    --card-bg: rgba(255, 255, 255, 0.05);
-    --sombra-verde: 0 10px 30px rgba(67, 233, 123, 0.2);
+    --verde-primario: #43e97b;
+    --verde-brillante: #38f9d7;
+    --fondo-oscuro: #070a14;
+    --card-bg: rgba(255, 255, 255, 0.03);
+    --gradiente-mfc: linear-gradient(135deg, var(--verde-primario) 0%, var(--verde-brillante) 100%);
+    --sombra-neon: 0 10px 40px rgba(67, 233, 123, 0.25);
+    --borde-cristal: rgba(255, 255, 255, 0.1);
 }
 
-/* CONTENEDOR DE CURSOS */
+/* CONTENEDOR PRINCIPAL - RESPONSIVO */
 .grid-cursos-mfc {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    /* Ajuste automático de columnas según el ancho disponible */
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 25px;
     padding: 20px;
+    perspective: 1000px;
 }
 
-/* TARJETA DE CURSO ESTILO MODERNO */
+/* TARJETA DE CURSO (ESTILO CRISTAL) */
 .curso-card-mfc {
     background: var(--card-bg);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 24px;
-    padding: 24px;
+    border: 1px solid var(--borde-cristal);
+    border-radius: 28px;
+    padding: 30px;
     position: relative;
     overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     cursor: pointer;
-    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
 }
 
 .curso-card-mfc:hover {
     transform: translateY(-10px);
-    border-color: #43e97b;
-    box-shadow: var(--sombra-verde);
+    border-color: var(--verde-primario);
+    box-shadow: var(--sombra-neon);
 }
 
-/* EL CÍRCULO DEL NÚMERO (DIFUMINADO) */
+/* EL CÍRCULO CON EL NÚMERO */
 .curso-numero-wrapper {
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    background: var(--gradiente-verde);
-    display: grid;
-    place-items: center;
+    background: var(--gradiente-mfc);
+    display: flex;
+    justify-content: center;
+    align-items: center;
     font-size: 22px;
     font-weight: 900;
     color: #0b1020;
-    margin-bottom: 15px;
-    box-shadow: 0 5px 15px rgba(56, 249, 215, 0.4);
+    margin-bottom: 20px;
+    box-shadow: 0 0 15px rgba(67, 233, 123, 0.4);
 }
 
-/* TEXTOS */
 .curso-nombre-mfc {
-    font-size: 18px;
+    font-size: 19px;
     font-weight: 800;
-    color: #fff;
-    margin: 0;
+    color: #ffffff;
+    margin-bottom: 5px;
+    text-transform: uppercase;
 }
 
 .curso-detalle-mfc {
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.6);
-    margin-top: 5px;
+    color: rgba(255, 255, 255, 0.5);
 }
 
-/* DECORACIÓN DIFUMINADA DE FONDO */
-.curso-card-mfc::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(67, 233, 123, 0.05) 0%, transparent 70%);
-    pointer-events: none;
+/* ========================================================
+   MODAL DE MATRÍCULA RESPONSIVO
+   ======================================================== */
+
+.modal-mfc {
+    position: fixed;
+    top: 0; left: 0; 
+    width: 100%; height: 100%;
+    background: rgba(4, 6, 12, 0.9);
+    backdrop-filter: blur(20px);
+    display: none; 
+    place-items: center;
+    z-index: 2000;
+    padding: 15px; /* Espacio para móviles */
+}
+
+.modal-content-mfc {
+    background: #0d1221;
+    border: 1px solid rgba(67, 233, 123, 0.2);
+    border-radius: 25px;
+    padding: 30px;
+    width: 100%;
+    max-width: 450px;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.8);
+}
+
+/* MEDIA QUERIES PARA PANTALLAS PEQUEÑAS */
+@media (max-width: 600px) {
+    .grid-cursos-mfc {
+        grid-template-columns: 1fr; /* Una sola columna en celulares */
+        padding: 15px;
+    }
+
+    .curso-card-mfc {
+        padding: 20px;
+    }
+
+    .curso-nombre-mfc {
+        font-size: 17px;
+    }
 }
