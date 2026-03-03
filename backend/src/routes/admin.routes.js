@@ -8,13 +8,14 @@ const router = express.Router();
 
 /**
  * ==========================================
- * NUEVA RUTA: ESTADÍSTICAS DE CURSOS
- * Para las tarjetas del frontend
+ * RUTA: ESTADÍSTICAS DE CURSOS
+ * Para las tarjetas del frontend (Matrículas)
  * ==========================================
  */
 router.get("/cursos/estadisticas", authRequired, onlyAdmin, async (req, res) => {
   try {
-    // Consulta que cuenta estudiantes por curso de forma segura
+    // Usamos LEFT JOIN para que aparezcan los 7 cursos (Inicial a 5to)
+    // aunque tengan 0 alumnos matriculados.
     const [rows] = await db.query(`
       SELECT 
         c.id, 
@@ -47,11 +48,12 @@ router.post("/usuarios", authRequired, onlyAdmin, async (req, res) => {
 
     const rolFinal = rol === "ADMIN" ? "ADMIN" : "PROFESOR";
 
-    // validar cedula simple (10 dígitos)
+    // Validar cédula simple (10 dígitos)
     if (!/^\d{10}$/.test(String(cedula).trim())) {
       return res.status(400).json({ error: "Cédula inválida (debe tener 10 dígitos)" });
     }
 
+    // Verificar si ya existe
     const [exist] = await db.query("SELECT id FROM usuarios WHERE cedula = ? LIMIT 1", [cedula]);
     if (exist.length > 0) {
       return res.status(409).json({ error: "Ya existe un usuario con esa cédula" });
