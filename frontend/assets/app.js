@@ -1,5 +1,5 @@
 /* ========================================================
-   SISTEMA COLEGIO MIGUEL FEBRES CORDERO - APP.JS
+   SISTEMA COLEGIO MIGUEL FEBRES CORDERO - APP.JS (ACTUALIZADO)
    ======================================================== */
 
 const API_BASE = "https://sistema-colegio-mfc.onrender.com";
@@ -48,6 +48,7 @@ async function api(path, options = {}) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  // Se añade el API_BASE a la ruta
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   const data = await res.json().catch(() => ({}));
 
@@ -103,10 +104,12 @@ function fillUserUI() {
 }
 
 function setActiveView(view) {
+  // Actualizar botones del menú
   $$(".menu-item").forEach(b => b.classList.remove("active"));
   const btn = document.querySelector(`.menu-item[data-view="${view}"]`);
   if (btn) btn.classList.add("active");
 
+  // Ocultar todas las vistas y mostrar la seleccionada
   $$(".view").forEach(v => v.hidden = true);
   const section = $(`#view-${view}`);
   if (section) section.hidden = false;
@@ -117,14 +120,17 @@ function setActiveView(view) {
     pagos: ["Pagos", "Control de pensiones y abonos"],
     usuarios: ["Usuarios", "Administración de personal"],
   };
+  
   const [t, s] = titles[view] || ["Panel", ""];
   if($("#pageTitle")) $("#pageTitle").textContent = t;
   if($("#pageSubtitle")) $("#pageSubtitle").textContent = s;
 
-  // INYECTADO: Si entra a matrículas, cargar las tarjetas
+  // CARGA AUTOMÁTICA: Si entra a matrículas, llama a la función de las tarjetas
   if (view === 'matriculas') {
     if (typeof renderizarCursos === 'function') {
       renderizarCursos(); 
+    } else {
+      console.warn("La función renderizarCursos no está disponible todavía.");
     }
   }
 }
@@ -193,10 +199,12 @@ async function crearUsuario(form) {
 function setupInteractions() {
   if($("#year")) $("#year").textContent = new Date().getFullYear();
 
+  // Sidebar móvil
   $("#btnToggleSidebar")?.addEventListener("click", () => {
     $("#sidebar").classList.toggle("open");
   });
 
+  // Navegación principal
   $$(".menu-item[data-view]").forEach(btn => {
     btn.addEventListener("click", () => {
       setActiveView(btn.dataset.view);
@@ -204,15 +212,18 @@ function setupInteractions() {
     });
   });
 
+  // Botones de acceso rápido
   $$(".quick-btn[data-view]").forEach(btn => {
     btn.addEventListener("click", () => {
       setActiveView(btn.dataset.view);
     });
   });
 
+  // Logout
   $("#btnLogoutSide")?.addEventListener("click", logout);
   $("#btnLogoutTop")?.addEventListener("click", logout);
 
+  // Toggle Password
   $$("[data-toggle-pass]").forEach(btn => {
     btn.addEventListener("click", () => {
       const input = btn.parentElement.querySelector("input");
@@ -223,6 +234,7 @@ function setupInteractions() {
     });
   });
 
+  // Formulario Usuarios
   const formUser = $("#formCrearUsuario");
   if (formUser) {
     formUser.addEventListener("submit", (e) => {
@@ -233,9 +245,12 @@ function setupInteractions() {
 
   $("#btnCargarUsuarios")?.addEventListener("click", cargarUsuarios);
 
+  // El botón de demo ahora fuerza una recarga real
   $("#btnDemoMatriculas")?.addEventListener("click", () => {
-    if (typeof renderizarCursos === 'function') renderizarCursos();
-    showAlert("ok", "Cargando cursos desde la base de datos...");
+    if (typeof renderizarCursos === 'function') {
+        renderizarCursos();
+        showAlert("ok", "Sincronizando con Railway...");
+    }
   });
 }
 

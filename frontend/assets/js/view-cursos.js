@@ -1,18 +1,28 @@
+/* ========================================================
+   LÓGICA REAL DE CURSOS - CONECTADO A MYSQL
+   ======================================================== */
+
 async function renderizarCursos() {
     const contenedor = document.querySelector('.grid-cursos-mfc');
     if(!contenedor) return;
 
+    // Ponemos un mensaje de carga para saber que el sistema está trabajando
+    contenedor.innerHTML = `<p class="muted">Conectando con la base de datos de Railway...</p>`;
+
     try {
-        // Llamamos a la API (Note que usamos la ruta exacta)
-        const respuesta = await api('/api/cursos/estadisticas'); 
+        // CORRECCIÓN DE RUTA: Ahora apunta a /admin/... que es donde está en su backend
+        const respuesta = await api('/api/admin/cursos/estadisticas'); 
         
-        // Validamos que sea un array
         const cursos = Array.isArray(respuesta) ? respuesta : [];
         
         contenedor.innerHTML = "";
 
         if (cursos.length === 0) {
-            contenedor.innerHTML = `<p class="muted">No hay cursos registrados en la base de datos.</p>`;
+            contenedor.innerHTML = `
+                <div style="text-align:center; padding:20px;">
+                    <p class="muted">No hay cursos en MySQL.</p>
+                    <small>Verifique la tabla 'cursos' en su Workbench.</small>
+                </div>`;
             return;
         }
 
@@ -24,21 +34,24 @@ async function renderizarCursos() {
                     </div>
                     <div class="curso-info-mfc">
                         <h3 class="curso-nombre-mfc">${c.nombre}</h3>
-                        <span class="curso-detalle-mfc">Haga clic para matricular</span>
+                        <span class="curso-detalle-mfc">Click para gestionar</span>
                     </div>
                 </div>
             `;
         });
 
     } catch (err) {
-        console.error("Error al cargar cursos:", err);
-        contenedor.innerHTML = `<p class="danger">Error: No se pudo conectar con el servidor.</p>`;
+        console.error("Error detallado:", err);
+        contenedor.innerHTML = `
+            <p class="danger">Error: No se pudo conectar con el servidor.</p>
+            <small class="muted">Ruta intentada: /api/admin/cursos/estadisticas</small>
+        `;
     }
 }
 
 function abrirFormularioMatricula(id, nombre) {
-    console.log(`Iniciando matrícula para ID: ${id} - ${nombre}`);
-    alert(`Preparando inscripción para: ${nombre}`);
+    alert(`Iniciando matrícula para: ${nombre} (ID: ${id})`);
 }
 
+// Hacemos la función disponible para app.js
 window.renderizarCursos = renderizarCursos;
