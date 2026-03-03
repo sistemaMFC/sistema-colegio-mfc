@@ -1,0 +1,76 @@
+/* VARIABLES DE COLOR - VERDE TECNOLÓGICO */
+:root {
+    --verde-primario: #00f2fe; /* Azul cian para difuminado */
+    --verde-mfc: #4facfe;      /* Verde brillante */
+    --gradiente-verde: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    --card-bg: rgba(255, 255, 255, 0.05);
+    --sombra-verde: 0 10px 30px rgba(67, 233, 123, 0.2);
+}
+
+/* CONTENEDOR DE CURSOS */
+.grid-cursos-mfc {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 25px;
+    padding: 20px;
+}
+
+/* TARJETA DE CURSO ESTILO MODERNO */
+.curso-card-mfc {
+    background: var(--card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+}
+
+.curso-card-mfc:hover {
+    transform: translateY(-10px);
+    border-color: #43e97b;
+    box-shadow: var(--sombra-verde);
+}
+
+/* EL CÍRCULO DEL NÚMERO (DIFUMINADO) */
+.curso-numero-wrapper {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--gradiente-verde);
+    display: grid;
+    place-items: center;
+    font-size: 22px;
+    font-weight: 900;
+    color: #0b1020;
+    margin-bottom: 15px;
+    box-shadow: 0 5px 15px rgba(56, 249, 215, 0.4);
+}
+
+/* TEXTOS */
+.curso-nombre-mfc {
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    margin: 0;
+}
+
+.curso-detalle-mfc {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 5px;
+}
+
+/* DECORACIÓN DIFUMINADA DE FONDO */
+.curso-card-mfc::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(67, 233, 123, 0.05) 0%, transparent 70%);
+    pointer-events: none;
+}
