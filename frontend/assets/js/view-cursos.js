@@ -3,9 +3,7 @@ async function renderizarCursos() {
     if(!contenedor) return;
 
     try {
-        // Llamamos a la nueva ruta en /admin/
         const respuesta = await api('/api/admin/cursos/estadisticas'); 
-        
         const cursos = Array.isArray(respuesta) ? respuesta : [];
         
         contenedor.innerHTML = "";
@@ -16,6 +14,7 @@ async function renderizarCursos() {
         }
 
         cursos.forEach((c) => {
+            // Usamos las clases exactas de su archivo matricula-estilo.css
             contenedor.innerHTML += `
                 <div class="curso-card-mfc" onclick="abrirFormularioMatricula('${c.id}', '${c.nombre}')">
                     <div class="curso-numero-wrapper">
