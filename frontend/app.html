@@ -1,682 +1,115 @@
 <!DOCTYPE html>
-
 <html lang="es">
-
 <head>
-
   <meta charset="UTF-8" />
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <title>Sistema Colegio Miguel Febres Cordero - Admin</title>
-
   <link rel="stylesheet" href="./assets/app.css" />
   <link rel="stylesheet" href="./assets/diseno-matricula/matricula-estilo.css">
-
 </head>
-
 <body>
 
-
-
-  <!-- Topbar móvil -->
-
   <header class="topbar">
-
     <button class="icon-btn" id="btnToggleSidebar" aria-label="Abrir menú">☰</button>
-
     <div class="topbar-title">
-
       <span class="brand-mini">MFC</span>
-
       <span>Panel Administrativo</span>
-
     </div>
-
     <div class="topbar-right">
-
       <span class="pill" id="pillRole">ROL</span>
-
       <button class="btn-outline" id="btnLogoutTop">Salir</button>
-
     </div>
-
   </header>
 
-
-
   <div class="layout">
-
-    <!-- Sidebar -->
-
     <aside class="sidebar" id="sidebar">
-
       <div class="brand">
-
         <div class="brand-logo">
-
-          <!-- Cambia el archivo por tu logo real -->
-
           <img src="./assets/logo-mfc.png" alt="Logo MFC" onerror="this.style.display='none'">
-
           <div class="brand-fallback">MFC</div>
-
         </div>
-
         <div class="brand-text">
-
           <div class="brand-title">Sistema Colegio</div>
-
           <div class="brand-subtitle">Miguel Febres Cordero</div>
-
         </div>
-
       </div>
-
-
 
       <nav class="menu">
-
-        <button class="menu-item active" data-view="dashboard">
-
-          <span class="mi-ico">🏠</span><span>Inicio</span>
-
-        </button>
-
-
-
-        <button class="menu-item" data-view="matriculas">
-
-          <span class="mi-ico">🧾</span><span>Matrículas</span>
-
-        </button>
-
-
-
-        <button class="menu-item" data-view="pagos">
-
-          <span class="mi-ico">💳</span><span>Pagos</span>
-
-        </button>
-
-
-
-        <button class="menu-item" data-view="usuarios">
-
-          <span class="mi-ico">👤</span><span>Usuarios</span>
-
-        </button>
-
-
-
+        <button class="menu-item active" data-view="dashboard">🏠<span>Inicio</span></button>
+        <button class="menu-item" data-view="matriculas">🧾<span>Matrículas</span></button>
+        <button class="menu-item" data-view="pagos">💳<span>Pagos</span></button>
+        <button class="menu-item" data-view="usuarios">👤<span>Usuarios</span></button>
         <div class="menu-sep"></div>
-
-
-
-        <button class="menu-item danger" id="btnLogoutSide">
-
-          <span class="mi-ico">🚪</span><span>Cerrar Sesión</span>
-
-        </button>
-
+        <button class="menu-item danger" id="btnLogoutSide">🚪<span>Cerrar Sesión</span></button>
       </nav>
-
-
-
       <div class="sidebar-footer">
-
         <small>© <span id="year"></span> Sistema Educativo MFC</small>
-
       </div>
-
     </aside>
 
-
-
-    <!-- Contenido -->
-
     <main class="content">
-
       <div class="content-header">
-
         <div>
-
           <h1 id="pageTitle">Dashboard</h1>
-
           <p class="muted" id="pageSubtitle">Resumen general del sistema</p>
-
         </div>
-
-
-
         <div class="userbox">
-
           <div class="avatar" id="avatar">A</div>
-
           <div>
-
             <div class="user-name" id="userName">Admin</div>
-
             <div class="user-sub muted" id="userCedula">Cédula: -</div>
-
           </div>
-
         </div>
-
       </div>
-
-
-
-      <!-- ALERTA -->
 
       <div class="alert" id="alert" hidden></div>
 
-
-
-      <!-- VISTAS -->
-
       <section class="view" id="view-dashboard">
-
         <div class="grid-cards">
-
           <div class="card kpi">
-
             <div class="kpi-title">Estudiantes Matriculados</div>
-
             <div class="kpi-value" id="kpiMatriculados">0</div>
-
-            <div class="kpi-foot muted">Periodo activo</div>
-
           </div>
-
-
-
-          <div class="card kpi">
-
-            <div class="kpi-title">Total Pagos Realizados</div>
-
-            <div class="kpi-value" id="kpiTotalPagos">$0.00</div>
-
-            <div class="kpi-foot muted">Periodo activo</div>
-
-          </div>
-
-
-
-          <div class="card kpi">
-
-            <div class="kpi-title">Por Matricular</div>
-
-            <div class="kpi-value" id="kpiPorMatricular">0</div>
-
-            <div class="kpi-foot muted">Pendientes</div>
-
-          </div>
-
-
-
           <div class="card kpi danger">
-
             <div class="kpi-title">Pagos Pendientes</div>
-
             <div class="kpi-value" id="kpiPendientes">0</div>
-
-            <div class="kpi-foot muted">Al día / No al día</div>
-
           </div>
-
         </div>
-
-
-
-        <div class="grid-2">
-
-          <div class="card">
-
-            <div class="card-head">
-
-              <h3>Últimas Matrículas</h3>
-
-              <button class="btn-soft" data-view="matriculas">Ver todas</button>
-
-            </div>
-
-            <div class="table-wrap">
-
-              <table class="table" id="tblUltMatriculas">
-
-                <thead>
-
-                  <tr>
-
-                    <th>Código</th>
-
-                    <th>Estudiante</th>
-
-                    <th>Curso</th>
-
-                    <th>Fecha</th>
-
-                  </tr>
-
-                </thead>
-
-                <tbody>
-
-                  <tr><td colspan="4" class="muted">Sin datos aún (conectaremos API luego)</td></tr>
-
-                </tbody>
-
-              </table>
-
-            </div>
-
-          </div>
-
-
-
-          <div class="card">
-
-            <div class="card-head">
-
-              <h3>Pagos Recientes</h3>
-
-              <button class="btn-soft" data-view="pagos">Ver todos</button>
-
-            </div>
-
-            <div class="table-wrap">
-
-              <table class="table" id="tblPagosRecientes">
-
-                <thead>
-
-                  <tr>
-
-                    <th>Estudiante</th>
-
-                    <th>Mes</th>
-
-                    <th>Valor</th>
-
-                    <th>Estado</th>
-
-                  </tr>
-
-                </thead>
-
-                <tbody>
-
-                  <tr><td colspan="4" class="muted">Sin datos aún (conectaremos API luego)</td></tr>
-
-                </tbody>
-
-              </table>
-
-            </div>
-
-          </div>
-
-        </div>
-
-
-
-        <div class="card">
-
-          <div class="card-head">
-
-            <h3>Accesos Rápidos</h3>
-
-          </div>
-
-
-
-          <div class="quick">
-
-            <button class="quick-btn" data-view="usuarios">
-
-              <span class="qb-ico">➕</span>
-
-              <div>
-
-                <div class="qb-title">Crear Usuario</div>
-
-                <div class="muted qb-sub">Admins / Profesores</div>
-
-              </div>
-
-            </button>
-
-
-
-            <button class="quick-btn" data-view="matriculas">
-
-              <span class="qb-ico">🧾</span>
-
-              <div>
-
-                <div class="qb-title">Nueva Matrícula</div>
-
-                <div class="muted qb-sub">Registrar estudiante</div>
-
-              </div>
-
-            </button>
-
-
-
-            <button class="quick-btn" data-view="pagos">
-
-              <span class="qb-ico">💳</span>
-
-              <div>
-
-                <div class="qb-title">Registrar Pago</div>
-
-                <div class="muted qb-sub">Pensión / Abono</div>
-
-              </div>
-
-            </button>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-
-      <!-- Matriculas -->
+        </section>
 
       <section class="view" id="view-matriculas" hidden>
-
         <div class="card">
-
           <div class="card-head">
-
-            <h3>Matrículas</h3>
-
-            <button class="btn" id="btnDemoMatriculas">Cargar demo</button>
-
+            <h3>Matrícula por Cursos</h3>
           </div>
-
-          <p class="muted">Aquí conectaremos luego: estudiantes + curso + periodo + estado.</p>
-
-
-
-          <div class="table-wrap">
-
-            <table class="table" id="tblMatriculas">
-
-              <thead>
-
-                <tr>
-
-                  <th>ID</th>
-
-                  <th>Estudiante</th>
-
-                  <th>Curso</th>
-
-                  <th>Estado</th>
-
-                </tr>
-
-              </thead>
-
-              <tbody>
-
-                <tr><td colspan="4" class="muted">Sin datos aún</td></tr>
-
-              </tbody>
-
-            </table>
-
-          </div>
-
+          <p class="muted">Seleccione un curso para ver los alumnos o registrar uno nuevo.</p>
+          
+          <div class="grid-cursos-mfc"></div>
         </div>
-
       </section>
-
-
-
-      <!-- Pagos -->
 
       <section class="view" id="view-pagos" hidden>
-
         <div class="card">
-
-          <div class="card-head">
-
-            <h3>Pagos</h3>
-
-            <button class="btn" id="btnDemoPagos">Cargar demo</button>
-
-          </div>
-
-          <p class="muted">
-
-            Aquí registraremos pagos/abonos. El botón “Crear factura SRI” quedará desactivado por ahora.
-
-          </p>
-
-
-
+          <div class="card-head"><h3>Pagos</h3></div>
           <div class="table-wrap">
-
             <table class="table" id="tblPagos">
-
-              <thead>
-
-                <tr>
-
-                  <th>ID</th>
-
-                  <th>Estudiante</th>
-
-                  <th>Concepto</th>
-
-                  <th>Mes</th>
-
-                  <th>Valor</th>
-
-                  <th>Estado</th>
-
-                  <th>Factura SRI</th>
-
-                </tr>
-
-              </thead>
-
-              <tbody>
-
-                <tr><td colspan="7" class="muted">Sin datos aún</td></tr>
-
-              </tbody>
-
+              <thead><tr><th>ID</th><th>Estudiante</th><th>Valor</th><th>Estado</th></tr></thead>
+              <tbody><tr><td colspan="4" class="muted">Cargando datos...</td></tr></tbody>
             </table>
-
           </div>
-
         </div>
-
       </section>
-
-
-
-      <!-- Usuarios -->
 
       <section class="view" id="view-usuarios" hidden>
-
-        <div class="grid-2">
-
-          <div class="card">
-
-            <div class="card-head">
-
-              <h3>Crear Usuario</h3>
-
-            </div>
-
-
-
-            <form id="formCrearUsuario" class="form">
-
-              <div class="form-row">
-
-                <div class="form-group">
-
-                  <label>Nombres</label>
-
-                  <input type="text" name="nombres" placeholder="Ej: Juan" required />
-
-                </div>
-
-                <div class="form-group">
-
-                  <label>Apellidos</label>
-
-                  <input type="text" name="apellidos" placeholder="Ej: Pérez" required />
-
-                </div>
-
-              </div>
-
-
-
-              <div class="form-row">
-
-                <div class="form-group">
-
-                  <label>Cédula</label>
-
-                  <input type="text" name="cedula" placeholder="10 dígitos" maxlength="10" required />
-
-                </div>
-
-                <div class="form-group">
-
-                  <label>Rol</label>
-
-                  <select name="rol">
-
-                    <option value="PROFESOR">PROFESOR</option>
-
-                    <option value="ADMIN">ADMIN</option>
-
-                  </select>
-
-                </div>
-
-              </div>
-
-
-
-              <div class="form-row">
-
-                <div class="form-group">
-
-                  <label>Contraseña</label>
-
-                  <div class="pass-wrap">
-
-                    <input type="password" name="password" placeholder="******" required />
-
-                    <button type="button" class="pass-toggle" data-toggle-pass>👁</button>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-
-
-              <button class="btn" type="submit">Crear usuario</button>
-
-              <p class="muted small">Este endpoint requiere token ADMIN (Bearer).</p>
-
-            </form>
-
-          </div>
-
-
-
-          <div class="card">
-
-            <div class="card-head">
-
-              <h3>Lista de Usuarios</h3>
-
-              <button class="btn-soft" id="btnCargarUsuarios">Actualizar</button>
-
-            </div>
-
-
-
-            <div class="table-wrap">
-
-              <table class="table" id="tblUsuarios">
-
-                <thead>
-
-                  <tr>
-
-                    <th>ID</th>
-
-                    <th>Nombre</th>
-
-                    <th>Cédula</th>
-
-                    <th>Rol</th>
-
-                    <th>Estado</th>
-
-                  </tr>
-
-                </thead>
-
-                <tbody>
-
-                  <tr><td colspan="5" class="muted">Clic en “Actualizar”</td></tr>
-
-                </tbody>
-
-              </table>
-
-            </div>
-
-
-
-            <p class="muted small">
-
-              Conecta con: <code>GET /admin/usuarios</code>
-
-            </p>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
+        </section>
 
       <footer class="footer">
-
         <small>Desarrollado por Erick Abad Monserrate — Sistema Educativo MFC</small>
-
       </footer>
-
     </main>
-
   </div>
 
-
-
   <script src="./assets/app.js"></script>
-
+  <script src="./assets/js/view-cursos.js"></script>
 </body>
-
 </html>
