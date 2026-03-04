@@ -128,5 +128,23 @@ router.put("/usuarios/:id/estado", authRequired, onlyAdmin, async (req, res) => 
     return res.status(500).json({ error: "Error actualizando estado" });
   }
 });
+// RUTA DE PRUEBA RÁPIDA (Sin protección)
+router.get("/test-db", async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT COUNT(*) as conteo FROM cursos");
+    return res.json({ 
+      success: true, 
+      mensaje: "Conexión a Railway OK", 
+      total_cursos: rows[0].conteo 
+    });
+  } catch (err) {
+    console.error("DETALLE DEL ERROR DE BD:", err);
+    return res.status(500).json({ 
+      success: false, 
+      error: err.message,
+      codigo: err.code 
+    });
+  }
+});
 
 module.exports = router;
