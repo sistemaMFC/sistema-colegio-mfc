@@ -9,6 +9,7 @@ require("dotenv").config();
 // IMPORTACIÓN DE RUTAS
 const authRoutes = require("./routes/auth.routes");
 const adminRoutes = require("./routes/admin.routes");
+const studentRoutes = require("./routes/students.routes"); // <--- NUEVA RUTA
 
 const app = express();
 
@@ -25,13 +26,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/auth", authRoutes); 
 
 // Rutas de Administración (Usuarios y Cursos)
-// IMPORTANTE: Se añade el prefijo /api/admin para que coincida con el frontend
 app.use("/api/admin", adminRoutes);
+
+// Rutas de Estudiantes y Matrículas (NUEVO)
+app.use("/api/students", studentRoutes); // <--- REGISTRADA AQUÍ
 
 /* =========================
     ARCHIVOS ESTÁTICOS
    ========================= */
-// Servir el frontend desde la carpeta pública si es necesario
+// Servir el frontend desde la carpeta pública
 app.use(express.static(path.join(__dirname, "../../frontend")));
 
 /* =========================
@@ -49,6 +52,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
   console.log(`✅ Rutas de administración cargadas en /api/admin`);
+  console.log(`✅ Rutas de estudiantes cargadas en /api/students`);
 });
 
 module.exports = app;
