@@ -1,12 +1,15 @@
 /* ========================================================
     LÓGICA DE VISUALIZACIÓN DE CURSOS - COLEGIO MFC
-    ACTUALIZACIÓN: INTEGRACIÓN CON FORMULARIO DE MATRÍCULA
+    ACTUALIZACIÓN: INTEGRACIÓN TOTAL CON BASE DE DATOS
    ======================================================== */
 
 // Variables globales para el contexto de la matrícula
 let cursoActualId = null;
 let cursoActualNombre = "";
 
+/**
+ * Renderiza las tarjetas de los cursos con sus estadísticas
+ */
 async function renderizarCursos() {
     const contenedor = document.querySelector('.grid-cursos-mfc');
     if(!contenedor) return;
@@ -23,7 +26,6 @@ async function renderizarCursos() {
         }
 
         cursos.forEach((c) => {
-            // Cada tarjeta ahora llama a abrirSelectorMatricula
             contenedor.innerHTML += `
                 <div class="curso-card-mfc" onclick="abrirSelectorMatricula('${c.id}', '${c.nombre}')">
                     <div class="curso-numero-wrapper">
@@ -44,10 +46,61 @@ async function renderizarCursos() {
 }
 
 /* ========================================================
-    FUNCIONES DE LOS MODALES (SELECTOR Y FORMULARIO)
+    GESTIÓN DE ENVÍO DE DATOS (EL JUEGO)
    ======================================================== */
 
-// 1. Abre el selector de "Nuevo" o "Antiguo"
+/**
+ * Captura los datos del formulario y los envía al Backend
+ */
+async function procesarMatriculaNueva(e) {
+    e.preventDefault(); // Evitamos que la página se recargue
+
+    const form = e.target;
+    const formData = new FormData(form);
+    
+    // Construimos el objeto con los nombres exactos que espera el Backend
+    const datos = {
+        cedula_est: formData.get('cedula_est'),
+        nombres_est: formData.get('nombres_est'),
+        apellidos_est: formData.get('apellidos_est'),
+        fecha_nac: formData.get('fecha_nac'),
+        genero: formData.get('genero'),
+        nombre_rep: formData.get('nombre_rep'),
+        cedula_rep: formData.get('cedula_rep'),
+        parentesco_rep: formData.get('parentesco_rep'),
+        celular_rep: formData.get('celular_rep'),
+        sector: formData.get('sector'),
+        direccion: formData.get('direccion'),
+        curso_id: cursoActualId // El ID del curso seleccionado
+    };
+
+    try {
+        // Mostramos un mensaje de carga básico en consola
+        console.log("Intentando matricular en curso ID:", cursoActualId);
+
+        // Llamada a la API (tu función api() ya pone el Token)
+        const res = await api('/api/students', {
+            method: 'POST',
+            body: JSON.stringify(datos)
+        });
+
+        // SI HAY ÉXITO
+        alert("✨ ¡Excelente! " + res.message);
+        
+        cerrarFormularioMatricula(); // Cerramos el modal
+        renderizarCursos();          // Actualizamos los números de las tarjetas
+        
+    } catch (err) {
+        // SI HAY ERROR (Cédula duplicada, campos vacíos, etc)
+        console.error("Error en la matrícula:", err);
+        alert("❌ Error: " + (err.message || "No se pudo completar el registro"));
+    }
+}
+
+/* ========================================================
+    FUNCIONES DE LOS MODALES
+   ======================================================== */
+
 function abrirSelectorMatricula(id, nombre) {
     cursoActualId = id;
     cursoActualNombre = nombre;
@@ -64,15 +117,12 @@ function cerrarSelector() {
     if (modal) modal.style.display = 'none';
 }
 
-// 2. Abre el Gran Formulario de Matrícula Nueva
 function abrirFormularioMatriculaNueva() {
-    cerrarSelector(); // Cerramos el selector pequeño primero
+    cerrarSelector();
     
-    // Actualizamos el título del curso en el formulario grande
     const txtCurso = document.getElementById('txtCursoSeleccionado');
     if (txtCurso) txtCurso.textContent = `Curso: ${cursoActualNombre}`;
     
-    // Mostramos el formulario de dos columnas
     const modalForm = document.getElementById('modalFormMatricula');
     if (modalForm) modalForm.style.display = 'grid';
 }
@@ -81,38 +131,39 @@ function cerrarFormularioMatricula() {
     const modalForm = document.getElementById('modalFormMatricula');
     if (modalForm) {
         modalForm.style.display = 'none';
-        document.getElementById('formNuevaMatricula')?.reset(); // Limpiamos campos al cerrar
+        document.getElementById('formNuevaMatricula')?.reset();
     }
 }
 
 /* ========================================================
-    EVENTOS DE BOTONES Y CLICK EXTERNO
+    INICIALIZACIÓN DE EVENTOS
    ======================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
     
-    // Configurar botón "Matrícula Nueva" para que abra el formulario real
-    document.getElementById('btnMatriculaNueva')?.addEventListener('click', () => {
-        abrirFormularioMatriculaNueva();
-    });
+    // 1. Escuchar el envío del formulario
+    const formMatricula = document.getElementById('formNuevaMatricula');
+    if (formMatricula) {
+        formMatricula.addEventListener('submit', procesarMatriculaNueva);
+    }
 
-    // Opción 2: Pre-matriculado (Pendiente de lógica de búsqueda)
+    // 2. Botón para abrir el formulario desde el selector
+    document.getElementById('btnMatriculaNueva')?.addEventListener('click', abrirFormularioMatriculaNueva);
+
+    // 3. Botón para pre-matriculados (pendiente)
     document.getElementById('btnMatriculaAntigua')?.addEventListener('click', () => {
         cerrarSelector();
         alert("🔍 Buscador de Pre-Matriculados en desarrollo...");
     });
 
-    // Cerrar cualquier modal si se hace clic fuera del contenido
+    // 4. Cerrar al hacer clic fuera
     window.addEventListener('click', (e) => {
-        const modalSel = document.getElementById('modalSelectorMatricula');
-        const modalForm = document.getElementById('modalFormMatricula');
-        
-        if (e.target === modalSel) cerrarSelector();
-        if (e.target === modalForm) cerrarFormularioMatricula();
+        if (e.target.id === 'modalSelectorMatricula') cerrarSelector();
+        if (e.target.id === 'modalFormMatricula') cerrarFormularioMatricula();
     });
 });
 
-// Exportar funciones para que sean accesibles desde el HTML
+// Exponer funciones globales
 window.renderizarCursos = renderizarCursos;
 window.cerrarSelector = cerrarSelector;
 window.cerrarFormularioMatricula = cerrarFormularioMatricula;
