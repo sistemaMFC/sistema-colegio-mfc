@@ -1,6 +1,6 @@
 /* ========================================================
-   SISTEMA COLEGIO MIGUEL FEBRES CORDERO - APP.JS (ACTUALIZADO)
-   ======================================================== */
+    SISTEMA COLEGIO MIGUEL FEBRES CORDERO - APP.JS (ACTUALIZADO CON THEME TOGGLE)
+    ======================================================== */
 
 const API_BASE = "https://sistema-colegio-mfc.onrender.com";
 
@@ -36,6 +36,40 @@ function parseJWT(token) {
 }
 
 /* =========================
+    LÓGICA DE TEMAS (DARK/LIGHT)
+========================= */
+
+function initTheme() {
+  const btnTheme = $("#btnThemeToggle");
+  if (!btnTheme) return;
+
+  // 1. Revisar si ya había un tema guardado
+  const savedTheme = localStorage.getItem("mfc_theme") || "dark";
+  
+  if (savedTheme === "light") {
+    document.body.classList.add("light-mode");
+    btnTheme.textContent = "☀️";
+  } else {
+    btnTheme.textContent = "🌑";
+  }
+
+  // 2. Evento de clic para cambiar tema
+  btnTheme.addEventListener("click", () => {
+    const isLight = document.body.classList.toggle("light-mode");
+    const newTheme = isLight ? "light" : "dark";
+    
+    // Guardar preferencia
+    localStorage.setItem("mfc_theme", newTheme);
+    
+    // Cambiar icono
+    btnTheme.textContent = isLight ? "☀️" : "🌑";
+    
+    // Opcional: Alerta sutil
+    console.log(`Modo ${newTheme} activado`);
+  });
+}
+
+/* =========================
     COMUNICACIÓN CON API
 ========================= */
 
@@ -48,7 +82,6 @@ async function api(path, options = {}) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  // Se añade el API_BASE a la ruta
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   const data = await res.json().catch(() => ({}));
 
@@ -104,12 +137,10 @@ function fillUserUI() {
 }
 
 function setActiveView(view) {
-  // Actualizar botones del menú
   $$(".menu-item").forEach(b => b.classList.remove("active"));
   const btn = document.querySelector(`.menu-item[data-view="${view}"]`);
   if (btn) btn.classList.add("active");
 
-  // Ocultar todas las vistas y mostrar la seleccionada
   $$(".view").forEach(v => v.hidden = true);
   const section = $(`#view-${view}`);
   if (section) section.hidden = false;
@@ -125,12 +156,9 @@ function setActiveView(view) {
   if($("#pageTitle")) $("#pageTitle").textContent = t;
   if($("#pageSubtitle")) $("#pageSubtitle").textContent = s;
 
-  // CARGA AUTOMÁTICA: Si entra a matrículas, llama a la función de las tarjetas
   if (view === 'matriculas') {
     if (typeof renderizarCursos === 'function') {
       renderizarCursos(); 
-    } else {
-      console.warn("La función renderizarCursos no está disponible todavía.");
     }
   }
 }
@@ -141,7 +169,7 @@ function setActiveView(view) {
 
 async function cargarUsuarios() {
   try {
-    const rows = await api("/admin/usuarios", { method: "GET" });
+    const rows = await api("/api/admin/usuarios", { method: "GET" });
     const tbody = $("#tblUsuarios tbody");
     if(!tbody) return;
     tbody.innerHTML = "";
@@ -179,7 +207,7 @@ async function crearUsuario(form) {
       rol: form.rol.value
     };
 
-    await api("/admin/usuarios", {
+    await api("/api/admin/usuarios", {
       method: "POST",
       body: JSON.stringify(payload)
     });
@@ -199,12 +227,10 @@ async function crearUsuario(form) {
 function setupInteractions() {
   if($("#year")) $("#year").textContent = new Date().getFullYear();
 
-  // Sidebar móvil
   $("#btnToggleSidebar")?.addEventListener("click", () => {
     $("#sidebar").classList.toggle("open");
   });
 
-  // Navegación principal
   $$(".menu-item[data-view]").forEach(btn => {
     btn.addEventListener("click", () => {
       setActiveView(btn.dataset.view);
@@ -212,18 +238,15 @@ function setupInteractions() {
     });
   });
 
-  // Botones de acceso rápido
   $$(".quick-btn[data-view]").forEach(btn => {
     btn.addEventListener("click", () => {
       setActiveView(btn.dataset.view);
     });
   });
 
-  // Logout
   $("#btnLogoutSide")?.addEventListener("click", logout);
   $("#btnLogoutTop")?.addEventListener("click", logout);
 
-  // Toggle Password
   $$("[data-toggle-pass]").forEach(btn => {
     btn.addEventListener("click", () => {
       const input = btn.parentElement.querySelector("input");
@@ -234,7 +257,6 @@ function setupInteractions() {
     });
   });
 
-  // Formulario Usuarios
   const formUser = $("#formCrearUsuario");
   if (formUser) {
     formUser.addEventListener("submit", (e) => {
@@ -245,7 +267,6 @@ function setupInteractions() {
 
   $("#btnCargarUsuarios")?.addEventListener("click", cargarUsuarios);
 
-  // El botón de demo ahora fuerza una recarga real
   $("#btnDemoMatriculas")?.addEventListener("click", () => {
     if (typeof renderizarCursos === 'function') {
         renderizarCursos();
@@ -256,6 +277,7 @@ function setupInteractions() {
 
 (function init() {
   fillUserUI();
+  initTheme(); // <--- NUEVO: Inicia la lógica de Dark/Light
   setupInteractions();
   setActiveView("dashboard");
 })();
