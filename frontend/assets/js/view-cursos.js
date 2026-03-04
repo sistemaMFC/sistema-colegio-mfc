@@ -1,10 +1,11 @@
 /* ========================================================
     LÓGICA DE VISUALIZACIÓN DE CURSOS - COLEGIO MFC
-    ACTUALIZACIÓN: SELECTOR DUAL DE MATRÍCULA
+    ACTUALIZACIÓN: INTEGRACIÓN CON FORMULARIO DE MATRÍCULA
    ======================================================== */
 
-// Variable para guardar el ID del curso donde se hizo clic
+// Variables globales para el contexto de la matrícula
 let cursoActualId = null;
+let cursoActualNombre = "";
 
 async function renderizarCursos() {
     const contenedor = document.querySelector('.grid-cursos-mfc');
@@ -43,21 +44,19 @@ async function renderizarCursos() {
 }
 
 /* ========================================================
-    FUNCIONES DEL SELECTOR (GLORIA)
+    FUNCIONES DE LOS MODALES (SELECTOR Y FORMULARIO)
    ======================================================== */
 
+// 1. Abre el selector de "Nuevo" o "Antiguo"
 function abrirSelectorMatricula(id, nombre) {
-    cursoActualId = id; // Guardamos el ID para usarlo después
+    cursoActualId = id;
+    cursoActualNombre = nombre;
     
-    // 1. Cambiamos el título del modal con el nombre del curso
     const titulo = document.getElementById('tituloCursoSeleccionado');
     if (titulo) titulo.textContent = `Curso: ${nombre}`;
 
-    // 2. Mostramos el modal de cristal
     const modal = document.getElementById('modalSelectorMatricula');
-    if (modal) {
-        modal.style.display = 'grid'; // Usamos grid para centrarlo
-    }
+    if (modal) modal.style.display = 'grid';
 }
 
 function cerrarSelector() {
@@ -65,35 +64,55 @@ function cerrarSelector() {
     if (modal) modal.style.display = 'none';
 }
 
+// 2. Abre el Gran Formulario de Matrícula Nueva
+function abrirFormularioMatriculaNueva() {
+    cerrarSelector(); // Cerramos el selector pequeño primero
+    
+    // Actualizamos el título del curso en el formulario grande
+    const txtCurso = document.getElementById('txtCursoSeleccionado');
+    if (txtCurso) txtCurso.textContent = `Curso: ${cursoActualNombre}`;
+    
+    // Mostramos el formulario de dos columnas
+    const modalForm = document.getElementById('modalFormMatricula');
+    if (modalForm) modalForm.style.display = 'grid';
+}
+
+function cerrarFormularioMatricula() {
+    const modalForm = document.getElementById('modalFormMatricula');
+    if (modalForm) {
+        modalForm.style.display = 'none';
+        document.getElementById('formNuevaMatricula')?.reset(); // Limpiamos campos al cerrar
+    }
+}
+
 /* ========================================================
-    EVENTOS DE LAS OPCIONES DEL SELECTOR
+    EVENTOS DE BOTONES Y CLICK EXTERNO
    ======================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
     
-    // Opción 1: Matrícula Nueva
+    // Configurar botón "Matrícula Nueva" para que abra el formulario real
     document.getElementById('btnMatriculaNueva')?.addEventListener('click', () => {
-        cerrarSelector();
-        console.log("Iniciando registro de nuevo alumno para curso:", cursoActualId);
-        alert("✨ Abriendo formulario de Matrícula Nueva para " + document.getElementById('tituloCursoSeleccionado').textContent);
-        // Aquí llamaremos a la función del formulario de registro
+        abrirFormularioMatriculaNueva();
     });
 
-    // Opción 2: Pre-matriculado
+    // Opción 2: Pre-matriculado (Pendiente de lógica de búsqueda)
     document.getElementById('btnMatriculaAntigua')?.addEventListener('click', () => {
         cerrarSelector();
-        console.log("Iniciando búsqueda de pre-matriculado para curso:", cursoActualId);
-        alert("🔍 Abriendo buscador de Pre-Matriculados para " + document.getElementById('tituloCursoSeleccionado').textContent);
-        // Aquí llamaremos a la lógica de búsqueda de alumnos
+        alert("🔍 Buscador de Pre-Matriculados en desarrollo...");
     });
 
-    // Cerrar si hace clic fuera del cristal
+    // Cerrar cualquier modal si se hace clic fuera del contenido
     window.addEventListener('click', (e) => {
-        const modal = document.getElementById('modalSelectorMatricula');
-        if (e.target === modal) cerrarSelector();
+        const modalSel = document.getElementById('modalSelectorMatricula');
+        const modalForm = document.getElementById('modalFormMatricula');
+        
+        if (e.target === modalSel) cerrarSelector();
+        if (e.target === modalForm) cerrarFormularioMatricula();
     });
 });
 
-// Exportar función al objeto global
+// Exportar funciones para que sean accesibles desde el HTML
 window.renderizarCursos = renderizarCursos;
 window.cerrarSelector = cerrarSelector;
+window.cerrarFormularioMatricula = cerrarFormularioMatricula;
