@@ -19,7 +19,7 @@
 body.light-mode {
     --card-bg: rgba(255, 255, 255, 0.8);
     --borde-cristal: rgba(0, 0, 0, 0.08);
-    --texto-card: #1e293b; /* Azul pizarra oscuro para legibilidad */
+    --texto-card: #1e293b; 
     --texto-detalle: #64748b;
     --sombra-neon: 0 10px 30px rgba(16, 185, 129, 0.15);
 }
@@ -56,7 +56,6 @@ body.light-mode {
     box-shadow: var(--sombra-neon);
 }
 
-/* EL CÍRCULO CON EL NÚMERO (Sigue siendo neón en ambos modos) */
 .curso-numero-wrapper {
     width: 60px;
     height: 60px;
@@ -88,7 +87,7 @@ body.light-mode {
 }
 
 /* ========================================================
-    MODAL DE MATRÍCULA RESPONSIVO (DYNAMICS)
+    MODALES (GENERAL Y CONTENIDO)
    ======================================================== */
 
 .modal-mfc {
@@ -100,7 +99,7 @@ body.light-mode {
     display: none; 
     place-items: center;
     z-index: 2000;
-    padding: 15px;
+    padding: 20px;
 }
 
 .modal-content-mfc {
@@ -108,13 +107,22 @@ body.light-mode {
     border: 1px solid var(--stroke);
     border-radius: 25px;
     padding: 30px;
-    width: 100%;
-    max-width: 500px;
+    width: 95%;
+    max-width: 800px; /* Ancho aumentado para las dos columnas */
+    max-height: 90vh; /* Para que no se salga de la pantalla */
+    overflow-y: auto; /* ACTIVA EL SCROLL */
     box-shadow: var(--shadow);
     color: var(--txt);
+    position: relative;
+    animation: modalFadeIn 0.3s ease-out;
 }
 
-/* DISEÑO DEL SELECTOR DE OPCIONES (NUEVO) */
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* DISEÑO DEL SELECTOR DE OPCIONES */
 .modal-header-mfc {
     text-align: center;
     margin-bottom: 25px;
@@ -161,60 +169,102 @@ body.light-mode {
     box-shadow: 0 10px 30px rgba(46, 123, 255, 0.15);
 }
 
-.opcion-ico-mfc {
-    font-size: 28px;
-    min-width: 50px;
-    height: 50px;
-    display: grid;
-    place-items: center;
-    background: rgba(255,255,255,0.05);
-    border-radius: 14px;
-}
+/* ========================================================
+    DISEÑO DEL FORMULARIO (Doble Columna & Inputs)
+   ======================================================== */
 
-.opcion-text-mfc {
+.form-mfc {
     display: flex;
     flex-direction: column;
+    gap: 20px;
 }
 
-.opcion-title {
+.form-grid-mfc {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* DOS COLUMNAS */
+    gap: 20px;
+}
+
+.form-section {
+    border: 1px solid var(--stroke);
+    border-radius: 18px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.02);
+    margin: 0;
+}
+
+.form-section legend {
+    padding: 0 10px;
+    font-size: 13px;
     font-weight: 800;
-    font-size: 16px;
-    display: block;
+    color: var(--green);
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-.opcion-sub {
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.form-group label {
+    display: block;
     font-size: 12px;
     color: var(--muted);
+    margin-bottom: 6px;
+    margin-left: 4px;
 }
 
-.modal-footer-mfc {
-    display: flex;
-    justify-content: center;
+.form-group input, 
+.form-group select {
+    width: 100%;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--stroke);
+    border-radius: 12px;
+    color: var(--txt);
+    outline: none;
+    transition: all 0.3s ease;
 }
 
-/* MEDIA QUERIES PARA PANTALLAS PEQUEÑAS */
+.form-group input:focus {
+    border-color: var(--green);
+    background: rgba(38, 255, 122, 0.05);
+    box-shadow: 0 0 15px rgba(38, 255, 122, 0.1);
+}
+
+/* PERSONALIZACIÓN DE LA BARRA DE SCROLL NEÓN */
+.modal-content-mfc::-webkit-scrollbar {
+    width: 6px;
+}
+.modal-content-mfc::-webkit-scrollbar-thumb {
+    background: var(--green);
+    border-radius: 10px;
+}
+.modal-content-mfc::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* MEDIA QUERIES PARA RESPONSIVIDAD */
+@media (max-width: 800px) {
+    .form-grid-mfc {
+        grid-template-columns: 1fr; /* Pasa a una columna en tablets */
+    }
+}
+
 @media (max-width: 600px) {
     .grid-cursos-mfc {
         grid-template-columns: 1fr; 
         padding: 15px;
-        gap: 15px;
     }
 
-    .curso-card-mfc {
-        padding: 20px;
-        border-radius: 20px;
-    }
-
-    .curso-nombre-mfc {
-        font-size: 17px;
+    .form-row {
+        grid-template-columns: 1fr; /* Inputs uno sobre otro en celulares */
     }
 
     .modal-content-mfc {
         padding: 20px;
         border-radius: 20px;
-    }
-
-    .opcion-card-mfc {
-        padding: 15px;
     }
 }
