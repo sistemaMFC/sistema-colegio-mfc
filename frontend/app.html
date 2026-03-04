@@ -305,6 +305,37 @@
     </main>
   </div>
 
+  <div id="modalSelectorMatricula" class="modal-mfc">
+    <div class="modal-content-mfc">
+        <div class="modal-header-mfc">
+            <h2 id="tituloCursoSeleccionado">Curso: -</h2>
+            <p class="muted">Seleccione el tipo de trámite a realizar</p>
+        </div>
+        
+        <div class="selector-opciones-mfc">
+            <button class="opcion-card-mfc" id="btnMatriculaNueva">
+                <div class="opcion-ico-mfc">✨</div>
+                <div class="opcion-text-mfc">
+                    <span class="opcion-title">Matrícula Nueva</span>
+                    <span class="opcion-sub">Estudiante que ingresa por primera vez</span>
+                </div>
+            </button>
+
+            <button class="opcion-card-mfc accent" id="btnMatriculaAntigua">
+                <div class="opcion-ico-mfc">🔍</div>
+                <div class="opcion-text-mfc">
+                    <span class="opcion-title">Pre-Matriculados</span>
+                    <span class="opcion-sub">Alumnos de la institución / Promoción</span>
+                </div>
+            </button>
+        </div>
+
+        <div class="modal-footer-mfc">
+            <button class="btn-outline" onclick="cerrarSelector()">Cancelar</button>
+        </div>
+    </div>
+  </div>
+
   <script src="./assets/app.js"></script>
   <script src="./assets/js/view-cursos.js"></script>
 </body>
