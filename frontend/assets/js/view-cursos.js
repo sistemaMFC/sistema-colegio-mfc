@@ -1,23 +1,24 @@
 /* ========================================================
     LÓGICA DE VISUALIZACIÓN DE CURSOS - COLEGIO MFC
-    ACTUALIZACIÓN: INTEGRACIÓN TOTAL CON BASE DE DATOS
+    ACTUALIZACIÓN: SELECTOR BOOTSTRAP Y LISTADO OFICIAL
    ======================================================== */
 
 // Variables globales para el contexto de la matrícula
 let cursoActualId = null;
 let cursoActualNombre = "";
+let bsSelectorModal = null; // Instancia del modal de Bootstrap
 
 /**
  * Renderiza las tarjetas de los cursos con sus estadísticas
  */
 async function renderizarCursos() {
     const contenedor = document.querySelector('.grid-cursos-mfc');
-    if(!contenedor) return;
+    if (!contenedor) return;
 
     try {
-        const respuesta = await api('/api/admin/cursos/estadisticas'); 
+        const respuesta = await api('/api/admin/cursos/estadisticas');
         const cursos = Array.isArray(respuesta) ? respuesta : [];
-        
+
         contenedor.innerHTML = "";
 
         if (cursos.length === 0) {
@@ -33,7 +34,7 @@ async function renderizarCursos() {
                     </div>
                     <div class="curso-info-mfc">
                         <h3 class="curso-nombre-mfc">${c.nombre}</h3>
-                        <span class="curso-detalle-mfc">Click para matricular</span>
+                        <span class="curso-detalle-mfc">Click para gestionar</span>
                     </div>
                 </div>
             `;
@@ -46,19 +47,73 @@ async function renderizarCursos() {
 }
 
 /* ========================================================
-    GESTIÓN DE ENVÍO DE DATOS (EL JUEGO)
+    GESTIÓN DE PRE-MATRICULADOS (LISTADO OFICIAL)
    ======================================================== */
 
 /**
- * Captura los datos del formulario y los envía al Backend
+ * Carga y muestra los alumnos ya registrados en el curso seleccionado
  */
-async function procesarMatriculaNueva(e) {
-    e.preventDefault(); // Evitamos que la página se recargue
+async function listarPreMatriculados() {
+    // Cerramos el selector de Bootstrap
+    if (bsSelectorModal) bsSelectorModal.hide();
 
+    const contenedor = document.getElementById('contenedor-pre-matriculados');
+    const tbody = document.getElementById('listaAlumnosFiltrados');
+    const txtTitulo = document.getElementById('txtCursoLista');
+
+    if (!contenedor || !tbody) return;
+
+    // Mostrar contenedor y limpiar tabla
+    contenedor.style.display = 'block';
+    txtTitulo.textContent = `Listado Oficial: ${cursoActualNombre}`;
+    tbody.innerHTML = "<tr><td colspan='4' style='text-align:center;'>⏳ Cargando estudiantes...</td></tr>";
+
+    try {
+        const alumnos = await api('/api/students');
+        
+        // Filtramos solo los alumnos que pertenecen al curso actual
+        const filtrados = alumnos.filter(a => a.curso_id == cursoActualId);
+
+        tbody.innerHTML = "";
+
+        if (filtrados.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='4' class='muted' style='text-align:center;'>No hay alumnos registrados en este curso.</td></tr>";
+            return;
+        }
+
+        filtrados.forEach(est => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${est.cedula_est}</td>
+                    <td style="font-weight:bold; text-transform:uppercase;">${est.apellidos_est}, ${est.nombres_est}</td>
+                    <td>${cursoActualNombre}</td>
+                    <td><span class="pill badge info">${est.estado}</span></td>
+                </tr>
+            `;
+        });
+
+        // Scroll suave hasta la tabla para mejorar la experiencia
+        contenedor.scrollIntoView({ behavior: 'smooth' });
+
+    } catch (err) {
+        console.error("Error al listar:", err);
+        alert("❌ No se pudo cargar la lista de alumnos.");
+    }
+}
+
+function cerrarListaPre() {
+    document.getElementById('contenedor-pre-matriculados').style.display = 'none';
+}
+
+/* ========================================================
+    GESTIÓN DE ENVÍO DE DATOS (MATRÍCULA NUEVA)
+   ======================================================== */
+
+async function procesarMatriculaNueva(e) {
+    e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
     
-    // Construimos el objeto con los nombres exactos que espera el Backend
     const datos = {
         cedula_est: formData.get('cedula_est'),
         nombres_est: formData.get('nombres_est'),
@@ -67,32 +122,23 @@ async function procesarMatriculaNueva(e) {
         genero: formData.get('genero'),
         nombre_rep: formData.get('nombre_rep'),
         cedula_rep: formData.get('cedula_rep'),
-        parentesco_rep: formData.get('parentesco_rep'),
         celular_rep: formData.get('celular_rep'),
         sector: formData.get('sector'),
         direccion: formData.get('direccion'),
-        curso_id: cursoActualId // El ID del curso seleccionado
+        curso_id: cursoActualId
     };
 
     try {
-        // Mostramos un mensaje de carga básico en consola
-        console.log("Intentando matricular en curso ID:", cursoActualId);
-
-        // Llamada a la API (tu función api() ya pone el Token)
         const res = await api('/api/students', {
             method: 'POST',
             body: JSON.stringify(datos)
         });
 
-        // SI HAY ÉXITO
         alert("✨ ¡Excelente! " + res.message);
-        
-        cerrarFormularioMatricula(); // Cerramos el modal
-        renderizarCursos();          // Actualizamos los números de las tarjetas
+        cerrarFormularioMatricula();
+        renderizarCursos(); 
         
     } catch (err) {
-        // SI HAY ERROR (Cédula duplicada, campos vacíos, etc)
-        console.error("Error en la matrícula:", err);
         alert("❌ Error: " + (err.message || "No se pudo completar el registro"));
     }
 }
@@ -105,20 +151,21 @@ function abrirSelectorMatricula(id, nombre) {
     cursoActualId = id;
     cursoActualNombre = nombre;
     
+    // Actualizar título en el modal de Bootstrap
     const titulo = document.getElementById('tituloCursoSeleccionado');
     if (titulo) titulo.textContent = `Curso: ${nombre}`;
 
-    const modal = document.getElementById('modalSelectorMatricula');
-    if (modal) modal.style.display = 'grid';
-}
-
-function cerrarSelector() {
-    const modal = document.getElementById('modalSelectorMatricula');
-    if (modal) modal.style.display = 'none';
+    // Inicializar Modal de Bootstrap si no existe
+    if (!bsSelectorModal) {
+        const modalEl = document.getElementById('modalSelectorBootstrap');
+        bsSelectorModal = new bootstrap.Modal(modalEl);
+    }
+    
+    bsSelectorModal.show();
 }
 
 function abrirFormularioMatriculaNueva() {
-    cerrarSelector();
+    if (bsSelectorModal) bsSelectorModal.hide();
     
     const txtCurso = document.getElementById('txtCursoSeleccionado');
     if (txtCurso) txtCurso.textContent = `Curso: ${cursoActualNombre}`;
@@ -140,30 +187,25 @@ function cerrarFormularioMatricula() {
    ======================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // 1. Escuchar el envío del formulario
-    const formMatricula = document.getElementById('formNuevaMatricula');
-    if (formMatricula) {
-        formMatricula.addEventListener('submit', procesarMatriculaNueva);
-    }
+    renderizarCursos();
 
-    // 2. Botón para abrir el formulario desde el selector
+    // 1. Escuchar el envío del formulario
+    document.getElementById('formNuevaMatricula')?.addEventListener('submit', procesarMatriculaNueva);
+
+    // 2. Botón Matrícula Nueva (dentro del selector)
     document.getElementById('btnMatriculaNueva')?.addEventListener('click', abrirFormularioMatriculaNueva);
 
-    // 3. Botón para pre-matriculados (pendiente)
-    document.getElementById('btnMatriculaAntigua')?.addEventListener('click', () => {
-        cerrarSelector();
-        alert("🔍 Buscador de Pre-Matriculados en desarrollo...");
-    });
+    // 3. Botón Pre-Matriculados (dentro del selector)
+    document.getElementById('btnMatriculaAntigua')?.addEventListener('click', listarPreMatriculados);
 
-    // 4. Cerrar al hacer clic fuera
+    // 4. Cerrar modales MFC al hacer clic fuera (solo para el de formulario que no es de Bootstrap)
     window.addEventListener('click', (e) => {
-        if (e.target.id === 'modalSelectorMatricula') cerrarSelector();
         if (e.target.id === 'modalFormMatricula') cerrarFormularioMatricula();
     });
 });
 
-// Exponer funciones globales
+// Exponer funciones globales para los onclick del HTML
 window.renderizarCursos = renderizarCursos;
-window.cerrarSelector = cerrarSelector;
+window.abrirSelectorMatricula = abrirSelectorMatricula;
 window.cerrarFormularioMatricula = cerrarFormularioMatricula;
+window.cerrarListaPre = cerrarListaPre;
