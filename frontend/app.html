@@ -102,93 +102,66 @@
             <div class="kpi-foot muted">Al día / No al día</div>
           </div>
         </div>
-
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-head">
-              <h3>Últimas Matrículas</h3>
-              <button class="btn-soft" data-view="matriculas">Ver todas</button>
-            </div>
-            <div class="table-wrap">
-              <table class="table" id="tblUltMatriculas">
-                <thead>
-                  <tr>
-                    <th>Código</th>
-                    <th>Estudiante</th>
-                    <th>Curso</th>
-                    <th>Fecha</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td colspan="4" class="muted">Sin datos aún</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-head">
-              <h3>Pagos Recientes</h3>
-              <button class="btn-soft" data-view="pagos">Ver todos</button>
-            </div>
-            <div class="table-wrap">
-              <table class="table" id="tblPagosRecientes">
-                <thead>
-                  <tr>
-                    <th>Estudiante</th>
-                    <th>Mes</th>
-                    <th>Valor</th>
-                    <th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td colspan="4" class="muted">Sin datos aún</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
       </section>
 
       <section class="view" id="view-matriculas" hidden>
         <div class="card">
           <div class="card-head">
             <h3>Matrícula por Cursos</h3>
-            <button class="btn" id="btnDemoMatriculas">Cargar demo</button>
           </div>
           <p class="muted">Seleccione un curso para ver los alumnos o registrar uno nuevo.</p>
 
           <div class="grid-cursos-mfc"></div>
 
-          <div id="contenedor-pre-matriculados" style="display: none; margin-top: 30px;">
+          <div id="contenedor-pre-matriculados" style="display: none; margin-top: 30px; border-top: 2px solid #43e97b; padding-top: 20px;">
             <div class="card-head">
-               <h3 id="txtCursoLista">Listado Oficial</h3>
-               <button class="btn-soft" onclick="cerrarListaPre()">✖ Cerrar Lista</button>
+               <h3 id="txtCursoLista">Listado Oficial (Pre-Matriculados)</h3>
+               <button class="btn-soft" onclick="cerrarListaPre()">✖ Cerrar</button>
             </div>
-            <div class="table-wrap" style="margin-top: 20px;">
-              <table class="table" id="tblMatriculas">
+            <div class="table-wrap" style="margin-top: 15px;">
+              <table class="table">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Estudiante</th>
-                    <th>Curso</th>
+                    <th>Cédula</th>
+                    <th>Estudiante (Apellidos, Nombres)</th>
                     <th>Estado</th>
+                    <th>Acción</th>
                   </tr>
                 </thead>
                 <tbody id="listaAlumnosFiltrados">
-                  <tr><td colspan="4" class="muted">Use el buscador para filtrar alumnos</td></tr>
+                  <tr><td colspan="4" class="muted">Seleccione un curso para cargar los datos</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
+
+          <div id="contenedor-matriculados-actuales" style="display: none; margin-top: 30px; border-top: 2px solid #f1c40f; padding-top: 20px;">
+            <div class="card-head">
+               <h3 id="txtCursoMatriculados">Alumnos Matriculados en este Nivel</h3>
+               <button class="btn-soft" onclick="cerrarListaActual()">✖ Cerrar</button>
+            </div>
+            <div class="table-wrap" style="margin-top: 15px;">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Cédula</th>
+                    <th>Estudiante (Apellidos, Nombres)</th>
+                    <th>Representante</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="listaMatriculadosActuales">
+                  <tr><td colspan="4" class="muted">No hay matriculados en este curso todavía</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
       </section>
 
-      <section class="view" id="view-pagos" hidden>
-         </section>
-
-      <section class="view" id="view-usuarios" hidden>
-         </section>
+      <section class="view" id="view-pagos" hidden></section>
+      <section class="view" id="view-usuarios" hidden></section>
 
       <footer class="footer">
         <small>Desarrollado por Erick Abad Monserrate — Sistema Educativo MFC</small>
@@ -205,24 +178,32 @@
           </h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body p-4">
-          <p class="text-center opacity-75 mb-4">Seleccione el tipo de trámite a realizar</p>
-          <div class="d-grid gap-3">
-            <button class="btn btn-outline-success p-3 d-flex align-items-center text-start" id="btnMatriculaNueva" style="border-radius: 15px; border-width: 2px;">
-              <span class="fs-1 me-3">✨</span>
-              <div>
-                <strong class="d-block">Matrícula Nueva</strong>
-                <small class="opacity-50">Estudiante de primer ingreso</small>
-              </div>
-            </button>
-            <button class="btn btn-outline-info p-3 d-flex align-items-center text-start" id="btnMatriculaAntigua" style="border-radius: 15px; border-width: 2px;">
-              <span class="fs-1 me-3">🔍</span>
-              <div>
-                <strong class="d-block">Pre-Matriculados</strong>
-                <small class="opacity-50">Lista oficial / Promoción</small>
-              </div>
-            </button>
-          </div>
+        <div class="modal-body p-4 d-grid gap-3">
+          
+          <button class="btn btn-outline-success p-3 d-flex align-items-center text-start" id="btnMatriculaNueva" style="border-radius: 15px; border-width: 2px;">
+            <span class="fs-1 me-3">✨</span>
+            <div>
+              <strong class="d-block">Matrícula Nueva</strong>
+              <small class="opacity-50">Estudiante de primer ingreso</small>
+            </div>
+          </button>
+
+          <button class="btn btn-outline-info p-3 d-flex align-items-center text-start" id="btnMatriculaAntigua" style="border-radius: 15px; border-width: 2px;">
+            <span class="fs-1 me-3">🔍</span>
+            <div>
+              <strong class="d-block">Pre-Matriculados</strong>
+              <small class="opacity-50">Lista oficial / Promoción</small>
+            </div>
+          </button>
+
+          <button class="btn btn-outline-warning p-3 d-flex align-items-center text-start" id="btnVerMatriculados" style="border-radius: 15px; border-width: 2px;">
+            <span class="fs-1 me-3">🎓</span>
+            <div>
+              <strong class="d-block">Ver Matriculados</strong>
+              <small class="opacity-50">Alumnos inscritos en este nivel</small>
+            </div>
+          </button>
+
         </div>
         <div class="modal-footer border-0 justify-content-center">
           <button type="button" class="btn btn-link text-white-50 text-decoration-none" data-bs-dismiss="modal">Cancelar</button>
@@ -232,7 +213,7 @@
   </div>
 
   <div id="modalFormMatricula" class="modal-mfc">
-    <div class="modal-content-mfc" style="max-width: 800px;">
+    <div class="modal-content-mfc" style="max-width: 850px;">
         <div class="modal-header-mfc">
             <h2>Registro de Matrícula Nueva</h2>
             <p class="muted" id="txtCursoSeleccionado">Curso: -</p>
@@ -280,7 +261,7 @@
                 <fieldset class="form-section" style="grid-column: span 2;">
                     <legend>📍 Ubicación</legend>
                     <div class="form-row">
-                        <div class="form-group"><label>Sector / Barrio</label><input type="text" name="sector" placeholder="Ej: Sauces"></div>
+                        <div class="form-group"><label>Sector / Barrio</label><input type="text" name="sector" placeholder="Ej: Guasmo Sur"></div>
                         <div class="form-group"><label>Dirección Domiciliaria</label><input type="text" name="direccion" required></div>
                     </div>
                 </fieldset>
@@ -294,7 +275,6 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  
   <script src="./assets/app.js"></script>
   <script src="./assets/js/view-cursos.js"></script>
 </body>

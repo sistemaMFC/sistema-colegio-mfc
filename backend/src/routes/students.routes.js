@@ -25,17 +25,14 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
       curso_id
     } = req.body;
 
-    // 1. Validaciones básicas
     if (!cedula_est || !nombres_est || !apellidos_est || !curso_id) {
       return res.status(400).json({ error: "Faltan datos obligatorios (Cédula, Nombres, Curso)" });
     }
 
-    // 2. Validar que la cédula tenga 10 dígitos
     if (!/^\d{10}$/.test(String(cedula_est).trim())) {
       return res.status(400).json({ error: "Cédula del estudiante inválida (debe tener 10 dígitos)" });
     }
 
-    // 3. Verificar si el estudiante ya existe (por cédula)
     const [exist] = await pool.query(
       "SELECT id FROM estudiantes WHERE cedula_est = ? LIMIT 1",
       [cedula_est]
@@ -45,8 +42,6 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
       return res.status(409).json({ error: "Ya existe un estudiante registrado con esa cédula" });
     }
 
-    // 4. Insertar en la base de datos (Sincronizado con tu DESCRIBE)
-    // Agregamos 'periodo' con valor por defecto para evitar errores de restricción
     const [result] = await pool.query(
       `INSERT INTO estudiantes
         (cedula_est, nombres_est, apellidos_est, fecha_nac, genero, 
@@ -74,25 +69,17 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
 
 /**
  * GET /api/students
- * Listar estudiantes (Incluye curso_id para el filtro del frontend)
+ * Listar estudiantes
  */
 router.get("/", authRequired, async (req, res) => {
   try {
     const q = (req.query.q || "").trim();
 
-    // Seleccionamos las columnas exactas que existen en tu tabla
     let sql = `
       SELECT 
-        id, 
-        cedula_est, 
-        nombres_est, 
-        apellidos_est, 
-        nombre_rep, 
-        celular_rep, 
-        parentesco_rep,
-        estado, 
-        curso_id,
-        fecha_matricula
+        id, cedula_est, nombres_est, apellidos_est, 
+        nombre_rep, celular_rep, parentesco_rep,
+        estado, curso_id, fecha_matricula
       FROM estudiantes
     `;
     const params = [];
@@ -109,6 +96,35 @@ router.get("/", authRequired, async (req, res) => {
   } catch (err) {
     console.error("Error al listar estudiantes:", err);
     return res.status(500).json({ error: "Error al listar estudiantes" });
+  }
+});
+
+/**
+ * NUEVO: PUT /api/students/:id
+ * (ADMIN) Actualizar estado de matrícula (Legalización / Promoción)
+ */
+router.put("/:id", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado } = req.body; // Recibe 'ACTIVO'
+
+    if (!estado) {
+      return res.status(400).json({ error: "El nuevo estado es requerido" });
+    }
+
+    const [result] = await pool.query(
+      "UPDATE estudiantes SET estado = ?, fecha_matricula = NOW() WHERE id = ?",
+      [estado, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Estudiante no encontrado" });
+    }
+
+    return res.json({ success: true, message: "¡Matrícula legalizada con éxito! 🎓" });
+  } catch (err) {
+    console.error("Error en PUT /students:", err);
+    return res.status(500).json({ error: "Error al actualizar la matrícula" });
   }
 });
 
