@@ -208,4 +208,214 @@ body.light-mode {
     .form-grid-mfc, .form-row {
         grid-template-columns: 1fr;
     }
+}/* ========================================================
+    ESTILOS DE MATRÍCULAS - COLEGIO MIGUEL FEBRES CORDERO
+    DISEÑO: CRISTAL NEÓN RESPONSIVO (MODO DUAL)
+    VERSIÓN: COMPLETA E INTEGRADA CON BOOTSTRAP 5
+   ======================================================== */
+
+:root {
+    --verde-primario: #43e97b;
+    --verde-brillante: #38f9d7;
+    --fondo-oscuro: #070a14;
+    --card-bg: rgba(255, 255, 255, 0.03);
+    --gradiente-mfc: linear-gradient(135deg, var(--verde-primario) 0%, var(--verde-brillante) 100%);
+    --sombra-neon: 0 10px 40px rgba(67, 233, 123, 0.25);
+    --borde-cristal: rgba(255, 255, 255, 0.1);
+    --texto-card: #ffffff;
+    --texto-detalle: rgba(255, 255, 255, 0.5);
+    
+    /* Variables de compatibilidad con Bootstrap */
+    --bs-modal-bg: #0f172a;
+    --bs-modal-border-color: var(--verde-primario);
+}
+
+/* --- AJUSTES PARA MODO CLARO --- */
+body.light-mode {
+    --card-bg: rgba(255, 255, 255, 0.8);
+    --borde-cristal: rgba(0, 0, 0, 0.08);
+    --texto-card: #1e293b; 
+    --texto-detalle: #64748b;
+    --sombra-neon: 0 10px 30px rgba(16, 185, 129, 0.15);
+    --bs-modal-bg: #ffffff;
+}
+
+/* --- GRID DE CURSOS --- */
+.grid-cursos-mfc {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+    padding: 20px;
+    perspective: 1000px;
+}
+
+.curso-card-mfc {
+    background: var(--card-bg);
+    border: 1px solid var(--borde-cristal);
+    border-radius: 28px;
+    padding: 30px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.curso-card-mfc:hover {
+    transform: translateY(-10px);
+    border-color: var(--verde-primario);
+    box-shadow: var(--sombra-neon);
+}
+
+.curso-numero-wrapper {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--gradiente-mfc);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 22px;
+    font-weight: 900;
+    color: #0b1020; 
+    margin-bottom: 20px;
+    box-shadow: 0 0 15px rgba(67, 233, 123, 0.4);
+}
+
+.curso-nombre-mfc {
+    font-size: 19px;
+    font-weight: 800;
+    color: var(--texto-card); 
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.curso-detalle-mfc {
+    font-size: 13px;
+    color: var(--texto-detalle); 
+}
+
+/* --- SECCIÓN PRE-MATRICULADOS (BAJO EL GRID) --- */
+#contenedor-pre-matriculados {
+    background: var(--card-bg);
+    border: 1px solid var(--verde-primario);
+    border-radius: 24px;
+    padding: 25px;
+    margin: 30px 20px;
+    backdrop-filter: blur(10px);
+    animation: slideInUp 0.4s ease-out;
+}
+
+@keyframes slideInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- MODAL SELECTOR (BOOTSTRAP CUSTOM) --- */
+.modal-content {
+    border-radius: 25px !important;
+    border: 1px solid var(--verde-primario) !important;
+    background-color: var(--bs-modal-bg) !important;
+}
+
+.btn-outline-success {
+    border-color: var(--verde-primario) !important;
+    color: var(--verde-primario) !important;
+}
+
+.btn-outline-success:hover {
+    background-color: var(--verde-primario) !important;
+    color: #000 !important;
+}
+
+/* --- MODAL MFC (FORMULARIO MANUAL) --- */
+.modal-mfc {
+    position: fixed;
+    top: 0; left: 0; 
+    width: 100%; height: 100%;
+    background: rgba(4, 6, 12, 0.95);
+    backdrop-filter: blur(20px);
+    display: none; 
+    place-items: center;
+    z-index: 3000; /* Mayor que Bootstrap */
+    padding: 20px;
+}
+
+.modal-content-mfc {
+    background: #0f172a; 
+    border: 1px solid var(--verde-primario);
+    border-radius: 25px;
+    padding: 30px;
+    width: 95%;
+    max-width: 850px;
+    max-height: 90vh;
+    overflow-y: auto;
+    color: #fff;
+    position: relative;
+}
+
+/* --- FORMULARIO GRID --- */
+.form-grid-mfc {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.form-section {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 18px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.form-section legend {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--verde-primario);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0 10px;
+    width: auto;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.form-group label {
+    font-size: 12px;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 5px;
+    display: block;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 10px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    color: #fff;
+    outline: none;
+}
+
+.form-group input:focus {
+    border-color: var(--verde-primario);
+}
+
+/* SCROLLBAR PERSONALIZADA */
+.modal-content-mfc::-webkit-scrollbar { width: 6px; }
+.modal-content-mfc::-webkit-scrollbar-thumb { background: var(--verde-primario); border-radius: 10px; }
+
+/* RESPONSIVIDAD */
+@media (max-width: 800px) {
+    .form-grid-mfc, .form-row {
+        grid-template-columns: 1fr;
+    }
 }

@@ -1,15 +1,16 @@
 /* ========================================================
     LÓGICA DE VISUALIZACIÓN DE CURSOS - COLEGIO MFC
-    ACTUALIZACIÓN: SELECTOR BOOTSTRAP Y LISTADO OFICIAL
+    ACTUALIZACIÓN FINAL: SINCRONIZACIÓN SQL Y BUSCADOR
    ======================================================== */
 
 // Variables globales para el contexto de la matrícula
 let cursoActualId = null;
 let cursoActualNombre = "";
 let bsSelectorModal = null; // Instancia del modal de Bootstrap
+let alumnosCursoCache = [];  // Cache para búsqueda rápida
 
 /**
- * Renderiza las tarjetas de los cursos con sus estadísticas
+ * 1. RENDERIZAR TARJETAS DE CURSOS
  */
 async function renderizarCursos() {
     const contenedor = document.querySelector('.grid-cursos-mfc');
@@ -22,7 +23,7 @@ async function renderizarCursos() {
         contenedor.innerHTML = "";
 
         if (cursos.length === 0) {
-            contenedor.innerHTML = `<p class="muted">No hay cursos en la base de datos.</p>`;
+            contenedor.innerHTML = `<p class="muted">No hay cursos registrados.</p>`;
             return;
         }
 
@@ -47,14 +48,10 @@ async function renderizarCursos() {
 }
 
 /* ========================================================
-    GESTIÓN DE PRE-MATRICULADOS (LISTADO OFICIAL)
+    2. GESTIÓN DE PRE-MATRICULADOS (LISTADO OFICIAL)
    ======================================================== */
 
-/**
- * Carga y muestra los alumnos ya registrados en el curso seleccionado
- */
 async function listarPreMatriculados() {
-    // Cerramos el selector de Bootstrap
     if (bsSelectorModal) bsSelectorModal.hide();
 
     const contenedor = document.getElementById('contenedor-pre-matriculados');
@@ -63,42 +60,63 @@ async function listarPreMatriculados() {
 
     if (!contenedor || !tbody) return;
 
-    // Mostrar contenedor y limpiar tabla
     contenedor.style.display = 'block';
     txtTitulo.textContent = `Listado Oficial: ${cursoActualNombre}`;
-    tbody.innerHTML = "<tr><td colspan='4' style='text-align:center;'>⏳ Cargando estudiantes...</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='4' style='text-align:center;'>⏳ Cargando base de datos...</td></tr>";
 
     try {
         const alumnos = await api('/api/students');
         
-        // Filtramos solo los alumnos que pertenecen al curso actual
-        const filtrados = alumnos.filter(a => a.curso_id == cursoActualId);
+        // FILTRADO: Solo alumnos del curso seleccionado
+        alumnosCursoCache = alumnos.filter(a => a.curso_id == cursoActualId);
 
-        tbody.innerHTML = "";
-
-        if (filtrados.length === 0) {
-            tbody.innerHTML = "<tr><td colspan='4' class='muted' style='text-align:center;'>No hay alumnos registrados en este curso.</td></tr>";
-            return;
-        }
-
-        filtrados.forEach(est => {
-            tbody.innerHTML += `
-                <tr>
-                    <td>${est.cedula_est}</td>
-                    <td style="font-weight:bold; text-transform:uppercase;">${est.apellidos_est}, ${est.nombres_est}</td>
-                    <td>${cursoActualNombre}</td>
-                    <td><span class="pill badge info">${est.estado}</span></td>
-                </tr>
-            `;
-        });
-
-        // Scroll suave hasta la tabla para mejorar la experiencia
+        renderizarTablaFiltrada(alumnosCursoCache);
         contenedor.scrollIntoView({ behavior: 'smooth' });
 
     } catch (err) {
         console.error("Error al listar:", err);
-        alert("❌ No se pudo cargar la lista de alumnos.");
+        alert("❌ Error 500: Verifique la conexión o estructura de la tabla.");
     }
+}
+
+/**
+ * Renderiza las filas de la tabla basadas en una lista
+ */
+function renderizarTablaFiltrada(lista) {
+    const tbody = document.getElementById('listaAlumnosFiltrados');
+    tbody.innerHTML = "";
+
+    if (lista.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='4' class='muted' style='text-align:center;'>No se encontraron estudiantes.</td></tr>";
+        return;
+    }
+
+    lista.forEach(est => {
+        // IMPORTANTE: Los nombres coinciden con tu DESCRIBE de MySQL
+        tbody.innerHTML += `
+            <tr>
+                <td>${est.cedula_est}</td>
+                <td style="font-weight:bold; text-transform:uppercase; color: var(--verde-primario);">
+                    ${est.apellidos_est}, ${est.nombres_est}
+                </td>
+                <td>${est.nombre_rep || 'S/I'}</td>
+                <td><span class="pill badge info">${est.estado}</span></td>
+            </tr>
+        `;
+    });
+}
+
+/**
+ * Función para el buscador en tiempo real
+ */
+function filtrarEstudiantesPre(e) {
+    const texto = e.target.value.toLowerCase();
+    const filtrados = alumnosCursoCache.filter(a => 
+        a.apellidos_est.toLowerCase().includes(texto) || 
+        a.nombres_est.toLowerCase().includes(texto) ||
+        a.cedula_est.includes(texto)
+    );
+    renderizarTablaFiltrada(filtrados);
 }
 
 function cerrarListaPre() {
@@ -106,7 +124,7 @@ function cerrarListaPre() {
 }
 
 /* ========================================================
-    GESTIÓN DE ENVÍO DE DATOS (MATRÍCULA NUEVA)
+    3. GESTIÓN DE ENVÍO (MATRÍCULA NUEVA)
    ======================================================== */
 
 async function procesarMatriculaNueva(e) {
@@ -114,6 +132,7 @@ async function procesarMatriculaNueva(e) {
     const form = e.target;
     const formData = new FormData(form);
     
+    // MAPEADO DE DATOS: Aseguramos que los nombres coincidan con la DB
     const datos = {
         cedula_est: formData.get('cedula_est'),
         nombres_est: formData.get('nombres_est'),
@@ -122,10 +141,11 @@ async function procesarMatriculaNueva(e) {
         genero: formData.get('genero'),
         nombre_rep: formData.get('nombre_rep'),
         cedula_rep: formData.get('cedula_rep'),
+        parentesco_rep: formData.get('parentesco_rep'),
         celular_rep: formData.get('celular_rep'),
         sector: formData.get('sector'),
         direccion: formData.get('direccion'),
-        curso_id: cursoActualId
+        curso_id: cursoActualId 
     };
 
     try {
@@ -134,28 +154,27 @@ async function procesarMatriculaNueva(e) {
             body: JSON.stringify(datos)
         });
 
-        alert("✨ ¡Excelente! " + res.message);
+        alert("✨ " + res.message);
         cerrarFormularioMatricula();
         renderizarCursos(); 
         
     } catch (err) {
-        alert("❌ Error: " + (err.message || "No se pudo completar el registro"));
+        // Aquí capturamos el Error 500 y lo mostramos como alerta
+        alert("❌ Error en el Servidor: " + (err.message || "Verifique los datos o si la cédula ya existe."));
     }
 }
 
 /* ========================================================
-    FUNCIONES DE LOS MODALES
+    4. FUNCIONES DE MODALES
    ======================================================== */
 
 function abrirSelectorMatricula(id, nombre) {
     cursoActualId = id;
     cursoActualNombre = nombre;
     
-    // Actualizar título en el modal de Bootstrap
     const titulo = document.getElementById('tituloCursoSeleccionado');
     if (titulo) titulo.textContent = `Curso: ${nombre}`;
 
-    // Inicializar Modal de Bootstrap si no existe
     if (!bsSelectorModal) {
         const modalEl = document.getElementById('modalSelectorBootstrap');
         bsSelectorModal = new bootstrap.Modal(modalEl);
@@ -166,7 +185,6 @@ function abrirSelectorMatricula(id, nombre) {
 
 function abrirFormularioMatriculaNueva() {
     if (bsSelectorModal) bsSelectorModal.hide();
-    
     const txtCurso = document.getElementById('txtCursoSeleccionado');
     if (txtCurso) txtCurso.textContent = `Curso: ${cursoActualNombre}`;
     
@@ -183,28 +201,25 @@ function cerrarFormularioMatricula() {
 }
 
 /* ========================================================
-    INICIALIZACIÓN DE EVENTOS
+    5. INICIALIZACIÓN
    ======================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
     renderizarCursos();
 
-    // 1. Escuchar el envío del formulario
+    // Evento para el buscador
+    document.getElementById('inputBuscarEstudiante')?.addEventListener('input', filtrarEstudiantesPre);
+
     document.getElementById('formNuevaMatricula')?.addEventListener('submit', procesarMatriculaNueva);
-
-    // 2. Botón Matrícula Nueva (dentro del selector)
     document.getElementById('btnMatriculaNueva')?.addEventListener('click', abrirFormularioMatriculaNueva);
-
-    // 3. Botón Pre-Matriculados (dentro del selector)
     document.getElementById('btnMatriculaAntigua')?.addEventListener('click', listarPreMatriculados);
 
-    // 4. Cerrar modales MFC al hacer clic fuera (solo para el de formulario que no es de Bootstrap)
     window.addEventListener('click', (e) => {
         if (e.target.id === 'modalFormMatricula') cerrarFormularioMatricula();
     });
 });
 
-// Exponer funciones globales para los onclick del HTML
+// Exponer funciones globales
 window.renderizarCursos = renderizarCursos;
 window.abrirSelectorMatricula = abrirSelectorMatricula;
 window.cerrarFormularioMatricula = cerrarFormularioMatricula;

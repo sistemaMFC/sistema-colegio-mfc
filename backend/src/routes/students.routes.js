@@ -6,8 +6,7 @@ const router = express.Router();
 
 /**
  * POST /api/students
- * (ADMIN) Registrar Matrícula Nueva (Gloria)
- * Recibe los datos del estudiante + representante
+ * (ADMIN) Registrar Matrícula Nueva
  */
 router.post("/", authRequired, onlyAdmin, async (req, res) => {
   try {
@@ -46,13 +45,14 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
       return res.status(409).json({ error: "Ya existe un estudiante registrado con esa cédula" });
     }
 
-    // 4. Insertar en la base de datos (Nueva estructura)
+    // 4. Insertar en la base de datos (Sincronizado con tu DESCRIBE)
+    // Agregamos 'periodo' con valor por defecto para evitar errores de restricción
     const [result] = await pool.query(
       `INSERT INTO estudiantes
         (cedula_est, nombres_est, apellidos_est, fecha_nac, genero, 
          nombre_rep, cedula_rep, parentesco_rep, celular_rep, 
-         direccion, sector, curso_id, estado)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO')`,
+         direccion, sector, curso_id, estado, periodo)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', '2025-2026')`,
       [
         cedula_est, nombres_est, apellidos_est, fecha_nac, genero,
         nombre_rep, cedula_rep, parentesco_rep, celular_rep,
@@ -74,14 +74,25 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
 
 /**
  * GET /api/students
- * Listar estudiantes con la nueva estructura
+ * Listar estudiantes (Incluye curso_id para el filtro del frontend)
  */
 router.get("/", authRequired, async (req, res) => {
   try {
     const q = (req.query.q || "").trim();
 
+    // Seleccionamos las columnas exactas que existen en tu tabla
     let sql = `
-      SELECT id, cedula_est, nombres_est, apellidos_est, nombre_rep, celular_rep, estado, fecha_matricula
+      SELECT 
+        id, 
+        cedula_est, 
+        nombres_est, 
+        apellidos_est, 
+        nombre_rep, 
+        celular_rep, 
+        parentesco_rep,
+        estado, 
+        curso_id,
+        fecha_matricula
       FROM estudiantes
     `;
     const params = [];
@@ -91,19 +102,19 @@ router.get("/", authRequired, async (req, res) => {
       params.push(`%${q}%`, `%${q}%`, `%${q}%`);
     }
 
-    sql += ` ORDER BY fecha_matricula DESC LIMIT 200`;
+    sql += ` ORDER BY apellidos_est ASC LIMIT 500`;
 
     const [rows] = await pool.query(sql, params);
     return res.json(rows);
   } catch (err) {
-    console.error(err);
+    console.error("Error al listar estudiantes:", err);
     return res.status(500).json({ error: "Error al listar estudiantes" });
   }
 });
 
 /**
  * GET /api/students/:id
- * Ver ficha completa (incluye representante)
+ * Ver ficha completa
  */
 router.get("/:id", authRequired, async (req, res) => {
   try {
