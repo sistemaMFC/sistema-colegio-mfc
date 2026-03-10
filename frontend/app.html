@@ -134,9 +134,8 @@
             <h3>Matrícula por Cursos</h3>
           </div>
           <p class="muted">Seleccione un curso para ver los alumnos o registrar uno nuevo.</p>
-
           <div class="grid-cursos-mfc"></div>
-
+          
           <div id="contenedor-pre-matriculados" style="display: none; margin-top: 30px; border-top: 2px solid #43e97b; padding-top: 20px;">
             <div class="card-head">
                <h3 id="txtCursoLista">Listado Oficial (Pre-Matriculados)</h3>
@@ -184,7 +183,73 @@
       </section>
 
       <section class="view" id="view-pagos" hidden></section>
-      <section class="view" id="view-usuarios" hidden></section>
+
+      <section class="view" id="view-usuarios" hidden>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <h3>✨ Registrar Nuevo Usuario</h3>
+            </div>
+            <form id="formCrearUsuario" class="form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Nombres</label>
+                  <input type="text" name="nombres" placeholder="Ej: Juan" required>
+                </div>
+                <div class="form-group">
+                  <label>Apellidos</label>
+                  <input type="text" name="apellidos" placeholder="Ej: Pérez" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Cédula (Usuario)</label>
+                <input type="text" name="cedula" maxlength="10" placeholder="0900000000" required>
+              </div>
+              <div class="form-group">
+                <label>Contraseña</label>
+                <div class="pass-wrap">
+                  <input type="password" name="password" required>
+                  <button type="button" class="pass-toggle" data-toggle-pass>👁</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Rol del Sistema</label>
+                <select name="rol">
+                  <option value="ADMIN">Administrador</option>
+                  <option value="COLECTOR">Colector / Pagos</option>
+                  <option value="SECRETARIA">Secretaría</option>
+                </select>
+              </div>
+              <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">Guardar Usuario ✅</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>👥 Personal del Colegio</h3>
+              <button class="btn-soft" id="btnCargarUsuarios">🔄 Refrescar</button>
+            </div>
+            <div class="table-wrap">
+              <table class="table" id="tblUsuarios">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nombre Completo</th>
+                    <th>Cédula</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colspan="5" class="muted text-center">Cargando usuarios registrados...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <footer class="footer">
         <small>Desarrollado por Erick Abad Monserrate — Sistema Educativo MFC</small>
@@ -196,32 +261,21 @@
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content text-white" style="background: #0f172a; border: 1px solid #43e97b; border-radius: 25px;">
         <div class="modal-header border-0 pb-0">
-          <h5 class="modal-title w-100 text-center" id="tituloCursoSeleccionado" style="color: #43e97b; font-weight: 800; font-size: 1.5rem;">
-            Curso: -
-          </h5>
+          <h5 class="modal-title w-100 text-center" id="tituloCursoSeleccionado" style="color: #43e97b; font-weight: 800; font-size: 1.5rem;">Curso: -</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body p-4 d-grid gap-3">
           <button class="btn btn-outline-success p-3 d-flex align-items-center text-start" id="btnMatriculaNueva" style="border-radius: 15px; border-width: 2px;">
             <span class="fs-1 me-3">✨</span>
-            <div>
-              <strong class="d-block">Matrícula Nueva</strong>
-              <small class="opacity-50">Estudiante de primer ingreso</small>
-            </div>
+            <div><strong class="d-block">Matrícula Nueva</strong><small class="opacity-50">Estudiante de primer ingreso</small></div>
           </button>
           <button class="btn btn-outline-info p-3 d-flex align-items-center text-start" id="btnMatriculaAntigua" style="border-radius: 15px; border-width: 2px;">
             <span class="fs-1 me-3">🔍</span>
-            <div>
-              <strong class="d-block">Pre-Matriculados</strong>
-              <small class="opacity-50">Lista oficial / Promoción</small>
-            </div>
+            <div><strong class="d-block">Pre-Matriculados</strong><small class="opacity-50">Lista oficial / Promoción</small></div>
           </button>
           <button class="btn btn-outline-warning p-3 d-flex align-items-center text-start" id="btnVerMatriculados" style="border-radius: 15px; border-width: 2px;">
             <span class="fs-1 me-3">🎓</span>
-            <div>
-              <strong class="d-block">Ver Matriculados</strong>
-              <small class="opacity-50">Alumnos inscritos en este nivel</small>
-            </div>
+            <div><strong class="d-block">Ver Matriculados</strong><small class="opacity-50">Alumnos inscritos en este nivel</small></div>
           </button>
         </div>
         <div class="modal-footer border-0 justify-content-center">
@@ -241,28 +295,21 @@
             <div class="form-grid-mfc">
                 <fieldset class="form-section">
                     <legend>✨ Datos del Estudiante</legend>
-                    <div class="form-group">
-                        <label>Cédula del Estudiante</label>
-                        <input type="text" name="cedula_est" maxlength="10" placeholder="Ej: 0912345678" required>
-                    </div>
+                    <div class="form-group"><label>Cédula</label><input type="text" name="cedula_est" maxlength="10" placeholder="0912345678" required></div>
                     <div class="form-row">
                         <div class="form-group"><label>Nombres</label><input type="text" name="nombres_est" required></div>
                         <div class="form-group"><label>Apellidos</label><input type="text" name="apellidos_est" required></div>
                     </div>
                     <div class="form-row">
-                        <div class="form-group"><label>Fecha de Nacimiento</label><input type="date" name="fecha_nac" required></div>
+                        <div class="form-group"><label>Fecha Nac.</label><input type="date" name="fecha_nac" required></div>
                         <div class="form-group">
                             <label>Género</label>
-                            <select name="genero">
-                                <option value="Masculino">Masculino</option>
-                                <option value="Femenino">Femenino</option>
-                                <option value="Otro">Otro</option>
-                            </select>
+                            <select name="genero"><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option><option value="Otro">Otro</option></select>
                         </div>
                     </div>
                 </fieldset>
                 <fieldset class="form-section">
-                    <legend>👤 Datos del Representante</legend>
+                    <legend>👤 Representante</legend>
                     <div class="form-group"><label>Nombre Completo</label><input type="text" name="nombre_rep" required></div>
                     <div class="form-row">
                         <div class="form-group"><label>Cédula Rep.</label><input type="text" name="cedula_rep" maxlength="10" required></div>
@@ -270,18 +317,14 @@
                     </div>
                     <div class="form-group">
                         <label>Parentesco</label>
-                        <select name="parentesco_rep">
-                            <option value="Padre">Padre</option>
-                            <option value="Madre">Madre</option>
-                            <option value="Tutor">Tutor Legal</option>
-                        </select>
+                        <select name="parentesco_rep"><option value="Padre">Padre</option><option value="Madre">Madre</option><option value="Tutor">Tutor Legal</option></select>
                     </div>
                 </fieldset>
                 <fieldset class="form-section" style="grid-column: span 2;">
                     <legend>📍 Ubicación</legend>
                     <div class="form-row">
                         <div class="form-group"><label>Sector / Barrio</label><input type="text" name="sector" placeholder="Ej: Guasmo Sur"></div>
-                        <div class="form-group"><label>Dirección Domiciliaria</label><input type="text" name="direccion" required></div>
+                        <div class="form-group"><label>Dirección</label><input type="text" name="direccion" required></div>
                     </div>
                 </fieldset>
             </div>
