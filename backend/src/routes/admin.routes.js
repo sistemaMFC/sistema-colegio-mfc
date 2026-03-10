@@ -1,28 +1,23 @@
-// backend/src/routes/admin.routes.js
 const express = require("express");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt"); // Cambiado a bcrypt para consistencia con auth.routes
 const db = require("../db");
 const { authRequired, onlyAdmin } = require("../middlewares/auth");
 
 const router = express.Router();
 
 /**
- * ==========================================
- * RUTA: ESTADÍSTICAS DE CURSOS
- * Para las tarjetas del frontend (Matrículas)
- * ==========================================
+ * GET /api/admin/cursos/estadisticas
+ * Obtiene la lista de cursos con el conteo real de matriculados
  */
 router.get("/cursos/estadisticas", authRequired, onlyAdmin, async (req, res) => {
   try {
-    // Usamos LEFT JOIN para que aparezcan los 7 cursos (Inicial a 5to)
-    // aunque tengan 0 alumnos matriculados.
     const [rows] = await db.query(`
       SELECT 
         c.id, 
         c.nombre, 
         COUNT(e.id) AS total_matriculados
       FROM cursos c
-      LEFT JOIN estudiantes e ON c.id = e.curso_id
+      LEFT JOIN estudiantes e ON c.id = e.curso_id AND e.estado = 'ACTIVO'
       GROUP BY c.id, c.nombre
       ORDER BY c.orden ASC
     `);
@@ -35,81 +30,79 @@ router.get("/cursos/estadisticas", authRequired, onlyAdmin, async (req, res) => 
 });
 
 /**
- * POST /admin/usuarios
- * Crea administradores o profesores
+ * POST /api/admin/usuarios
+ * Crea administradores, colectores o secretarias con contraseña encriptada
  */
 router.post("/usuarios", authRequired, onlyAdmin, async (req, res) => {
   try {
     const { nombres, apellidos, cedula, password, rol } = req.body;
 
+    // 1. Validaciones básicas
     if (!nombres || !apellidos || !cedula || !password) {
-      return res.status(400).json({ error: "Faltan datos (nombres, apellidos, cedula, password)" });
+      return res.status(400).json({ error: "Faltan datos obligatorios (nombres, apellidos, cedula, password)" });
     }
 
-    const rolFinal = rol === "ADMIN" ? "ADMIN" : "PROFESOR";
-
-    // Validar cédula simple (10 dígitos)
-    if (!/^\d{10}$/.test(String(cedula).trim())) {
-      return res.status(400).json({ error: "Cédula inválida (debe tener 10 dígitos)" });
+    // 2. Validar formato de cédula (10 dígitos)
+    const cedulaLimpia = String(cedula).trim();
+    if (!/^\d{10}$/.test(cedulaLimpia)) {
+      return res.status(400).json({ error: "La cédula debe tener exactamente 10 dígitos numéricos" });
     }
 
-    // Verificar si ya existe
-    const [exist] = await db.query("SELECT id FROM usuarios WHERE cedula = ? LIMIT 1", [cedula]);
+    // 3. Verificar si el usuario ya existe
+    const [exist] = await db.query("SELECT id FROM usuarios WHERE TRIM(cedula) = ? LIMIT 1", [cedulaLimpia]);
     if (exist.length > 0) {
-      return res.status(409).json({ error: "Ya existe un usuario con esa cédula" });
+      return res.status(409).json({ error: "Ya existe un usuario registrado con esa cédula" });
     }
 
-    const password_hash = await bcrypt.hash(password, 10);
+    // 4. ENCRIPTACIÓN DE CONTRASEÑA (BCRYPT)
+    // Esto transforma "123456" en el código largo que viste en la base de datos
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // INSERT usuario
+    // 5. Definir el rol (Acepta los del frontend: ADMIN, COLECTOR, SECRETARIA)
+    const rolFinal = rol ? rol.toUpperCase() : "SECRETARIA";
+
+    // 6. Insertar en la tabla 'usuarios'
     const [result] = await db.query(
       `INSERT INTO usuarios (nombres, apellidos, cedula, password_hash, rol, estado)
        VALUES (?, ?, ?, ?, ?, 'ACTIVO')`,
-      [nombres, apellidos, cedula, password_hash, rolFinal]
+      [nombres, apellidos, cedulaLimpia, hashedPassword, rolFinal]
     );
 
     const usuarioId = result.insertId;
 
-    // Si es PROFESOR, crea el registro en docentes (vinculado a usuario)
-    if (rolFinal === "PROFESOR") {
-      await db.query(
-        `INSERT INTO docentes (usuario_id, cedula, estado)
-         VALUES (?, ?, 'ACTIVO')`,
-        [usuarioId, cedula]
-      );
-    }
-
     return res.status(201).json({
       message: "Usuario creado correctamente ✅",
-      user: { id: usuarioId, nombres, apellidos, cedula, rol: rolFinal }
+      user: { id: usuarioId, nombres, apellidos, cedula: cedulaLimpia, rol: rolFinal }
     });
+
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Error creando usuario" });
+    console.error("Error al crear usuario:", err);
+    return res.status(500).json({ error: "Error interno al crear el usuario" });
   }
 });
 
 /**
- * GET /admin/usuarios
- * Lista usuarios (sin password)
+ * GET /api/admin/usuarios
+ * Lista todos los usuarios registrados
  */
 router.get("/usuarios", authRequired, onlyAdmin, async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT id, nombres, apellidos, cedula, rol, estado, created_at
        FROM usuarios
-       ORDER BY created_at DESC`
+       ORDER BY id DESC`
     );
     return res.json(rows);
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Error listando usuarios" });
+    console.error("Error al listar usuarios:", err);
+    return res.status(500).json({ error: "Error al listar usuarios" });
   }
 });
 
 /**
- * PUT /admin/usuarios/:id/estado
- * Body: { "estado": "ACTIVO" | "INACTIVO" }
+ * PUT /api/admin/usuarios/:id/estado
+ * Actualiza el estado (ACTIVO / INACTIVO) para bloquear accesos
  */
 router.put("/usuarios/:id/estado", authRequired, onlyAdmin, async (req, res) => {
   try {
@@ -117,17 +110,20 @@ router.put("/usuarios/:id/estado", authRequired, onlyAdmin, async (req, res) => 
     const { estado } = req.body;
 
     if (!["ACTIVO", "INACTIVO"].includes(estado)) {
-      return res.status(400).json({ error: "Estado inválido (ACTIVO o INACTIVO)" });
+      return res.status(400).json({ error: "Estado inválido. Use ACTIVO o INACTIVO" });
     }
 
-    await db.query(`UPDATE usuarios SET estado = ? WHERE id = ?`, [estado, id]);
+    const [result] = await db.query(`UPDATE usuarios SET estado = ? WHERE id = ?`, [estado, id]);
 
-    return res.json({ message: "Estado actualizado ✅", id, estado });
+    if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    return res.json({ message: "Estado de usuario actualizado ✅", id, estado });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Error actualizando estado" });
+    console.error("Error al actualizar estado:", err);
+    return res.status(500).json({ error: "Error interno del servidor" });
   }
 });
-
 
 module.exports = router;
