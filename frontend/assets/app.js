@@ -1,6 +1,6 @@
 /* ========================================================
     SISTEMA COLEGIO MIGUEL FEBRES CORDERO - APP.JS 
-    ACTUALIZACIÓN: DASHBOARD DINÁMICO Y GESTIÓN DE TEMAS
+    VERSIÓN TOTAL: DASHBOARD, USUARIOS, TEMAS Y SESIÓN
    ======================================================== */
 
 const API_BASE = "https://sistema-colegio-mfc.onrender.com";
@@ -85,48 +85,43 @@ async function api(path, options = {}) {
 }
 
 /* =========================
-    LÓGICA DEL DASHBOARD (NUEVO)
+    LÓGICA DEL DASHBOARD
 ========================= */
 
-/**
- * Carga los datos de los estudiantes y actualiza los indicadores del inicio
- */
 async function actualizarDashboard() {
     const listaBody = $("#listaDashboardMatriculados");
     const kpiMatriculados = $("#kpiMatriculados");
 
     try {
-        // 1. Obtener estudiantes de la API
-        const estudiantes = await api("/api/students");
+        // 1. Obtener cursos para mapear nombres reales
+        const cursosData = await api("/api/admin/cursos/estadisticas");
         
-        // 2. Filtrar solo los que están en estado 'ACTIVO' (Matriculados legalmente)
+        // 2. Obtener estudiantes
+        const estudiantes = await api("/api/students");
         const matriculados = estudiantes.filter(est => est.estado === 'ACTIVO');
 
-        // 3. Actualizar el contador grande
-        if (kpiMatriculados) {
-            kpiMatriculados.textContent = matriculados.length;
-        }
+        if (kpiMatriculados) kpiMatriculados.textContent = matriculados.length;
 
-        // 4. Llenar la tabla del Dashboard con los últimos 8 registros
         if (listaBody) {
             listaBody.innerHTML = "";
-
             if (matriculados.length === 0) {
                 listaBody.innerHTML = `<tr><td colspan="4" class="muted text-center">No hay alumnos matriculados aún</td></tr>`;
                 return;
             }
 
-            // Ordenar por ID de forma descendente (los más recientes primero)
             const recientes = [...matriculados].sort((a, b) => b.id - a.id).slice(0, 8);
 
             recientes.forEach(est => {
+                const infoCurso = cursosData.find(c => c.id == est.curso_id);
+                const nombreCurso = infoCurso ? infoCurso.nombre : `ID: ${est.curso_id}`;
+
                 listaBody.innerHTML += `
                     <tr>
                         <td>${est.cedula_est}</td>
                         <td style="font-weight:bold; text-transform:uppercase;">
                             ${est.apellidos_est}, ${est.nombres_est}
                         </td>
-                        <td>${obtenerNombreCursoSimplificado(est.curso_id)}</td>
+                        <td>${nombreCurso}</td>
                         <td><span class="badge ok">MATRICULADO</span></td>
                     </tr>
                 `;
@@ -134,20 +129,7 @@ async function actualizarDashboard() {
         }
     } catch (err) {
         console.error("Error Dashboard:", err);
-        if (listaBody) listaBody.innerHTML = `<tr><td colspan="4" class="text-danger">Error al cargar datos</td></tr>`;
     }
-}
-
-/**
- * Función auxiliar para mostrar el nombre del curso en el Dashboard
- */
-function obtenerNombreCursoSimplificado(id) {
-    const cursos = {
-        "1": "1ero EGB", "2": "2do EGB", "3": "3ero EGB", "4": "4to EGB",
-        "5": "5to EGB", "6": "6to EGB", "7": "7mo EGB", "8": "8vo EGB",
-        "9": "9no EGB", "10": "10mo EGB"
-    };
-    return cursos[id] || `Curso ${id}`;
 }
 
 /* =========================
@@ -171,13 +153,7 @@ function fillUserUI() {
     }
 
     const decoded = parseJWT(token);
-    if (!decoded) {
-        logout();
-        return;
-    }
-
-    if (decoded.rol !== "ADMIN") {
-        alert("Acceso denegado.");
+    if (!decoded || decoded.rol !== "ADMIN") {
         logout();
         return;
     }
@@ -214,11 +190,12 @@ function setActiveView(view) {
     if($("#pageTitle")) $("#pageTitle").textContent = t;
     if($("#pageSubtitle")) $("#pageSubtitle").textContent = s;
 
-    // Cargar datos específicos de la vista
     if (view === 'dashboard') {
         actualizarDashboard();
     } else if (view === 'matriculas') {
         if (typeof renderizarCursos === 'function') renderizarCursos();
+    } else if (view === 'usuarios') {
+        cargarUsuarios();
     }
 }
 
@@ -315,12 +292,11 @@ function setupInteractions() {
     $("#btnCargarUsuarios")?.addEventListener("click", cargarUsuarios);
 }
 
-// Exponer la función globalmente para el botón del HTML
 window.actualizarDashboard = actualizarDashboard;
 
 (function init() {
     fillUserUI();
     initTheme();
     setupInteractions();
-    setActiveView("dashboard"); // Carga el dashboard por defecto e inicia los datos
+    setActiveView("dashboard");
 })();
