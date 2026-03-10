@@ -29,7 +29,7 @@
     <aside class="sidebar" id="sidebar">
       <div class="brand">
         <div class="brand-logo">
-          <img src="./assets/logo-mfc.png" alt="Logo MFC" onerror="this.style.display='none'">
+          <img src="/frontend/LOGO.jpeg" alt="Logo MFC" onerror="this.style.display='none'">
           <div class="brand-fallback">MFC</div>
         </div>
         <div class="brand-text">
@@ -102,6 +102,30 @@
             <div class="kpi-foot muted">Al día / No al día</div>
           </div>
         </div>
+
+        <div class="card" style="margin-top: 25px;">
+          <div class="card-head d-flex justify-content-between align-items-center">
+            <h3>Últimos Estudiantes Matriculados</h3>
+            <button class="btn-soft" onclick="actualizarDashboard()">🔄 Actualizar</button>
+          </div>
+          <div class="table-wrap" style="margin-top: 15px;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Cédula</th>
+                  <th>Estudiante (Apellidos, Nombres)</th>
+                  <th>Curso / Nivel</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="listaDashboardMatriculados">
+                <tr>
+                  <td colspan="4" class="text-center muted">Cargando lista de estudiantes...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <section class="view" id="view-matriculas" hidden>
@@ -156,7 +180,6 @@
               </table>
             </div>
           </div>
-
         </div>
       </section>
 
@@ -179,7 +202,6 @@
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body p-4 d-grid gap-3">
-          
           <button class="btn btn-outline-success p-3 d-flex align-items-center text-start" id="btnMatriculaNueva" style="border-radius: 15px; border-width: 2px;">
             <span class="fs-1 me-3">✨</span>
             <div>
@@ -187,7 +209,6 @@
               <small class="opacity-50">Estudiante de primer ingreso</small>
             </div>
           </button>
-
           <button class="btn btn-outline-info p-3 d-flex align-items-center text-start" id="btnMatriculaAntigua" style="border-radius: 15px; border-width: 2px;">
             <span class="fs-1 me-3">🔍</span>
             <div>
@@ -195,7 +216,6 @@
               <small class="opacity-50">Lista oficial / Promoción</small>
             </div>
           </button>
-
           <button class="btn btn-outline-warning p-3 d-flex align-items-center text-start" id="btnVerMatriculados" style="border-radius: 15px; border-width: 2px;">
             <span class="fs-1 me-3">🎓</span>
             <div>
@@ -203,7 +223,6 @@
               <small class="opacity-50">Alumnos inscritos en este nivel</small>
             </div>
           </button>
-
         </div>
         <div class="modal-footer border-0 justify-content-center">
           <button type="button" class="btn btn-link text-white-50 text-decoration-none" data-bs-dismiss="modal">Cancelar</button>

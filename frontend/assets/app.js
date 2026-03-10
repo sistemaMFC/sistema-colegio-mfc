@@ -1,6 +1,7 @@
 /* ========================================================
-    SISTEMA COLEGIO MIGUEL FEBRES CORDERO - APP.JS (ACTUALIZADO CON THEME TOGGLE)
-    ======================================================== */
+    SISTEMA COLEGIO MIGUEL FEBRES CORDERO - APP.JS 
+    ACTUALIZACIÓN: DASHBOARD DINÁMICO Y GESTIÓN DE TEMAS
+   ======================================================== */
 
 const API_BASE = "https://sistema-colegio-mfc.onrender.com";
 
@@ -12,27 +13,27 @@ const $$ = (sel) => document.querySelectorAll(sel);
 ========================= */
 
 function getToken() {
-  return localStorage.getItem("mfc_token");
+    return localStorage.getItem("mfc_token");
 }
 
 function getUser() {
-  return JSON.parse(localStorage.getItem("mfc_user") || "null");
+    return JSON.parse(localStorage.getItem("mfc_user") || "null");
 }
 
 function logout() {
-  localStorage.removeItem("mfc_token");
-  localStorage.removeItem("mfc_user");
-  window.location.href = "./index.html";
+    localStorage.removeItem("mfc_token");
+    localStorage.removeItem("mfc_user");
+    window.location.href = "./index.html";
 }
 
 function parseJWT(token) {
-  try {
-    const part = token.split(".")[1];
-    const json = atob(part.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(json);
-  } catch (e) {
-    return null;
-  }
+    try {
+        const part = token.split(".")[1];
+        const json = atob(part.replace(/-/g, "+").replace(/_/g, "/"));
+        return JSON.parse(json);
+    } catch (e) {
+        return null;
+    }
 }
 
 /* =========================
@@ -40,33 +41,24 @@ function parseJWT(token) {
 ========================= */
 
 function initTheme() {
-  const btnTheme = $("#btnThemeToggle");
-  if (!btnTheme) return;
+    const btnTheme = $("#btnThemeToggle");
+    if (!btnTheme) return;
 
-  // 1. Revisar si ya había un tema guardado
-  const savedTheme = localStorage.getItem("mfc_theme") || "dark";
-  
-  if (savedTheme === "light") {
-    document.body.classList.add("light-mode");
-    btnTheme.textContent = "☀️";
-  } else {
-    btnTheme.textContent = "🌑";
-  }
+    const savedTheme = localStorage.getItem("mfc_theme") || "dark";
+    
+    if (savedTheme === "light") {
+        document.body.classList.add("light-mode");
+        btnTheme.textContent = "☀️";
+    } else {
+        btnTheme.textContent = "🌑";
+    }
 
-  // 2. Evento de clic para cambiar tema
-  btnTheme.addEventListener("click", () => {
-    const isLight = document.body.classList.toggle("light-mode");
-    const newTheme = isLight ? "light" : "dark";
-    
-    // Guardar preferencia
-    localStorage.setItem("mfc_theme", newTheme);
-    
-    // Cambiar icono
-    btnTheme.textContent = isLight ? "☀️" : "🌑";
-    
-    // Opcional: Alerta sutil
-    console.log(`Modo ${newTheme} activado`);
-  });
+    btnTheme.addEventListener("click", () => {
+        const isLight = document.body.classList.toggle("light-mode");
+        const newTheme = isLight ? "light" : "dark";
+        localStorage.setItem("mfc_theme", newTheme);
+        btnTheme.textContent = isLight ? "☀️" : "🌑";
+    });
 }
 
 /* =========================
@@ -74,22 +66,88 @@ function initTheme() {
 ========================= */
 
 async function api(path, options = {}) {
-  const token = getToken();
-  const headers = options.headers || {};
-  headers["Content-Type"] = "application/json";
-  
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
+    const token = getToken();
+    const headers = options.headers || {};
+    headers["Content-Type"] = "application/json";
+    
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+    }
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  const data = await res.json().catch(() => ({}));
+    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    const data = await res.json().catch(() => ({}));
 
-  if (!res.ok) {
-    const msg = data?.error || `Error ${res.status}`;
-    throw new Error(msg);
-  }
-  return data;
+    if (!res.ok) {
+        const msg = data?.error || `Error ${res.status}`;
+        throw new Error(msg);
+    }
+    return data;
+}
+
+/* =========================
+    LÓGICA DEL DASHBOARD (NUEVO)
+========================= */
+
+/**
+ * Carga los datos de los estudiantes y actualiza los indicadores del inicio
+ */
+async function actualizarDashboard() {
+    const listaBody = $("#listaDashboardMatriculados");
+    const kpiMatriculados = $("#kpiMatriculados");
+
+    try {
+        // 1. Obtener estudiantes de la API
+        const estudiantes = await api("/api/students");
+        
+        // 2. Filtrar solo los que están en estado 'ACTIVO' (Matriculados legalmente)
+        const matriculados = estudiantes.filter(est => est.estado === 'ACTIVO');
+
+        // 3. Actualizar el contador grande
+        if (kpiMatriculados) {
+            kpiMatriculados.textContent = matriculados.length;
+        }
+
+        // 4. Llenar la tabla del Dashboard con los últimos 8 registros
+        if (listaBody) {
+            listaBody.innerHTML = "";
+
+            if (matriculados.length === 0) {
+                listaBody.innerHTML = `<tr><td colspan="4" class="muted text-center">No hay alumnos matriculados aún</td></tr>`;
+                return;
+            }
+
+            // Ordenar por ID de forma descendente (los más recientes primero)
+            const recientes = [...matriculados].sort((a, b) => b.id - a.id).slice(0, 8);
+
+            recientes.forEach(est => {
+                listaBody.innerHTML += `
+                    <tr>
+                        <td>${est.cedula_est}</td>
+                        <td style="font-weight:bold; text-transform:uppercase;">
+                            ${est.apellidos_est}, ${est.nombres_est}
+                        </td>
+                        <td>${obtenerNombreCursoSimplificado(est.curso_id)}</td>
+                        <td><span class="badge ok">MATRICULADO</span></td>
+                    </tr>
+                `;
+            });
+        }
+    } catch (err) {
+        console.error("Error Dashboard:", err);
+        if (listaBody) listaBody.innerHTML = `<tr><td colspan="4" class="text-danger">Error al cargar datos</td></tr>`;
+    }
+}
+
+/**
+ * Función auxiliar para mostrar el nombre del curso en el Dashboard
+ */
+function obtenerNombreCursoSimplificado(id) {
+    const cursos = {
+        "1": "1ero EGB", "2": "2do EGB", "3": "3ero EGB", "4": "4to EGB",
+        "5": "5to EGB", "6": "6to EGB", "7": "7mo EGB", "8": "8vo EGB",
+        "9": "9no EGB", "10": "10mo EGB"
+    };
+    return cursos[id] || `Curso ${id}`;
 }
 
 /* =========================
@@ -97,70 +155,71 @@ async function api(path, options = {}) {
 ========================= */
 
 function showAlert(type, msg) {
-  const el = $("#alert");
-  if (!el) return;
-  el.className = `alert ${type}`;
-  el.textContent = msg;
-  el.hidden = false;
-  setTimeout(() => { el.hidden = true; }, 3500);
+    const el = $("#alert");
+    if (!el) return;
+    el.className = `alert ${type}`;
+    el.textContent = msg;
+    el.hidden = false;
+    setTimeout(() => { el.hidden = true; }, 3500);
 }
 
 function fillUserUI() {
-  const token = getToken();
-  if (!token) {
-    window.location.href = "./index.html";
-    return;
-  }
+    const token = getToken();
+    if (!token) {
+        window.location.href = "./index.html";
+        return;
+    }
 
-  const decoded = parseJWT(token);
-  if (!decoded) {
-    logout();
-    return;
-  }
+    const decoded = parseJWT(token);
+    if (!decoded) {
+        logout();
+        return;
+    }
 
-  if (decoded.rol !== "ADMIN") {
-    alert("Acceso denegado: Se requiere rol de Administrador.");
-    logout();
-    return;
-  }
+    if (decoded.rol !== "ADMIN") {
+        alert("Acceso denegado.");
+        logout();
+        return;
+    }
 
-  if($("#pillRole")) $("#pillRole").textContent = decoded.rol;
+    if($("#pillRole")) $("#pillRole").textContent = decoded.rol;
 
-  const user = getUser();
-  const nombres = user?.nombres || "Admin";
-  const apellidos = user?.apellidos || "";
-  const cedula = user?.cedula || decoded.cedula || "-";
+    const user = getUser();
+    const nombres = user?.nombres || "Admin";
+    const apellidos = user?.apellidos || "";
+    const cedula = user?.cedula || decoded.cedula || "-";
 
-  if($("#userName")) $("#userName").textContent = `${nombres} ${apellidos}`.trim();
-  if($("#userCedula")) $("#userCedula").textContent = `Cédula: ${cedula}`;
-  if($("#avatar")) $("#avatar").textContent = (nombres?.[0] || "A").toUpperCase();
+    if($("#userName")) $("#userName").textContent = `${nombres} ${apellidos}`.trim();
+    if($("#userCedula")) $("#userCedula").textContent = `Cédula: ${cedula}`;
+    if($("#avatar")) $("#avatar").textContent = (nombres?.[0] || "A").toUpperCase();
 }
 
 function setActiveView(view) {
-  $$(".menu-item").forEach(b => b.classList.remove("active"));
-  const btn = document.querySelector(`.menu-item[data-view="${view}"]`);
-  if (btn) btn.classList.add("active");
+    $$(".menu-item").forEach(b => b.classList.remove("active"));
+    const btn = document.querySelector(`.menu-item[data-view="${view}"]`);
+    if (btn) btn.classList.add("active");
 
-  $$(".view").forEach(v => v.hidden = true);
-  const section = $(`#view-${view}`);
-  if (section) section.hidden = false;
+    $$(".view").forEach(v => v.hidden = true);
+    const section = $(`#view-${view}`);
+    if (section) section.hidden = false;
 
-  const titles = {
-    dashboard: ["Dashboard", "Resumen general del sistema"],
-    matriculas: ["Matrículas", "Gestión por Cursos"],
-    pagos: ["Pagos", "Control de pensiones y abonos"],
-    usuarios: ["Usuarios", "Administración de personal"],
-  };
-  
-  const [t, s] = titles[view] || ["Panel", ""];
-  if($("#pageTitle")) $("#pageTitle").textContent = t;
-  if($("#pageSubtitle")) $("#pageSubtitle").textContent = s;
+    const titles = {
+        dashboard: ["Dashboard", "Resumen general del sistema"],
+        matriculas: ["Matrículas", "Gestión por Cursos"],
+        pagos: ["Pagos", "Control de pensiones y abonos"],
+        usuarios: ["Usuarios", "Administración de personal"],
+    };
+    
+    const [t, s] = titles[view] || ["Panel", ""];
+    if($("#pageTitle")) $("#pageTitle").textContent = t;
+    if($("#pageSubtitle")) $("#pageSubtitle").textContent = s;
 
-  if (view === 'matriculas') {
-    if (typeof renderizarCursos === 'function') {
-      renderizarCursos(); 
+    // Cargar datos específicos de la vista
+    if (view === 'dashboard') {
+        actualizarDashboard();
+    } else if (view === 'matriculas') {
+        if (typeof renderizarCursos === 'function') renderizarCursos();
     }
-  }
 }
 
 /* =========================
@@ -168,56 +227,50 @@ function setActiveView(view) {
 ========================= */
 
 async function cargarUsuarios() {
-  try {
-    const rows = await api("/api/admin/usuarios", { method: "GET" });
-    const tbody = $("#tblUsuarios tbody");
-    if(!tbody) return;
-    tbody.innerHTML = "";
+    try {
+        const rows = await api("/api/admin/usuarios");
+        const tbody = $("#tblUsuarios tbody");
+        if(!tbody) return;
+        tbody.innerHTML = "";
 
-    if (!rows?.length) {
-      tbody.innerHTML = `<tr><td colspan="5" class="muted">No hay usuarios registrados</td></tr>`;
-      return;
+        if (!rows?.length) {
+            tbody.innerHTML = `<tr><td colspan="5" class="muted">No hay usuarios</td></tr>`;
+            return;
+        }
+
+        rows.forEach(u => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${u.id}</td>
+                    <td>${u.nombres} ${u.apellidos}</td>
+                    <td>${u.cedula}</td>
+                    <td><span class="badge ok">${u.rol}</span></td>
+                    <td>${u.estado || 'ACTIVO'}</td>
+                </tr>
+            `;
+        });
+        showAlert("ok", "Usuarios actualizados");
+    } catch (err) {
+        showAlert("bad", err.message);
     }
-
-    rows.forEach(u => {
-      const name = `${u.nombres} ${u.apellidos}`;
-      tbody.innerHTML += `
-        <tr>
-          <td>${u.id}</td>
-          <td>${name}</td>
-          <td>${u.cedula}</td>
-          <td><span class="badge ok">${u.rol}</span></td>
-          <td>${u.estado || 'ACTIVO'}</td>
-        </tr>
-      `;
-    });
-    showAlert("ok", "Usuarios actualizados ✅");
-  } catch (err) {
-    showAlert("bad", "Error: " + err.message);
-  }
 }
 
 async function crearUsuario(form) {
-  try {
-    const payload = {
-      nombres: form.nombres.value.trim(),
-      apellidos: form.apellidos.value.trim(),
-      cedula: form.cedula.value.trim(),
-      password: form.password.value,
-      rol: form.rol.value
-    };
-
-    await api("/api/admin/usuarios", {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
-
-    showAlert("ok", "Usuario creado con éxito ✅");
-    form.reset();
-    await cargarUsuarios();
-  } catch (err) {
-    showAlert("bad", err.message);
-  }
+    try {
+        const payload = {
+            nombres: form.nombres.value.trim(),
+            apellidos: form.apellidos.value.trim(),
+            cedula: form.cedula.value.trim(),
+            password: form.password.value,
+            rol: form.rol.value
+        };
+        await api("/api/admin/usuarios", { method: "POST", body: JSON.stringify(payload) });
+        showAlert("ok", "Usuario creado con éxito ✅");
+        form.reset();
+        await cargarUsuarios();
+    } catch (err) {
+        showAlert("bad", err.message);
+    }
 }
 
 /* =========================
@@ -225,59 +278,49 @@ async function crearUsuario(form) {
 ========================= */
 
 function setupInteractions() {
-  if($("#year")) $("#year").textContent = new Date().getFullYear();
+    if($("#year")) $("#year").textContent = new Date().getFullYear();
 
-  $("#btnToggleSidebar")?.addEventListener("click", () => {
-    $("#sidebar").classList.toggle("open");
-  });
-
-  $$(".menu-item[data-view]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      setActiveView(btn.dataset.view);
-      $("#sidebar")?.classList.remove("open");
+    $("#btnToggleSidebar")?.addEventListener("click", () => {
+        $("#sidebar").classList.toggle("open");
     });
-  });
 
-  $$(".quick-btn[data-view]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      setActiveView(btn.dataset.view);
+    $$(".menu-item[data-view]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            setActiveView(btn.dataset.view);
+            $("#sidebar")?.classList.remove("open");
+        });
     });
-  });
 
-  $("#btnLogoutSide")?.addEventListener("click", logout);
-  $("#btnLogoutTop")?.addEventListener("click", logout);
+    $("#btnLogoutSide")?.addEventListener("click", logout);
+    $("#btnLogoutTop")?.addEventListener("click", logout);
 
-  $$("[data-toggle-pass]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const input = btn.parentElement.querySelector("input");
-      if (!input) return;
-      const isPass = input.type === "password";
-      input.type = isPass ? "text" : "password";
-      btn.textContent = isPass ? "🙈" : "👁";
+    $$("[data-toggle-pass]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const input = btn.parentElement.querySelector("input");
+            if (!input) return;
+            const isPass = input.type === "password";
+            input.type = isPass ? "text" : "password";
+            btn.textContent = isPass ? "🙈" : "👁";
+        });
     });
-  });
 
-  const formUser = $("#formCrearUsuario");
-  if (formUser) {
-    formUser.addEventListener("submit", (e) => {
-      e.preventDefault();
-      crearUsuario(e.target);
-    });
-  }
-
-  $("#btnCargarUsuarios")?.addEventListener("click", cargarUsuarios);
-
-  $("#btnDemoMatriculas")?.addEventListener("click", () => {
-    if (typeof renderizarCursos === 'function') {
-        renderizarCursos();
-        showAlert("ok", "Sincronizando con Railway...");
+    const formUser = $("#formCrearUsuario");
+    if (formUser) {
+        formUser.addEventListener("submit", (e) => {
+            e.preventDefault();
+            crearUsuario(e.target);
+        });
     }
-  });
+
+    $("#btnCargarUsuarios")?.addEventListener("click", cargarUsuarios);
 }
 
+// Exponer la función globalmente para el botón del HTML
+window.actualizarDashboard = actualizarDashboard;
+
 (function init() {
-  fillUserUI();
-  initTheme(); // <--- NUEVO: Inicia la lógica de Dark/Light
-  setupInteractions();
-  setActiveView("dashboard");
+    fillUserUI();
+    initTheme();
+    setupInteractions();
+    setActiveView("dashboard"); // Carga el dashboard por defecto e inicia los datos
 })();
