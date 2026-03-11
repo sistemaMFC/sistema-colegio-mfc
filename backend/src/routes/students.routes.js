@@ -11,18 +11,9 @@ const router = express.Router();
 router.post("/", authRequired, onlyAdmin, async (req, res) => {
   try {
     const {
-      cedula_est,
-      nombres_est,
-      apellidos_est,
-      fecha_nac,
-      genero,
-      nombre_rep,
-      cedula_rep,
-      parentesco_rep,
-      celular_rep,
-      direccion,
-      sector,
-      curso_id
+      cedula_est, nombres_est, apellidos_est, fecha_nac, genero,
+      nombre_rep, cedula_rep, parentesco_rep, celular_rep,
+      direccion, sector, curso_id
     } = req.body;
 
     if (!cedula_est || !nombres_est || !apellidos_est || !curso_id) {
@@ -69,7 +60,7 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
 
 /**
  * GET /api/students
- * Listar estudiantes
+ * Listar estudiantes (Ahora incluye cedula_rep)
  */
 router.get("/", authRequired, async (req, res) => {
   try {
@@ -78,15 +69,15 @@ router.get("/", authRequired, async (req, res) => {
     let sql = `
       SELECT 
         id, cedula_est, nombres_est, apellidos_est, 
-        nombre_rep, celular_rep, parentesco_rep,
+        nombre_rep, cedula_rep, celular_rep, parentesco_rep,
         estado, curso_id, fecha_matricula
       FROM estudiantes
     `;
     const params = [];
 
     if (q) {
-      sql += ` WHERE nombres_est LIKE ? OR apellidos_est LIKE ? OR cedula_est LIKE ? `;
-      params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+      sql += ` WHERE nombres_est LIKE ? OR apellidos_est LIKE ? OR cedula_est LIKE ? OR cedula_rep LIKE ? `;
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
     }
 
     sql += ` ORDER BY apellidos_est ASC LIMIT 500`;
@@ -100,31 +91,51 @@ router.get("/", authRequired, async (req, res) => {
 });
 
 /**
- * NUEVO: PUT /api/students/:id
- * (ADMIN) Actualizar estado de matrícula (Legalización / Promoción)
+ * ACTUALIZADO: PUT /api/students/:id
+ * (ADMIN) Editar ficha completa o actualizar estado (Anulación/Legalización)
  */
 router.put("/:id", authRequired, onlyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { estado } = req.body; // Recibe 'ACTIVO'
+    const {
+      cedula_est, nombres_est, apellidos_est, fecha_nac, genero,
+      nombre_rep, cedula_rep, parentesco_rep, celular_rep,
+      direccion, sector, estado
+    } = req.body;
 
-    if (!estado) {
-      return res.status(400).json({ error: "El nuevo estado es requerido" });
+    // Si solo viene el estado (como en Anulación o Promoción rápida)
+    if (estado && Object.keys(req.body).length === 1) {
+      const [resEstado] = await pool.query(
+        "UPDATE estudiantes SET estado = ?, fecha_matricula = IF(estado='ACTIVO', NOW(), fecha_matricula) WHERE id = ?",
+        [estado, id]
+      );
+      return res.json({ success: true, message: "Estado actualizado correctamente" });
     }
 
-    const [result] = await pool.query(
-      "UPDATE estudiantes SET estado = ?, fecha_matricula = NOW() WHERE id = ?",
-      [estado, id]
-    );
+    // Si viene toda la ficha (Edición completa desde el formulario)
+    const sql = `
+      UPDATE estudiantes SET 
+        cedula_est = ?, nombres_est = ?, apellidos_est = ?, 
+        fecha_nac = ?, genero = ?, nombre_rep = ?, 
+        cedula_rep = ?, parentesco_rep = ?, celular_rep = ?, 
+        direccion = ?, sector = ?
+      WHERE id = ?
+    `;
+    
+    const [result] = await pool.query(sql, [
+      cedula_est, nombres_est, apellidos_est, fecha_nac, genero,
+      nombre_rep, cedula_rep, parentesco_rep, celular_rep,
+      direccion, sector, id
+    ]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "Estudiante no encontrado" });
     }
 
-    return res.json({ success: true, message: "¡Matrícula legalizada con éxito! 🎓" });
+    return res.json({ success: true, message: "Ficha del estudiante actualizada correctamente 💾" });
   } catch (err) {
     console.error("Error en PUT /students:", err);
-    return res.status(500).json({ error: "Error al actualizar la matrícula" });
+    return res.status(500).json({ error: "Error al actualizar los datos" });
   }
 });
 

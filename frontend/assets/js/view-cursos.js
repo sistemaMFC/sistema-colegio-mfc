@@ -1,6 +1,6 @@
 /* ========================================================
     LÓGICA DE VISUALIZACIÓN DE CURSOS - COLEGIO MFC
-    ACTUALIZACIÓN FINAL: MATRÍCULA NUEVA, PRE Y ACTUALES
+    ACTUALIZACIÓN: EDICIÓN, ANULACIÓN Y OPCIONES
    ======================================================== */
 
 // Variables globales para el contexto de la matrícula
@@ -133,7 +133,7 @@ async function confirmarMatriculaPre(id, apellidos, nombres) {
 }
 
 /* ========================================================
-    3. VER MATRICULADOS ACTUALES (BOTÓN AMARILLO)
+    3. VER MATRICULADOS ACTUALES (BOTÓN AMARILLO + OPCIONES)
    ======================================================== */
 
 async function listarMatriculadosActuales() {
@@ -150,7 +150,7 @@ async function listarMatriculadosActuales() {
 
     contenedor.style.display = 'block';
     txtTitulo.textContent = `Matriculados: ${cursoActualNombre}`;
-    tbody.innerHTML = "<tr><td colspan='4' style='text-align:center;'>⏳ Cargando matriculados...</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>⏳ Cargando matriculados...</td></tr>";
 
     try {
         const alumnos = await api('/api/students');
@@ -161,7 +161,7 @@ async function listarMatriculadosActuales() {
         tbody.innerHTML = "";
 
         if (inscritos.length === 0) {
-            tbody.innerHTML = "<tr><td colspan='4' class='muted' style='text-align:center;'>No hay alumnos matriculados aún en este curso.</td></tr>";
+            tbody.innerHTML = "<tr><td colspan='5' class='muted' style='text-align:center;'>No hay alumnos matriculados aún en este curso.</td></tr>";
             return;
         }
 
@@ -172,8 +172,23 @@ async function listarMatriculadosActuales() {
                     <td style="font-weight:bold; text-transform:uppercase;">
                         ${est.apellidos_est}, ${est.nombres_est}
                     </td>
-                    <td>${est.nombre_rep || 'S/I'}</td>
+                    <td>
+                        ${est.nombre_rep || 'S/I'}<br>
+                        <small class="muted">CI: ${est.cedula_rep || 'S/I'}</small>
+                    </td>
                     <td><span class="badge bg-success">MATRICULADO</span></td>
+                    <td>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                ⚙️ Opciones
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="prepararEdicion('${est.id}')">✏️ Editar Datos</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="anularMatricula('${est.id}', '${est.apellidos_est}, ${est.nombres_est}')">🚫 Anular Matrícula</a></li>
+                            </ul>
+                        </div>
+                    </td>
                 </tr>
             `;
         });
@@ -182,6 +197,59 @@ async function listarMatriculadosActuales() {
 
     } catch (err) {
         alert("❌ Error al cargar matriculados.");
+    }
+}
+
+/**
+ * LOGICA PARA EDITAR (CARGAR DATOS)
+ */
+async function prepararEdicion(id) {
+    try {
+        const est = await api(`/api/students/${id}`);
+        
+        // Llenamos el ID oculto
+        document.getElementById('edit_id_estudiante').value = est.id;
+        
+        // Llenamos los campos del formulario
+        document.getElementById('field_cedula_est').value = est.cedula_est;
+        document.getElementById('field_nombres_est').value = est.nombres_est;
+        document.getElementById('field_apellidos_est').value = est.apellidos_est;
+        document.getElementById('field_fecha_nac').value = est.fecha_nac ? est.fecha_nac.split('T')[0] : '';
+        document.getElementById('field_genero').value = est.genero;
+        document.getElementById('field_nombre_rep').value = est.nombre_rep;
+        document.getElementById('field_cedula_rep').value = est.cedula_rep;
+        document.getElementById('field_celular_rep').value = est.celular_rep;
+        document.getElementById('field_parentesco_rep').value = est.parentesco_rep;
+        document.getElementById('field_sector').value = est.sector;
+        document.getElementById('field_direccion').value = est.direccion;
+
+        // Cambiamos el título y botón
+        document.getElementById('modalMatriculaTitulo').textContent = "✏️ Editar Estudiante";
+        document.getElementById('btnSubmitMatricula').textContent = "Guardar Cambios 💾";
+        
+        // Abrimos el modal
+        document.getElementById('modalFormMatricula').style.display = 'grid';
+    } catch (err) {
+        alert("❌ Error al obtener datos del estudiante.");
+    }
+}
+
+/**
+ * LOGICA PARA ANULAR MATRICULA
+ */
+async function anularMatricula(id, nombreCompleto) {
+    if (confirm(`⚠️ ¿Está seguro que desea ANULAR la matrícula de ${nombreCompleto}?\nEsta acción cambiará el estado del estudiante.`)) {
+        try {
+            await api(`/api/students/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ estado: 'ANULADO' })
+            });
+            alert("🚫 Matrícula anulada correctamente.");
+            listarMatriculadosActuales();
+            renderizarCursos();
+        } catch (err) {
+            alert("❌ Error al anular matrícula: " + err.message);
+        }
     }
 }
 
@@ -207,13 +275,14 @@ function cerrarListaActual() {
 }
 
 /* ========================================================
-    4. GESTIÓN DE ENVÍO (MATRÍCULA NUEVA)
+    4. GESTIÓN DE ENVÍO (MATRÍCULA NUEVA / EDITAR)
    ======================================================== */
 
-async function procesarMatriculaNueva(e) {
+async function procesarMatricula(e) {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
+    const idEstudiante = formData.get('id_estudiante');
     
     const datos = {
         cedula_est: formData.get('cedula_est'),
@@ -231,17 +300,29 @@ async function procesarMatriculaNueva(e) {
     };
 
     try {
-        const res = await api('/api/students', {
-            method: 'POST',
-            body: JSON.stringify(datos)
-        });
+        let res;
+        if (idEstudiante) {
+            // EDITAR
+            res = await api(`/api/students/${idEstudiante}`, {
+                method: 'PUT',
+                body: JSON.stringify(datos)
+            });
+            alert("✅ Estudiante actualizado con éxito.");
+        } else {
+            // CREAR NUEVA
+            res = await api('/api/students', {
+                method: 'POST',
+                body: JSON.stringify(datos)
+            });
+            alert("✨ " + res.message);
+        }
 
-        alert("✨ " + res.message);
         cerrarFormularioMatricula();
         renderizarCursos(); 
+        if(idEstudiante) listarMatriculadosActuales();
         
     } catch (err) {
-        alert("❌ Error en el Servidor: " + (err.message || "Verifique los datos."));
+        alert("❌ Error: " + (err.message || "Verifique los datos."));
     }
 }
 
@@ -266,6 +347,13 @@ function abrirSelectorMatricula(id, nombre) {
 
 function abrirFormularioMatriculaNueva() {
     if (bsSelectorModal) bsSelectorModal.hide();
+    
+    // Limpiar campos y resetear modo
+    document.getElementById('formNuevaMatricula').reset();
+    document.getElementById('edit_id_estudiante').value = "";
+    document.getElementById('modalMatriculaTitulo').textContent = "Registro de Matrícula Nueva";
+    document.getElementById('btnSubmitMatricula').textContent = "Confirmar Matrícula ✨";
+
     const txtCurso = document.getElementById('txtCursoSeleccionado');
     if (txtCurso) txtCurso.textContent = `Curso: ${cursoActualNombre}`;
     
@@ -291,8 +379,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Buscador
     document.getElementById('inputBuscarEstudiante')?.addEventListener('input', filtrarEstudiantesPre);
 
-    // Envío de formulario
-    document.getElementById('formNuevaMatricula')?.addEventListener('submit', procesarMatriculaNueva);
+    // Envío de formulario (ahora maneja Crear y Editar)
+    document.getElementById('formNuevaMatricula')?.addEventListener('submit', procesarMatricula);
 
     // Botones del Modal Selector
     document.getElementById('btnMatriculaNueva')?.addEventListener('click', abrirFormularioMatriculaNueva);
@@ -311,3 +399,5 @@ window.abrirSelectorMatricula = abrirSelectorMatricula;
 window.cerrarFormularioMatricula = cerrarFormularioMatricula;
 window.cerrarListaPre = cerrarListaPre;
 window.cerrarListaActual = cerrarListaActual;
+window.prepararEdicion = prepararEdicion;
+window.anularMatricula = anularMatricula;

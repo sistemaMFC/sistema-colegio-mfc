@@ -114,14 +114,13 @@
                 <tr>
                   <th>Cédula</th>
                   <th>Estudiante (Apellidos, Nombres)</th>
+                  <th>Representante (Cédula)</th>
                   <th>Curso / Nivel</th>
                   <th>Estado</th>
                 </tr>
               </thead>
               <tbody id="listaDashboardMatriculados">
-                <tr>
-                  <td colspan="4" class="text-center muted">Cargando lista de estudiantes...</td>
-                </tr>
+                <tr><td colspan="5" class="text-center muted">Cargando lista de estudiantes...</td></tr>
               </tbody>
             </table>
           </div>
@@ -169,12 +168,13 @@
                   <tr>
                     <th>Cédula</th>
                     <th>Estudiante (Apellidos, Nombres)</th>
-                    <th>Representante</th>
+                    <th>Representante (Cédula)</th>
                     <th>Estado</th>
+                    <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody id="listaMatriculadosActuales">
-                  <tr><td colspan="4" class="muted">No hay matriculados en este curso todavía</td></tr>
+                  <tr><td colspan="5" class="muted">No hay matriculados en este curso todavía</td></tr>
                 </tbody>
               </table>
             </div>
@@ -241,9 +241,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td colspan="5" class="muted text-center">Cargando usuarios registrados...</td>
-                  </tr>
+                  <tr><td colspan="5" class="muted text-center">Cargando usuarios registrados...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -288,49 +286,59 @@
   <div id="modalFormMatricula" class="modal-mfc">
     <div class="modal-content-mfc" style="max-width: 850px;">
         <div class="modal-header-mfc">
-            <h2>Registro de Matrícula Nueva</h2>
+            <h2 id="modalMatriculaTitulo">Registro de Matrícula Nueva</h2>
             <p class="muted" id="txtCursoSeleccionado">Curso: -</p>
         </div>
         <form id="formNuevaMatricula" class="form-mfc">
+            <input type="hidden" name="id_estudiante" id="edit_id_estudiante">
+            
             <div class="form-grid-mfc">
                 <fieldset class="form-section">
                     <legend>✨ Datos del Estudiante</legend>
-                    <div class="form-group"><label>Cédula</label><input type="text" name="cedula_est" maxlength="10" placeholder="0912345678" required></div>
+                    <div class="form-group"><label>Cédula</label><input type="text" name="cedula_est" id="field_cedula_est" maxlength="10" placeholder="0912345678" required></div>
                     <div class="form-row">
-                        <div class="form-group"><label>Nombres</label><input type="text" name="nombres_est" required></div>
-                        <div class="form-group"><label>Apellidos</label><input type="text" name="apellidos_est" required></div>
+                        <div class="form-group"><label>Nombres</label><input type="text" name="nombres_est" id="field_nombres_est" required></div>
+                        <div class="form-group"><label>Apellidos</label><input type="text" name="apellidos_est" id="field_apellidos_est" required></div>
                     </div>
                     <div class="form-row">
-                        <div class="form-group"><label>Fecha Nac.</label><input type="date" name="fecha_nac" required></div>
+                        <div class="form-group"><label>Fecha Nac.</label><input type="date" name="fecha_nac" id="field_fecha_nac" required></div>
                         <div class="form-group">
                             <label>Género</label>
-                            <select name="genero"><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option><option value="Otro">Otro</option></select>
+                            <select name="genero" id="field_genero">
+                                <option value="Masculino">Masculino</option>
+                                <option value="Femenino">Femenino</option>
+                                <option value="Otro">Otro</option>
+                            </select>
                         </div>
                     </div>
                 </fieldset>
                 <fieldset class="form-section">
                     <legend>👤 Representante</legend>
-                    <div class="form-group"><label>Nombre Completo</label><input type="text" name="nombre_rep" required></div>
+                    <div class="form-group"><label>Nombre Completo</label><input type="text" name="nombre_rep" id="field_nombre_rep" required></div>
                     <div class="form-row">
-                        <div class="form-group"><label>Cédula Rep.</label><input type="text" name="cedula_rep" maxlength="10" required></div>
-                        <div class="form-group"><label>Celular</label><input type="tel" name="celular_rep" required></div>
+                        <div class="form-group"><label>Cédula Rep.</label><input type="text" name="cedula_rep" id="field_cedula_rep" maxlength="10" required></div>
+                        <div class="form-group"><label>Celular</label><input type="tel" name="celular_rep" id="field_celular_rep" required></div>
                     </div>
                     <div class="form-group">
                         <label>Parentesco</label>
-                        <select name="parentesco_rep"><option value="Padre">Padre</option><option value="Madre">Madre</option><option value="Tutor">Tutor Legal</option></select>
+                        <select name="parentesco_rep" id="field_parentesco_rep">
+                            <option value="Padre">Padre</option>
+                            <option value="Madre">Madre</option>
+                            <option value="Tutor">Tutor Legal</option>
+                        </select>
                     </div>
                 </fieldset>
                 <fieldset class="form-section" style="grid-column: span 2;">
                     <legend>📍 Ubicación</legend>
                     <div class="form-row">
-                        <div class="form-group"><label>Sector / Barrio</label><input type="text" name="sector" placeholder="Ej: Guasmo Sur"></div>
-                        <div class="form-group"><label>Dirección</label><input type="text" name="direccion" required></div>
+                        <div class="form-group"><label>Sector / Barrio</label><input type="text" name="sector" id="field_sector" placeholder="Ej: Guasmo Sur"></div>
+                        <div class="form-group"><label>Dirección</label><input type="text" name="direccion" id="field_direccion" required></div>
                     </div>
                 </fieldset>
             </div>
             <div class="modal-footer-mfc" style="margin-top: 20px; gap: 15px;">
                 <button type="button" class="btn-outline" onclick="cerrarFormularioMatricula()">Cancelar</button>
-                <button type="submit" class="btn">Confirmar Matrícula ✨</button>
+                <button type="submit" class="btn" id="btnSubmitMatricula">Confirmar Matrícula ✨</button>
             </div>
         </form>
     </div>
