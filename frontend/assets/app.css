@@ -316,7 +316,7 @@ h1 { margin: 0; font-size: 28px; letter-spacing: .2px; }
 .qb-title { font-weight: 800; }
 .qb-sub { font-size: 12px; margin-top: 2px; }
 
-/* --- Table --- */
+/* --- Table (AJUSTADO PARA VISIBILIDAD) --- */
 .table-wrap { padding: 14px; overflow: auto; }
 .table {
   width: 100%;
@@ -329,6 +329,13 @@ h1 { margin: 0; font-size: 28px; letter-spacing: .2px; }
   border-bottom: 1px solid var(--stroke);
   text-align: left;
   font-size: 13px;
+  /* El color ahora se hereda correctamente de body o variables */
+  color: inherit; 
+}
+
+/* Forzamos color claro en celdas cuando NO es modo claro */
+body:not(.light-mode) .table td {
+    color: var(--txt);
 }
 
 .table th { color: var(--muted); font-weight: 800; }
@@ -396,6 +403,13 @@ input, select {
   color: var(--txt);
   outline: none;
   transition: 0.2s;
+}
+
+/* Forzamos que lo que Gloria escriba se vea blanco en modo oscuro */
+body:not(.light-mode) input,
+body:not(.light-mode) select {
+    background: #070a14 !important;
+    color: #ffffff !important;
 }
 
 input:focus, select:focus { border-color: var(--green); }

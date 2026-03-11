@@ -2,7 +2,7 @@
 .modal-mfc {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(7, 10, 20, 0.9);
+    background: rgba(7, 10, 20, 0.92); /* Un toque más de opacidad para separar del fondo */
     backdrop-filter: blur(15px);
     display: none; /* Se activa con JS */
     place-items: center;
@@ -11,12 +11,12 @@
 
 .modal-content-mfc {
     background: #0f1730;
-    border: 1px solid rgba(67, 233, 123, 0.3);
+    border: 1px solid rgba(67, 233, 123, 0.4); /* Subimos un poco el contraste del borde */
     border-radius: 25px;
     padding: 30px;
     width: 90%;
     max-width: 500px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7); /* Sombra más profunda para dar profundidad */
 }
 
 .mfc-input-group {
@@ -28,18 +28,27 @@
     font-size: 12px;
     color: #43e97b;
     margin-bottom: 5px;
+    font-weight: 600; /* Un poco más de cuerpo a la etiqueta */
 }
 
 .mfc-input {
     width: 100%;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.25); /* Cambiamos a un fondo oscuro sólido para que el texto blanco resalte más */
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 12px;
     padding: 12px;
-    color: white;
+    color: #ffffff !important; /* Forzamos blanco puro para que no se pierda nada */
     outline: none;
+    transition: all 0.3s ease;
 }
 
 .mfc-input:focus {
     border-color: #43e97b;
+    background: rgba(0, 0, 0, 0.4); /* Oscurece al escribir para máximo contraste */
+    box-shadow: 0 0 12px rgba(67, 233, 123, 0.2); /* Efecto resplandor al seleccionar */
+}
+
+/* Mejora para el placeholder (texto de fondo en el input) */
+.mfc-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
 }
