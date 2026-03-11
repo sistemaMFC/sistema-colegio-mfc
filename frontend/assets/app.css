@@ -455,31 +455,3 @@ input:focus, select:focus { border-color: var(--green); }
   .grid-2 { grid-template-columns: 1fr; }
   .form-row { grid-template-columns: 1fr; }
 }
-
-/* ========================================================
-   MODIFICACIONES QUIRÚRGICAS PARA MODO OSCURO (DARK MODE)
-   ======================================================== */
-
-body:not(.light-mode) .table td {
-    color: #f8fafc !important; 
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-body:not(.light-mode) .table th {
-    color: var(--green) !important; 
-    background: rgba(255, 255, 255, 0.02);
-    border-bottom: 1px solid var(--green);
-}
-
-body:not(.light-mode) input, 
-body:not(.light-mode) select {
-    background: #070a14 !important; 
-    color: #ffffff !important;      
-    border: 1px solid var(--stroke) !important;
-}
-
-body:not(.light-mode) input:focus, 
-body:not(.light-mode) select:focus {
-    border-color: var(--green) !important;
-    box-shadow: 0 0 10px rgba(38, 255, 122, 0.2);
-}
