@@ -457,39 +457,29 @@ input:focus, select:focus { border-color: var(--green); }
 }
 
 /* ========================================================
-   PARCHE DE CONTRASTE PARA MODO OSCURO (NUEVO)
+   MODIFICACIONES QUIRÚRGICAS PARA MODO OSCURO (DARK MODE)
    ======================================================== */
 
-/* Evita que los textos de las tablas se pierdan en negro */
-body.dark-mode .table td, 
-body.dark-mode .table th {
-    color: #f8fafc !important; /* Blanco suave */
+body:not(.light-mode) .table td {
+    color: #f8fafc !important; 
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Asegura que Gloria vea lo que escribe en los formularios */
-body.dark-mode input, 
-body.dark-mode select {
-    background-color: #070a14 !important; /* Fondo casi negro */
-    color: #ffffff !important;           /* Letras blancas puras */
-    border: 1px solid rgba(38, 255, 122, 0.3) !important;
+body:not(.light-mode) .table th {
+    color: var(--green) !important; 
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid var(--green);
 }
 
-/* Dropdown de opciones neón */
-body.dark-mode .dropdown-menu {
-    background-color: #111b39;
-    border: 1px solid var(--green);
+body:not(.light-mode) input, 
+body:not(.light-mode) select {
+    background: #070a14 !important; 
+    color: #ffffff !important;      
+    border: 1px solid var(--stroke) !important;
 }
 
-body.dark-mode .dropdown-item {
-    color: #f8fafc;
-}
-
-body.dark-mode .dropdown-item:hover {
-    background-color: var(--green);
-    color: #000;
-}
-
-/* Títulos de cursos siempre legibles */
-body.dark-mode .curso-nombre-mfc {
-    color: var(--green) !important;
+body:not(.light-mode) input:focus, 
+body:not(.light-mode) select:focus {
+    border-color: var(--green) !important;
+    box-shadow: 0 0 10px rgba(38, 255, 122, 0.2);
 }
