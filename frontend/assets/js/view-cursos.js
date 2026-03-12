@@ -1,6 +1,6 @@
 /* ========================================================
     LÓGICA DE VISUALIZACIÓN DE CURSOS - COLEGIO MFC
-    ACTUALIZACIÓN: SELECCIÓN POR LISTADO Y PROMOCIÓN SEGURA
+    ACTUALIZACIÓN: LISTADO NUMERADO Y ELIMINACIÓN FÍSICA SEGURA
    ======================================================== */
 
 // Variables globales para el contexto de la matrícula
@@ -226,25 +226,40 @@ async function listarMatriculadosActuales() {
 }
 
 /**
- * LÓGICA PARA ANULAR MATRÍCULA (Vuelve a PENDIENTE)
+ * ❗ CORREGIDO: LOGICA PARA ANULAR MATRICULA (ELIMINACIÓN FÍSICA)
+ * Pide la clave 'SistemaMFC' y borra al estudiante de la base de datos (DELETE).
  */
 async function anularMatricula(id, nombreCompleto) {
     if (!id) return;
-    if (!confirm(`⚠️ ¿Anular matrícula de ${nombreCompleto}?\nRegresará al Listado Oficial.`)) return;
+
+    // 1. Advertencia inicial
+    if (!confirm(`⚠️ ¡ATENCIÓN! ¿Está seguro de ANULAR a ${nombreCompleto}?\nEsta acción lo ELIMINARÁ definitivamente de la base de datos.`)) return;
+
+    // 2. Pedir contraseña de seguridad
+    const password = prompt("🔐 Ingrese la CLAVE DE SEGURIDAD para confirmar la eliminación:");
+    
+    if (password !== "SistemaMFC") {
+        alert("❌ Clave incorrecta. Acción cancelada.");
+        return;
+    }
 
     try {
+        // Llamada al método DELETE
         await api(`/api/students/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify({ estado: 'PENDIENTE' })
+            method: 'DELETE'
         });
 
-        alert("✅ Matrícula revertida.");
-        renderizarCursos();
+        alert("🗑️ Estudiante eliminado correctamente del sistema.");
+
+        // Refresco total
+        await renderizarCursos();
         if(window.actualizarDashboard) window.actualizarDashboard();
+        
         cerrarListaActual();
-        listarPreMatriculados();
+
     } catch (err) {
-        alert("❌ Error al anular.");
+        console.error("Error al eliminar:", err);
+        alert("❌ Error: No se pudo eliminar el registro. Puede que tenga historial asociado.");
     }
 }
 
