@@ -1,6 +1,6 @@
 /* ========================================================
     SISTEMA COLEGIO MIGUEL FEBRES CORDERO - APP.JS 
-    VERSIÓN: FIJA EN MODO CLARO PARA MÁXIMA VISIBILIDAD
+    VERSIÓN: DASHBOARD, USUARIOS Y MODO CLARO FIJO
    ======================================================== */
 
 const API_BASE = "https://sistema-colegio-mfc.onrender.com";
@@ -43,13 +43,12 @@ function parseJWT(token) {
 function initTheme() {
     const btnTheme = $("#btnThemeToggle");
     
-    // Forzamos siempre el modo claro en el body
+    // Forzamos siempre el modo claro para asegurar legibilidad total
     document.body.classList.add("light-mode");
     localStorage.setItem("mfc_theme", "light");
 
     if (btnTheme) {
         btnTheme.textContent = "☀️";
-        // Deshabilitamos el cambio de tema para evitar errores de visibilidad
         btnTheme.addEventListener("click", () => {
             showAlert("ok", "Sistema optimizado para modo claro ☀️");
         });
@@ -88,8 +87,13 @@ async function actualizarDashboard() {
     const kpiMatriculados = $("#kpiMatriculados");
 
     try {
-        const cursosData = await api("/api/admin/cursos/estadisticas");
-        const estudiantes = await api("/api/students");
+        // Obtenemos estadísticas de cursos y lista de estudiantes en paralelo
+        const [cursosData, estudiantes] = await Promise.all([
+            api("/api/admin/cursos/estadisticas"),
+            api("/api/students")
+        ]);
+        
+        // Solo contamos a los que Gloria ya legalizó (ACTIVO)
         const matriculados = estudiantes.filter(est => est.estado === 'ACTIVO');
 
         if (kpiMatriculados) kpiMatriculados.textContent = matriculados.length;
@@ -101,11 +105,13 @@ async function actualizarDashboard() {
                 return;
             }
 
+            // Ordenamos por fecha de ingreso (ID más alto primero) y tomamos los 8 más recientes
             const recientes = [...matriculados].sort((a, b) => b.id - a.id).slice(0, 8);
 
             recientes.forEach(est => {
+                // Buscamos el nombre del curso según el curso_id
                 const infoCurso = cursosData.find(c => c.id == est.curso_id);
-                const nombreCurso = infoCurso ? infoCurso.nombre : `ID: ${est.curso_id}`;
+                const nombreCurso = infoCurso ? infoCurso.nombre : `Nivel ID: ${est.curso_id}`;
 
                 listaBody.innerHTML += `
                     <tr>
@@ -113,6 +119,7 @@ async function actualizarDashboard() {
                         <td style="font-weight:bold; text-transform:uppercase;">
                             ${est.apellidos_est}, ${est.nombres_est}
                         </td>
+                        <td>${est.cedula_rep || 'S/I'}</td>
                         <td>${nombreCurso}</td>
                         <td><span class="badge ok">MATRICULADO</span></td>
                     </tr>
@@ -145,7 +152,7 @@ function fillUserUI() {
     }
 
     const decoded = parseJWT(token);
-    if (!decoded || decoded.rol !== "ADMIN") {
+    if (!decoded) {
         logout();
         return;
     }
@@ -203,7 +210,7 @@ async function cargarUsuarios() {
         tbody.innerHTML = "";
 
         if (!rows?.length) {
-            tbody.innerHTML = `<tr><td colspan="5" class="muted">No hay usuarios</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="muted">No hay usuarios registrados</td></tr>`;
             return;
         }
 
@@ -218,7 +225,7 @@ async function cargarUsuarios() {
                 </tr>
             `;
         });
-        showAlert("ok", "Usuarios actualizados");
+        showAlert("ok", "Personal actualizado");
     } catch (err) {
         showAlert("bad", err.message);
     }
@@ -284,6 +291,7 @@ function setupInteractions() {
     $("#btnCargarUsuarios")?.addEventListener("click", cargarUsuarios);
 }
 
+// Hacemos el dashboard actualizable desde otros scripts
 window.actualizarDashboard = actualizarDashboard;
 
 (function init() {

@@ -5,7 +5,7 @@ const { authRequired, onlyAdmin } = require("../middlewares/auth");
 const router = express.Router();
 
 /**
- * POST /api/students
+ * 1. POST /api/students
  * (ADMIN) Registrar Matrícula Nueva
  */
 router.post("/", authRequired, onlyAdmin, async (req, res) => {
@@ -59,8 +59,8 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
 });
 
 /**
- * GET /api/students
- * Listar estudiantes (Ahora incluye cedula_rep)
+ * 2. GET /api/students
+ * Listar estudiantes con filtro de búsqueda
  */
 router.get("/", authRequired, async (req, res) => {
   try {
@@ -91,8 +91,8 @@ router.get("/", authRequired, async (req, res) => {
 });
 
 /**
- * ACTUALIZADO: PUT /api/students/:id
- * (ADMIN) Editar ficha completa o actualizar estado (Anulación/Legalización)
+ * 3. PUT /api/students/:id
+ * (ADMIN) Actualización: Soporta anulación (PENDIENTE) y edición completa
  */
 router.put("/:id", authRequired, onlyAdmin, async (req, res) => {
   try {
@@ -103,45 +103,54 @@ router.put("/:id", authRequired, onlyAdmin, async (req, res) => {
       direccion, sector, estado
     } = req.body;
 
-    // Si solo viene el estado (como en Anulación o Promoción rápida)
+    // --- CASO A: CAMBIO DE ESTADO RÁPIDO (ANULACIÓN / LEGALIZACIÓN) ---
     if (estado && Object.keys(req.body).length === 1) {
-      const [resEstado] = await pool.query(
-        "UPDATE estudiantes SET estado = ?, fecha_matricula = IF(estado='ACTIVO', NOW(), fecha_matricula) WHERE id = ?",
-        [estado, id]
-      );
-      return res.json({ success: true, message: "Estado actualizado correctamente" });
+      console.log(`Cambiando estado de ID ${id} a ${estado}`);
+      
+      let sqlEstado = "UPDATE estudiantes SET estado = ? WHERE id = ?";
+      let paramsEstado = [estado, id];
+
+      if (estado === 'ACTIVO') {
+          sqlEstado = "UPDATE estudiantes SET estado = ?, fecha_matricula = NOW() WHERE id = ?";
+          paramsEstado = ['ACTIVO', id];
+      }
+
+      const [resEstado] = await pool.query(sqlEstado, paramsEstado);
+      if (resEstado.affectedRows === 0) return res.status(404).json({ error: "Estudiante no encontrado" });
+      
+      return res.json({ success: true, message: `Estado actualizado a ${estado}` });
     }
 
-    // Si viene toda la ficha (Edición completa desde el formulario)
-    const sql = `
+    // --- CASO B: EDICIÓN COMPLETA ---
+    const sqlFull = `
       UPDATE estudiantes SET 
         cedula_est = ?, nombres_est = ?, apellidos_est = ?, 
         fecha_nac = ?, genero = ?, nombre_rep = ?, 
         cedula_rep = ?, parentesco_rep = ?, celular_rep = ?, 
-        direccion = ?, sector = ?
+        direccion = ?, sector = ?,
+        estado = COALESCE(?, estado)
       WHERE id = ?
     `;
     
-    const [result] = await pool.query(sql, [
+    const [result] = await pool.query(sqlFull, [
       cedula_est, nombres_est, apellidos_est, fecha_nac, genero,
       nombre_rep, cedula_rep, parentesco_rep, celular_rep,
-      direccion, sector, id
+      direccion, sector, estado || null, id
     ]);
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: "Estudiante no encontrado" });
-    }
+    if (result.affectedRows === 0) return res.status(404).json({ error: "Estudiante no encontrado" });
 
-    return res.json({ success: true, message: "Ficha del estudiante actualizada correctamente 💾" });
+    return res.json({ success: true, message: "Ficha actualizada correctamente 💾" });
+
   } catch (err) {
-    console.error("Error en PUT /students:", err);
-    return res.status(500).json({ error: "Error al actualizar los datos" });
+    console.error("❌ ERROR CRÍTICO EN PUT /students:", err.message);
+    return res.status(500).json({ error: "Error interno del servidor" });
   }
 });
 
 /**
- * GET /api/students/:id
- * Ver ficha completa
+ * 4. GET /api/students/:id
+ * Ver ficha completa de un estudiante
  */
 router.get("/:id", authRequired, async (req, res) => {
   try {
@@ -154,6 +163,33 @@ router.get("/:id", authRequired, async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Error al consultar estudiante" });
+  }
+});
+
+/**
+ * 5. DELETE /api/students/:id
+ * (ADMIN) Eliminar definitivamente de la tabla de estudiantes
+ */
+router.delete("/:id", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Ejecutamos el borrado físico del registro
+    const [result] = await pool.query("DELETE FROM estudiantes WHERE id = ?", [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Estudiante no encontrado" });
+    }
+
+    console.log(`🗑️ Estudiante ID ${id} eliminado por el administrador.`);
+    return res.json({ success: true, message: "Registro eliminado permanentemente de la base de datos." });
+
+  } catch (err) {
+    console.error("❌ ERROR AL ELIMINAR:", err.message);
+    // Si falla suele ser porque el ID tiene deudas o cargos asociados en otra tabla
+    return res.status(500).json({ 
+        error: "No se puede eliminar el registro porque tiene historial académico o financiero asociado." 
+    });
   }
 });
 
