@@ -1,15 +1,15 @@
 /* ========================================================
     LÓGICA DE VISUALIZACIÓN DE CURSOS - COLEGIO MFC
-    ACTUALIZACIÓN: PROMOCIÓN LÓGICA CON CLAVE DE SEGURIDAD
+    ACTUALIZACIÓN: PROMOCIÓN SEGURA CON VALIDACIÓN Y CLAVE
    ======================================================== */
 
-// Variables globales para el contexto
+// Variables globales para el contexto de la matrícula
 let cursoActualId = null;
 let cursoActualNombre = "";
-let bsSelectorModal = null; 
-let alumnosCursoCache = [];  
+let bsSelectorModal = null; // Instancia del modal de Bootstrap
+let alumnosCursoCache = [];  // Caché para búsqueda rápida y filtrado local
 
-// Orden lógico de los cursos para validar promociones
+// --- NUEVO: Orden lógico de los cursos para validar promociones ---
 const ORDEN_CURSOS = [
     "Inicial II", "Primero EGB", "Segundo EGB", "Tercero EGB", 
     "Cuarto EGB", "Quinto EGB", "Sexto EGB", "Séptimo EGB",
@@ -26,24 +26,28 @@ async function renderizarCursos() {
     try {
         const respuesta = await api('/api/admin/cursos/estadisticas');
         const cursos = Array.isArray(respuesta) ? respuesta : [];
+
         contenedor.innerHTML = "";
 
         if (cursos.length === 0) {
-            contenedor.innerHTML = `<p class="muted">No hay cursos registrados.</p>`;
+            contenedor.innerHTML = `<p class="muted">No hay cursos registrados en el sistema.</p>`;
             return;
         }
 
         cursos.forEach((c) => {
             contenedor.innerHTML += `
                 <div class="curso-card-mfc" onclick="abrirSelectorMatricula('${c.id}', '${c.nombre}')">
-                    <div class="curso-numero-wrapper">${c.total_matriculados || 0}</div>
+                    <div class="curso-numero-wrapper">
+                        ${c.total_matriculados || 0}
+                    </div>
                     <div class="curso-info-mfc">
                         <h3 class="curso-nombre-mfc">${c.nombre}</h3>
-                        <span class="curso-detalle-mfc">Click para gestionar</span>
+                        <span class="curso-detalle-mfc">Click para gestionar estudiantes</span>
                     </div>
                 </div>
             `;
         });
+
     } catch (err) {
         console.error("Error al cargar cursos:", err);
         contenedor.innerHTML = `<p class="danger">Error de conexión con el servidor.</p>`;
@@ -70,12 +74,11 @@ async function listarPreMatriculados() {
 
     try {
         const alumnos = await api('/api/students');
-        // Filtramos por el curso seleccionado y que NO estén activos
         alumnosCursoCache = alumnos.filter(a => a.curso_id == cursoActualId && a.estado !== 'ACTIVO');
         renderizarTablaFiltrada(alumnosCursoCache);
         contenedor.scrollIntoView({ behavior: 'smooth' });
     } catch (err) {
-        alert("❌ Error al cargar listado oficial.");
+        alert("❌ No se pudo cargar el listado oficial.");
     }
 }
 
@@ -84,7 +87,7 @@ function renderizarTablaFiltrada(lista) {
     tbody.innerHTML = "";
 
     if (lista.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='4' class='muted' style='text-align:center;'>No hay estudiantes pendientes en este curso.</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='4' class='muted' style='text-align:center;'>No hay estudiantes pendientes.</td></tr>";
         return;
     }
 
@@ -92,7 +95,9 @@ function renderizarTablaFiltrada(lista) {
         tbody.innerHTML += `
             <tr>
                 <td>${est.cedula_est}</td>
-                <td style="font-weight:bold; text-transform:uppercase; color: var(--green);">${est.apellidos_est}, ${est.nombres_est}</td>
+                <td style="font-weight:bold; text-transform:uppercase; color: var(--green);">
+                    ${est.apellidos_est}, ${est.nombres_est}
+                </td>
                 <td><span class="badge warn">${est.estado}</span></td>
                 <td>
                     <button class="btn btn-sm btn-success" onclick="confirmarMatriculaPre('${est.id}', '${est.apellidos_est}', '${est.nombres_est}')">
@@ -105,11 +110,11 @@ function renderizarTablaFiltrada(lista) {
 }
 
 /**
- * FORMALIZAR MATRÍCULA CON VALIDACIÓN DE CURSO
+ * NUEVA LÓGICA: Confirmar matrícula con selección de curso y validación
  */
 async function confirmarMatriculaPre(id, apellidos, nombres) {
     try {
-        // 1. Obtener cursos para que el usuario elija
+        // 1. Obtener todos los cursos para que el usuario elija
         const cursosBase = await api('/api/admin/cursos/estadisticas');
         let listaNombres = cursosBase.map(c => c.nombre).join("\n- ");
         
@@ -121,19 +126,25 @@ async function confirmarMatriculaPre(id, apellidos, nombres) {
         if (!cursoDestinoNombre) return;
 
         const cursoDestino = cursosBase.find(c => c.nombre.trim() === cursoDestinoNombre.trim());
-        if (!cursoDestino) return alert("❌ El curso escrito no es válido.");
+        if (!cursoDestino) {
+            alert("❌ El curso escrito no es válido o no existe.");
+            return;
+        }
 
-        // 2. Validar lógica de promoción
+        // 2. Validar orden lógico (Mismo curso o Siguiente)
         const idxActual = ORDEN_CURSOS.indexOf(cursoActualNombre);
         const idxDestino = ORDEN_CURSOS.indexOf(cursoDestinoNombre);
 
-        // Si intenta saltarse más de 1 curso hacia adelante
+        // Si el curso destino está más allá del siguiente en el orden
         if (idxDestino > idxActual + 1) {
-            const pass = prompt("⚠️ PROMOCIÓN EXCEPCIONAL: Ingrese la CLAVE DE SEGURIDAD para matricular en un curso superior:");
-            if (pass !== "SistemaMFC") return alert("❌ Clave incorrecta. Acción cancelada.");
+            const pass = prompt("⚠️ PROMOCIÓN EXCEPCIONAL: El curso elegido es superior al que le corresponde.\nIngrese la CLAVE DE SEGURIDAD para autorizar:");
+            if (pass !== "SistemaMFC") {
+                alert("❌ Clave incorrecta. Acción cancelada.");
+                return;
+            }
         }
 
-        // 3. Ejecutar actualización
+        // 3. Ejecutar el cambio
         await api(`/api/students/${id}`, {
             method: 'PUT',
             body: JSON.stringify({ 
@@ -142,7 +153,7 @@ async function confirmarMatriculaPre(id, apellidos, nombres) {
             })
         });
 
-        alert("✨ Estudiante matriculado con éxito.");
+        alert(`✨ Estudiante matriculado con éxito en ${cursoDestinoNombre}.`);
         listarPreMatriculados(); 
         renderizarCursos();     
         if(window.actualizarDashboard) window.actualizarDashboard();
@@ -153,7 +164,7 @@ async function confirmarMatriculaPre(id, apellidos, nombres) {
 }
 
 /* ========================================================
-    3. VER MATRICULADOS ACTUALES (ANULACIÓN)
+    3. VER MATRICULADOS ACTUALES (ANULACIÓN INTELIGENTE)
    ======================================================== */
 
 async function listarMatriculadosActuales() {
@@ -173,6 +184,7 @@ async function listarMatriculadosActuales() {
     try {
         const alumnos = await api('/api/students');
         const inscritos = alumnos.filter(a => a.curso_id == cursoActualId && a.estado === 'ACTIVO');
+
         tbody.innerHTML = "";
 
         if (inscritos.length === 0) {
@@ -184,16 +196,23 @@ async function listarMatriculadosActuales() {
             tbody.innerHTML += `
                 <tr>
                     <td>${est.cedula_est}</td>
-                    <td style="font-weight:bold; text-transform:uppercase;">${est.apellidos_est}, ${est.nombres_est}</td>
-                    <td>${est.nombre_rep || 'S/I'}<br><small class="muted">CI: ${est.cedula_rep || 'S/I'}</small></td>
+                    <td style="font-weight:bold; text-transform:uppercase;">
+                        ${est.apellidos_est}, ${est.nombres_est}
+                    </td>
+                    <td>
+                        ${est.nombre_rep || 'S/I'}<br>
+                        <small class="muted">CI: ${est.cedula_rep || 'S/I'}</small>
+                    </td>
                     <td><span class="badge ok">MATRICULADO</span></td>
                     <td>
                         <div class="dropdown">
-                            <button class="btn btn-sm btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">⚙️</button>
+                            <button class="btn btn-sm btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                ⚙️ Opciones
+                            </button>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#" onclick="prepararEdicion('${est.id}')">✏️ Editar</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="prepararEdicion('${est.id}')">✏️ Editar Datos</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="#" onclick="anularMatricula('${est.id}', '${est.apellidos_est}, ${est.nombres_est}')">🚫 Anular</a></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="anularMatricula('${est.id}', '${est.apellidos_est}, ${est.nombres_est}')">🚫 Anular Matrícula</a></li>
                             </ul>
                         </div>
                     </td>
@@ -206,27 +225,36 @@ async function listarMatriculadosActuales() {
     }
 }
 
+/**
+ * REVERSIÓN DE MATRÍCULA: Vuelve a PENDIENTE
+ */
 async function anularMatricula(id, nombreCompleto) {
     if (!id) return;
-    if (confirm(`⚠️ ¿Desea ANULAR la matrícula de ${nombreCompleto}?\nVolverá al Listado Oficial.`)) {
-        try {
-            await api(`/api/students/${id}`, {
-                method: 'PUT',
-                body: JSON.stringify({ estado: 'PENDIENTE' }) 
-            });
-            alert("✅ Matrícula revertida.");
-            renderizarCursos();
-            if(window.actualizarDashboard) window.actualizarDashboard();
-            cerrarListaActual();
-            listarPreMatriculados(); 
-        } catch (err) {
-            alert("❌ Error al anular.");
-        }
+
+    if (!confirm(`⚠️ ¿Está seguro de ANULAR la matrícula de ${nombreCompleto}?\nEl estudiante regresará al Listado Oficial (Pre-Matrícula).`)) return;
+
+    try {
+        await api(`/api/students/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ estado: 'PENDIENTE' })
+        });
+
+        alert("✅ Matrícula anulada correctamente.");
+
+        await renderizarCursos();
+        if(window.actualizarDashboard) window.actualizarDashboard();
+        
+        cerrarListaActual();
+        listarPreMatriculados();
+
+    } catch (err) {
+        console.error("Error al anular:", err);
+        alert("❌ Error: No se pudo anular el registro.");
     }
 }
 
 /**
- * EDICIÓN DE DATOS
+ * CARGAR DATOS EN EL FORMULARIO PARA EDITAR
  */
 async function prepararEdicion(id) {
     try {
@@ -245,71 +273,141 @@ async function prepararEdicion(id) {
         document.getElementById('field_direccion').value = est.direccion;
 
         document.getElementById('modalMatriculaTitulo').textContent = "✏️ Editar Estudiante";
+        document.getElementById('btnSubmitMatricula').textContent = "Guardar Cambios 💾";
         document.getElementById('modalFormMatricula').style.display = 'grid';
     } catch (err) {
-        alert("❌ Error al obtener datos.");
+        alert("❌ Error al obtener la ficha.");
     }
 }
 
 /* ========================================================
-    4. UTILIDADES Y EVENTOS
+    4. FUNCIONES DE UTILIDAD (BÚSQUEDA Y CIERRES)
    ======================================================== */
 
-function cerrarListaPre() { document.getElementById('contenedor-pre-matriculados').style.display = 'none'; }
-function cerrarListaActual() { document.getElementById('contenedor-matriculados-actuales').style.display = 'none'; }
+function filtrarEstudiantesPre(e) {
+    const texto = e.target.value.toLowerCase();
+    const filtrados = alumnosCursoCache.filter(a => 
+        a.apellidos_est.toLowerCase().includes(texto) || 
+        a.nombres_est.toLowerCase().includes(texto) ||
+        a.cedula_est.includes(texto)
+    );
+    renderizarTablaFiltrada(filtrados);
+}
+
+function cerrarListaPre() {
+    const el = document.getElementById('contenedor-pre-matriculados');
+    if (el) el.style.display = 'none';
+}
+
+function cerrarListaActual() {
+    const el = document.getElementById('contenedor-matriculados-actuales');
+    if (el) el.style.display = 'none';
+}
 
 async function procesarMatricula(e) {
     e.preventDefault();
-    const f = new FormData(e.target);
-    const id = f.get('id_estudiante');
+    const form = e.target;
+    const formData = new FormData(form);
+    const idEstudiante = formData.get('id_estudiante');
+    
     const datos = {
-        cedula_est: f.get('cedula_est'), nombres_est: f.get('nombres_est'), apellidos_est: f.get('apellidos_est'),
-        fecha_nac: f.get('fecha_nac'), genero: f.get('genero'), nombre_rep: f.get('nombre_rep'),
-        cedula_rep: f.get('cedula_rep'), parentesco_rep: f.get('parentesco_rep'), celular_rep: f.get('celular_rep'),
-        sector: f.get('sector'), direccion: f.get('direccion'), curso_id: cursoActualId 
+        cedula_est: formData.get('cedula_est'),
+        nombres_est: formData.get('nombres_est'),
+        apellidos_est: formData.get('apellidos_est'),
+        fecha_nac: formData.get('fecha_nac'),
+        genero: formData.get('genero'),
+        nombre_rep: formData.get('nombre_rep'),
+        cedula_rep: formData.get('cedula_rep'),
+        parentesco_rep: formData.get('parentesco_rep'),
+        celular_rep: formData.get('celular_rep'),
+        sector: formData.get('sector'),
+        direccion: formData.get('direccion'),
+        curso_id: cursoActualId 
     };
 
     try {
-        if (id) {
-            await api(`/api/students/${id}`, { method: 'PUT', body: JSON.stringify(datos) });
-            alert("✅ Actualizado.");
+        if (idEstudiante) {
+            await api(`/api/students/${idEstudiante}`, {
+                method: 'PUT',
+                body: JSON.stringify(datos)
+            });
+            alert("✅ Información actualizada.");
         } else {
-            await api('/api/students', { method: 'POST', body: JSON.stringify(datos) });
-            alert("✨ Registrado.");
+            const res = await api('/api/students', {
+                method: 'POST',
+                body: JSON.stringify(datos)
+            });
+            alert("✨ " + res.message);
         }
-        document.getElementById('modalFormMatricula').style.display = 'none';
+
+        cerrarFormularioMatricula();
         renderizarCursos(); 
-        if(id) listarMatriculadosActuales();
+        if(idEstudiante) listarMatriculadosActuales();
         if(window.actualizarDashboard) window.actualizarDashboard();
+        
     } catch (err) {
-        alert("❌ Error en el proceso.");
+        alert("❌ Error: " + (err.message || "Revise los datos."));
     }
 }
+
+/* ========================================================
+    5. INICIALIZACIÓN Y EVENTOS
+   ======================================================== */
 
 function abrirSelectorMatricula(id, nombre) {
     cursoActualId = id;
     cursoActualNombre = nombre;
-    document.getElementById('tituloCursoSeleccionado').textContent = `Curso: ${nombre}`;
-    if (!bsSelectorModal) bsSelectorModal = new bootstrap.Modal(document.getElementById('modalSelectorBootstrap'));
-    bsSelectorModal.show();
+    const titulo = document.getElementById('tituloCursoSeleccionado');
+    if (titulo) titulo.textContent = `Curso: ${nombre}`;
+
+    if (!bsSelectorModal) {
+        const modalEl = document.getElementById('modalSelectorBootstrap');
+        if (modalEl) bsSelectorModal = new bootstrap.Modal(modalEl);
+    }
+    if (bsSelectorModal) bsSelectorModal.show();
 }
 
 function abrirFormularioMatriculaNueva() {
     if (bsSelectorModal) bsSelectorModal.hide();
-    document.getElementById('formNuevaMatricula').reset();
+    const form = document.getElementById('formNuevaMatricula');
+    if (form) form.reset();
+    
     document.getElementById('edit_id_estudiante').value = "";
     document.getElementById('modalMatriculaTitulo').textContent = "Registro de Matrícula Nueva";
+    document.getElementById('btnSubmitMatricula').textContent = "Confirmar Matrícula ✨";
+
+    const txtCurso = document.getElementById('txtCursoSeleccionado');
+    if (txtCurso) txtCurso.textContent = `Curso: ${cursoActualNombre}`;
     document.getElementById('modalFormMatricula').style.display = 'grid';
+}
+
+function cerrarFormularioMatricula() {
+    const modalForm = document.getElementById('modalFormMatricula');
+    if (modalForm) {
+        modalForm.style.display = 'none';
+        document.getElementById('formNuevaMatricula')?.reset();
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     renderizarCursos();
+    document.getElementById('inputBuscarEstudiante')?.addEventListener('input', filtrarEstudiantesPre);
     document.getElementById('formNuevaMatricula')?.addEventListener('submit', procesarMatricula);
     document.getElementById('btnMatriculaNueva')?.addEventListener('click', abrirFormularioMatriculaNueva);
     document.getElementById('btnMatriculaAntigua')?.addEventListener('click', listarPreMatriculados);
     document.getElementById('btnVerMatriculados')?.addEventListener('click', listarMatriculadosActuales);
+    
+    window.addEventListener('click', (e) => {
+        if (e.target.id === 'modalFormMatricula') cerrarFormularioMatricula();
+    });
 });
 
+// Exposición global
 window.renderizarCursos = renderizarCursos;
 window.abrirSelectorMatricula = abrirSelectorMatricula;
+window.cerrarFormularioMatricula = cerrarFormularioMatricula;
+window.cerrarListaPre = cerrarListaPre;
+window.cerrarListaActual = cerrarListaActual;
+window.prepararEdicion = prepararEdicion;
 window.anularMatricula = anularMatricula;
+window.confirmarMatriculaPre = confirmarMatriculaPre;
