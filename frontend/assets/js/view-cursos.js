@@ -1,6 +1,6 @@
 /* ========================================================
     LÓGICA DE VISUALIZACIÓN DE CURSOS - COLEGIO MFC
-    ACTUALIZACIÓN: EDICIÓN, ELIMINACIÓN SEGURA Y OPCIONES
+    ACTUALIZACIÓN: SELECCIÓN POR LISTADO Y PROMOCIÓN SEGURA
    ======================================================== */
 
 // Variables globales para el contexto de la matrícula
@@ -8,6 +8,13 @@ let cursoActualId = null;
 let cursoActualNombre = "";
 let bsSelectorModal = null; // Instancia del modal de Bootstrap
 let alumnosCursoCache = [];  // Caché para búsqueda rápida y filtrado local
+
+// --- ORDEN LÓGICO PARA VALIDACIÓN ---
+const ORDEN_CURSOS = [
+    "Inicial II", "Primero EGB", "Segundo EGB", "Tercero EGB", 
+    "Cuarto EGB", "Quinto EGB", "Sexto EGB", "Séptimo EGB",
+    "Octavo EGB", "Noveno EGB", "Décimo EGB"
+];
 
 /**
  * 1. RENDERIZAR TARJETAS DE CURSOS
@@ -102,25 +109,62 @@ function renderizarTablaFiltrada(lista) {
     });
 }
 
+/**
+ * ACTUALIZADO: Matricular preguntando el curso desde un listado numerado
+ */
 async function confirmarMatriculaPre(id, apellidos, nombres) {
-    if (confirm(`¿Desea formalizar la matrícula de ${apellidos}, ${nombres}?`)) {
-        try {
-            await api(`/api/students/${id}`, {
-                method: 'PUT',
-                body: JSON.stringify({ estado: 'ACTIVO' })
-            });
-            alert("✨ Estudiante matriculado.");
-            listarPreMatriculados(); 
-            renderizarCursos();     
-            if(window.actualizarDashboard) window.actualizarDashboard();
-        } catch (err) {
-            alert("❌ Error: " + err.message);
+    try {
+        const cursosBase = await api('/api/admin/cursos/estadisticas');
+        
+        let mensajeListado = `Seleccione el curso destino para:\n${apellidos} ${nombres}\n\n`;
+        cursosBase.forEach((c, index) => {
+            mensajeListado += `${index + 1}. ${c.nombre}\n`;
+        });
+
+        const seleccion = prompt(mensajeListado + "\nEscriba el NÚMERO del curso:");
+
+        if (!seleccion) return;
+
+        const indice = parseInt(seleccion) - 1;
+        const cursoDestino = cursosBase[indice];
+
+        if (!cursoDestino) {
+            alert("❌ Selección inválida.");
+            return;
         }
+
+        // VALIDACIÓN DE CURSO SUPERIOR
+        const idxActual = ORDEN_CURSOS.indexOf(cursoActualNombre);
+        const idxDestino = ORDEN_CURSOS.indexOf(cursoDestino.nombre);
+
+        if (idxDestino > idxActual + 1) {
+            const pass = prompt("⚠️ SALTO DE CURSO: Ingrese la CLAVE DE SEGURIDAD para autorizar curso superior:");
+            if (pass !== "SistemaMFC") {
+                alert("❌ Clave incorrecta.");
+                return;
+            }
+        }
+
+        await api(`/api/students/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ 
+                estado: 'ACTIVO',
+                curso_id: cursoDestino.id 
+            })
+        });
+
+        alert(`✨ Estudiante matriculado en ${cursoDestino.nombre}`);
+        listarPreMatriculados(); 
+        renderizarCursos();     
+        if(window.actualizarDashboard) window.actualizarDashboard();
+
+    } catch (err) {
+        alert("❌ Error: " + err.message);
     }
 }
 
 /* ========================================================
-    3. VER MATRICULADOS ACTUALES (ANULACIÓN POR ELIMINACIÓN)
+    3. VER MATRICULADOS ACTUALES
    ======================================================== */
 
 async function listarMatriculadosActuales() {
@@ -182,40 +226,25 @@ async function listarMatriculadosActuales() {
 }
 
 /**
- * LOGICA PARA ANULAR MATRICULA (ELIMINACIÓN FÍSICA)
- * Pide la clave 'SistemaMFC' y borra al estudiante de la base de datos.
+ * LÓGICA PARA ANULAR MATRÍCULA (Vuelve a PENDIENTE)
  */
 async function anularMatricula(id, nombreCompleto) {
     if (!id) return;
-
-    // 1. Advertencia inicial
-    if (!confirm(`⚠️ ¡ATENCIÓN! ¿Está seguro de ANULAR a ${nombreCompleto}?\nEsta acción lo ELIMINARÁ definitivamente de la base de datos.`)) return;
-
-    // 2. Pedir contraseña de seguridad
-    const password = prompt("🔐 Ingrese la CLAVE DE SEGURIDAD para confirmar la eliminación:");
-    
-    if (password !== "SistemaMFC") {
-        alert("❌ Clave incorrecta. Acción cancelada.");
-        return;
-    }
+    if (!confirm(`⚠️ ¿Anular matrícula de ${nombreCompleto}?\nRegresará al Listado Oficial.`)) return;
 
     try {
-        // Llamada al método DELETE que configuramos en students.routes.js
         await api(`/api/students/${id}`, {
-            method: 'DELETE'
+            method: 'PUT',
+            body: JSON.stringify({ estado: 'PENDIENTE' })
         });
 
-        alert("🗑️ Estudiante eliminado correctamente del sistema.");
-
-        // Refresco total
-        await renderizarCursos();
+        alert("✅ Matrícula revertida.");
+        renderizarCursos();
         if(window.actualizarDashboard) window.actualizarDashboard();
-        
         cerrarListaActual();
-
+        listarPreMatriculados();
     } catch (err) {
-        console.error("Error al eliminar:", err);
-        alert("❌ Error: No se pudo eliminar el registro. Puede que tenga deudas o historial asociado.");
+        alert("❌ Error al anular.");
     }
 }
 
@@ -376,3 +405,4 @@ window.cerrarListaPre = cerrarListaPre;
 window.cerrarListaActual = cerrarListaActual;
 window.prepararEdicion = prepararEdicion;
 window.anularMatricula = anularMatricula;
+window.confirmarMatriculaPre = confirmarMatriculaPre;
