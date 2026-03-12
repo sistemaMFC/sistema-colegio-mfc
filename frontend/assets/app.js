@@ -1,6 +1,6 @@
 /* ========================================================
     SISTEMA COLEGIO MIGUEL FEBRES CORDERO - APP.JS 
-    VERSIÓN TOTAL: DASHBOARD, USUARIOS, TEMAS Y SESIÓN
+    VERSIÓN: FIJA EN MODO CLARO PARA MÁXIMA VISIBILIDAD
    ======================================================== */
 
 const API_BASE = "https://sistema-colegio-mfc.onrender.com";
@@ -37,28 +37,23 @@ function parseJWT(token) {
 }
 
 /* =========================
-    LÓGICA DE TEMAS (DARK/LIGHT)
+    LÓGICA DE TEMAS (FIJO EN LIGHT)
 ========================= */
 
 function initTheme() {
     const btnTheme = $("#btnThemeToggle");
-    if (!btnTheme) return;
-
-    const savedTheme = localStorage.getItem("mfc_theme") || "dark";
     
-    if (savedTheme === "light") {
-        document.body.classList.add("light-mode");
-        btnTheme.textContent = "☀️";
-    } else {
-        btnTheme.textContent = "🌑";
-    }
+    // Forzamos siempre el modo claro en el body
+    document.body.classList.add("light-mode");
+    localStorage.setItem("mfc_theme", "light");
 
-    btnTheme.addEventListener("click", () => {
-        const isLight = document.body.classList.toggle("light-mode");
-        const newTheme = isLight ? "light" : "dark";
-        localStorage.setItem("mfc_theme", newTheme);
-        btnTheme.textContent = isLight ? "☀️" : "🌑";
-    });
+    if (btnTheme) {
+        btnTheme.textContent = "☀️";
+        // Deshabilitamos el cambio de tema para evitar errores de visibilidad
+        btnTheme.addEventListener("click", () => {
+            showAlert("ok", "Sistema optimizado para modo claro ☀️");
+        });
+    }
 }
 
 /* =========================
@@ -93,10 +88,7 @@ async function actualizarDashboard() {
     const kpiMatriculados = $("#kpiMatriculados");
 
     try {
-        // 1. Obtener cursos para mapear nombres reales
         const cursosData = await api("/api/admin/cursos/estadisticas");
-        
-        // 2. Obtener estudiantes
         const estudiantes = await api("/api/students");
         const matriculados = estudiantes.filter(est => est.estado === 'ACTIVO');
 
@@ -105,7 +97,7 @@ async function actualizarDashboard() {
         if (listaBody) {
             listaBody.innerHTML = "";
             if (matriculados.length === 0) {
-                listaBody.innerHTML = `<tr><td colspan="4" class="muted text-center">No hay alumnos matriculados aún</td></tr>`;
+                listaBody.innerHTML = `<tr><td colspan="5" class="muted text-center">No hay alumnos matriculados aún</td></tr>`;
                 return;
             }
 

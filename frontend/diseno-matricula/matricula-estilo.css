@@ -15,7 +15,6 @@
     --texto-card: #ffffff;
     --texto-detalle: rgba(255, 255, 255, 0.5);
     
-    /* Variables de compatibilidad con Bootstrap */
     --bs-modal-bg: #0f172a;
     --bs-modal-border-color: var(--verde-primario);
 }
@@ -62,40 +61,29 @@ body.light-mode {
 }
 
 .curso-numero-wrapper {
-    width: 60px;
-    height: 60px;
+    width: 60px; height: 60px;
     border-radius: 50%;
     background: var(--gradiente-mfc);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 22px;
-    font-weight: 900;
-    color: #0b1020; 
-    margin-bottom: 20px;
+    display: flex; justify-content: center; align-items: center;
+    font-size: 22px; font-weight: 900;
+    color: #0b1020; margin-bottom: 20px;
     box-shadow: 0 0 15px rgba(67, 233, 123, 0.4);
 }
 
 .curso-nombre-mfc {
-    font-size: 19px;
-    font-weight: 800;
-    color: var(--texto-card); 
-    margin-bottom: 5px;
+    font-size: 19px; font-weight: 800;
+    color: var(--texto-card); margin-bottom: 5px;
     text-transform: uppercase;
 }
 
-.curso-detalle-mfc {
-    font-size: 13px;
-    color: var(--texto-detalle); 
-}
+.curso-detalle-mfc { font-size: 13px; color: var(--texto-detalle); }
 
-/* --- SECCIÓN PRE-MATRICULADOS (BAJO EL GRID) --- */
+/* --- SECCIÓN PRE-MATRICULADOS --- */
 #contenedor-pre-matriculados {
     background: var(--card-bg);
     border: 1px solid var(--verde-primario);
     border-radius: 24px;
-    padding: 25px;
-    margin: 30px 20px;
+    padding: 25px; margin: 30px 20px;
     backdrop-filter: blur(10px);
     animation: slideInUp 0.4s ease-out;
 }
@@ -105,7 +93,7 @@ body.light-mode {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- MODAL SELECTOR (BOOTSTRAP CUSTOM) --- */
+/* --- MODAL SELECTOR --- */
 .modal-content {
     border-radius: 25px !important;
     border: 1px solid var(--verde-primario) !important;
@@ -122,17 +110,14 @@ body.light-mode {
     color: #000 !important;
 }
 
-/* --- MODAL MFC (FORMULARIO MANUAL) --- */
+/* --- MODAL MFC --- */
 .modal-mfc {
-    position: fixed;
-    top: 0; left: 0; 
+    position: fixed; top: 0; left: 0; 
     width: 100%; height: 100%;
     background: rgba(4, 6, 12, 0.95);
     backdrop-filter: blur(20px);
-    display: none; 
-    place-items: center;
-    z-index: 3000; /* Mayor que Bootstrap */
-    padding: 20px;
+    display: none; place-items: center;
+    z-index: 3000; padding: 20px;
 }
 
 .modal-content-mfc {
@@ -140,284 +125,66 @@ body.light-mode {
     border: 1px solid var(--verde-primario);
     border-radius: 25px;
     padding: 30px;
-    width: 95%;
-    max-width: 850px;
-    max-height: 90vh;
-    overflow-y: auto;
-    color: #fff;
-    position: relative;
+    width: 95%; max-width: 850px;
+    max-height: 90vh; overflow-y: auto;
+    color: #fff; position: relative;
 }
 
-/* --- FORMULARIO GRID --- */
-.form-grid-mfc {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
+.form-grid-mfc { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 
 .form-section {
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 18px;
-    padding: 20px;
+    border-radius: 18px; padding: 20px;
     background: rgba(255, 255, 255, 0.02);
 }
 
 .form-section legend {
-    font-size: 12px;
-    font-weight: 800;
+    font-size: 12px; font-weight: 800;
     color: var(--verde-primario);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 0 10px;
-    width: auto;
+    text-transform: uppercase; letter-spacing: 1px;
+    padding: 0 10px; width: auto;
 }
 
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 .form-group label {
-    font-size: 12px;
-    color: rgba(255,255,255,0.6);
-    margin-bottom: 5px;
-    display: block;
+    font-size: 12px; color: rgba(255,255,255,0.6);
+    margin-bottom: 5px; display: block;
 }
 
 .form-group input, .form-group select {
-    width: 100%;
-    padding: 10px;
+    width: 100%; padding: 10px;
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 10px;
-    color: #fff;
-    outline: none;
+    border-radius: 10px; color: #fff; outline: none;
 }
 
-.form-group input:focus {
-    border-color: var(--verde-primario);
-}
+.form-group input:focus { border-color: var(--verde-primario); }
 
-/* SCROLLBAR PERSONALIZADA */
-.modal-content-mfc::-webkit-scrollbar { width: 6px; }
-.modal-content-mfc::-webkit-scrollbar-thumb { background: var(--verde-primario); border-radius: 10px; }
-
-/* RESPONSIVIDAD */
 @media (max-width: 800px) {
-    .form-grid-mfc, .form-row {
-        grid-template-columns: 1fr;
-    }
+    .form-grid-mfc, .form-row { grid-template-columns: 1fr; }
 }
 
 /* ========================================================
-   REPETICIÓN DEL CÓDIGO (SEGÚN TU ARCHIVO ORIGINAL)
+    PARCHE DE VISIBILIDAD MODO OSCURO (FINAL - OBLIGATORIO)
    ======================================================== */
 
-:root {
-    --verde-primario: #43e97b;
-    --verde-brillante: #38f9d7;
-    --fondo-oscuro: #070a14;
-    --card-bg: rgba(255, 255, 255, 0.03);
-    --gradiente-mfc: linear-gradient(135deg, var(--verde-primario) 0%, var(--verde-brillante) 100%);
-    --sombra-neon: 0 10px 40px rgba(67, 233, 123, 0.25);
-    --borde-cristal: rgba(255, 255, 255, 0.1);
-    --texto-card: #ffffff;
-    --texto-detalle: rgba(255, 255, 255, 0.5);
-    --bs-modal-bg: #0f172a;
-    --bs-modal-border-color: var(--verde-primario);
-}
-
-body.light-mode {
-    --card-bg: rgba(255, 255, 255, 0.8);
-    --borde-cristal: rgba(0, 0, 0, 0.08);
-    --texto-card: #1e293b; 
-    --texto-detalle: #64748b;
-    --sombra-neon: 0 10px 30px rgba(16, 185, 129, 0.15);
-    --bs-modal-bg: #ffffff;
-}
-
-.grid-cursos-mfc {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 25px;
-    padding: 20px;
-    perspective: 1000px;
-}
-
-.curso-card-mfc {
-    background: var(--card-bg);
-    border: 1px solid var(--borde-cristal);
-    border-radius: 28px;
-    padding: 30px;
-    position: relative;
-    overflow: hidden;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-}
-
-.curso-card-mfc:hover {
-    transform: translateY(-10px);
-    border-color: var(--verde-primario);
-    box-shadow: var(--sombra-neon);
-}
-
-.curso-numero-wrapper {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: var(--gradiente-mfc);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 22px;
-    font-weight: 900;
-    color: #0b1020; 
-    margin-bottom: 20px;
-    box-shadow: 0 0 15px rgba(67, 233, 123, 0.4);
-}
-
-.curso-nombre-mfc {
-    font-size: 19px;
-    font-weight: 800;
-    color: var(--texto-card); 
-    margin-bottom: 5px;
-    text-transform: uppercase;
-}
-
-.curso-detalle-mfc {
-    font-size: 13px;
-    color: var(--texto-detalle); 
-}
-
-#contenedor-pre-matriculados {
-    background: var(--card-bg);
-    border: 1px solid var(--verde-primario);
-    border-radius: 24px;
-    padding: 25px;
-    margin: 30px 20px;
-    backdrop-filter: blur(10px);
-    animation: slideInUp 0.4s ease-out;
-}
-
-.modal-content {
-    border-radius: 25px !important;
-    border: 1px solid var(--verde-primario) !important;
-    background-color: var(--bs-modal-bg) !important;
-}
-
-.btn-outline-success {
-    border-color: var(--verde-primario) !important;
-    color: var(--verde-primario) !important;
-}
-
-.btn-outline-success:hover {
-    background-color: var(--verde-primario) !important;
-    color: #000 !important;
-}
-
-.modal-mfc {
-    position: fixed;
-    top: 0; left: 0; 
-    width: 100%; height: 100%;
-    background: rgba(4, 6, 12, 0.95);
-    backdrop-filter: blur(20px);
-    display: none; 
-    place-items: center;
-    z-index: 3000;
-    padding: 20px;
-}
-
-.modal-content-mfc {
-    background: #0f172a; 
-    border: 1px solid var(--verde-primario);
-    border-radius: 25px;
-    padding: 30px;
-    width: 95%;
-    max-width: 850px;
-    max-height: 90vh;
-    overflow-y: auto;
-    color: #fff;
-    position: relative;
-}
-
-.form-grid-mfc {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
-
-.form-section {
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 18px;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.02);
-}
-
-.form-section legend {
-    font-size: 12px;
-    font-weight: 800;
-    color: var(--verde-primario);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 0 10px;
-    width: auto;
-}
-
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
-
-.form-group label {
-    font-size: 12px;
-    color: rgba(255,255,255,0.6);
-    margin-bottom: 5px;
-    display: block;
-}
-
-.form-group input, .form-group select {
-    width: 100%;
-    padding: 10px;
-    background: rgba(0,0,0,0.3);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 10px;
-    color: #fff;
-    outline: none;
-}
-
-.form-group input:focus {
-    border-color: var(--verde-primario);
-}
-
-@media (max-width: 800px) {
-    .form-grid-mfc, .form-row {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* ========================================================
-   PARCHE DE VISIBILIDAD MODO OSCURO (FINAL)
-   ======================================================== */
-
+/* Forzamos visibilidad de textos en tablas cuando NO hay clase light-mode */
 body:not(.light-mode) .table td {
-    color: #f8fafc !important; /* Fuerza las letras a blanco nieve */
+    color: #ffffff !important; 
 }
 
 body:not(.light-mode) .table th {
-    color: var(--verde-primario) !important; /* Encabezados en verde neón */
-    border-bottom: 2px solid var(--verde-primario);
+    color: var(--verde-primario) !important;
+    border-bottom: 2px solid var(--verde-primario) !important;
+    background: transparent !important;
 }
 
+/* Aseguramos que los dropdowns y menús sean legibles */
 body:not(.light-mode) .dropdown-menu {
     background-color: #1e293b !important;
-    border: 1px solid var(--verde-primario);
+    border: 1px solid var(--verde-primario) !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
 body:not(.light-mode) .dropdown-item {
@@ -425,6 +192,20 @@ body:not(.light-mode) .dropdown-item {
 }
 
 body:not(.light-mode) .dropdown-item:hover {
-    background-color: var(--verde-primario);
-    color: #000;
+    background-color: var(--verde-primario) !important;
+    color: #000000 !important;
+}
+
+/* Contraste máximo para inputs del modal en modo oscuro */
+body:not(.light-mode) .form-group input, 
+body:not(.light-mode) .form-group select {
+    background-color: #070a14 !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(67, 233, 123, 0.5) !important;
+}
+
+/* Estilo para los Badges en modo oscuro */
+body:not(.light-mode) .badge {
+    border-width: 2px !important;
+    font-weight: 700 !important;
 }
