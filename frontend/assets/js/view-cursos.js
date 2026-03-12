@@ -1,6 +1,6 @@
 /* ========================================================
     LÓGICA DE VISUALIZACIÓN DE CURSOS - COLEGIO MFC
-    ACTUALIZACIÓN: LISTADO NUMERADO Y ELIMINACIÓN FÍSICA SEGURA
+    ACTUALIZACIÓN: LISTADO NUMERADO, ELIMINACIÓN Y CERTIFICADOS
    ======================================================== */
 
 // Variables globales para el contexto de la matrícula
@@ -110,7 +110,7 @@ function renderizarTablaFiltrada(lista) {
 }
 
 /**
- * ACTUALIZADO: Matricular preguntando el curso desde un listado numerado
+ * Matricular preguntando el curso desde un listado numerado
  */
 async function confirmarMatriculaPre(id, apellidos, nombres) {
     try {
@@ -133,7 +133,6 @@ async function confirmarMatriculaPre(id, apellidos, nombres) {
             return;
         }
 
-        // VALIDACIÓN DE CURSO SUPERIOR
         const idxActual = ORDEN_CURSOS.indexOf(cursoActualNombre);
         const idxDestino = ORDEN_CURSOS.indexOf(cursoDestino.nombre);
 
@@ -164,7 +163,7 @@ async function confirmarMatriculaPre(id, apellidos, nombres) {
 }
 
 /* ========================================================
-    3. VER MATRICULADOS ACTUALES
+    3. VER MATRICULADOS ACTUALES Y OPCIONES
    ======================================================== */
 
 async function listarMatriculadosActuales() {
@@ -210,6 +209,8 @@ async function listarMatriculadosActuales() {
                                 ⚙️ Opciones
                             </button>
                             <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="generarCertificadoMatricula('${est.id}', '${cursoActualNombre}')">📜 Certificado</a></li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="#" onclick="prepararEdicion('${est.id}')">✏️ Editar Datos</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="#" onclick="anularMatricula('${est.id}', '${est.apellidos_est}, ${est.nombres_est}')">🚫 Anular Matrícula</a></li>
@@ -226,40 +227,26 @@ async function listarMatriculadosActuales() {
 }
 
 /**
- * ❗ CORREGIDO: LOGICA PARA ANULAR MATRICULA (ELIMINACIÓN FÍSICA)
- * Pide la clave 'SistemaMFC' y borra al estudiante de la base de datos (DELETE).
+ * LOGICA PARA ANULAR MATRICULA (ELIMINACIÓN FÍSICA)
  */
 async function anularMatricula(id, nombreCompleto) {
     if (!id) return;
-
-    // 1. Advertencia inicial
     if (!confirm(`⚠️ ¡ATENCIÓN! ¿Está seguro de ANULAR a ${nombreCompleto}?\nEsta acción lo ELIMINARÁ definitivamente de la base de datos.`)) return;
 
-    // 2. Pedir contraseña de seguridad
     const password = prompt("🔐 Ingrese la CLAVE DE SEGURIDAD para confirmar la eliminación:");
-    
     if (password !== "SistemaMFC") {
         alert("❌ Clave incorrecta. Acción cancelada.");
         return;
     }
 
     try {
-        // Llamada al método DELETE
-        await api(`/api/students/${id}`, {
-            method: 'DELETE'
-        });
-
-        alert("🗑️ Estudiante eliminado correctamente del sistema.");
-
-        // Refresco total
+        await api(`/api/students/${id}`, { method: 'DELETE' });
+        alert("🗑️ Estudiante eliminado correctamente.");
         await renderizarCursos();
         if(window.actualizarDashboard) window.actualizarDashboard();
-        
         cerrarListaActual();
-
     } catch (err) {
-        console.error("Error al eliminar:", err);
-        alert("❌ Error: No se pudo eliminar el registro. Puede que tenga historial asociado.");
+        alert("❌ Error: No se pudo eliminar el registro.");
     }
 }
 
@@ -283,7 +270,6 @@ async function prepararEdicion(id) {
         document.getElementById('field_direccion').value = est.direccion;
 
         document.getElementById('modalMatriculaTitulo').textContent = "✏️ Editar Estudiante";
-        document.getElementById('btnSubmitMatricula').textContent = "Guardar Cambios 💾";
         document.getElementById('modalFormMatricula').style.display = 'grid';
     } catch (err) {
         alert("❌ Error al obtener la ficha.");
@@ -384,10 +370,6 @@ function abrirFormularioMatriculaNueva() {
     
     document.getElementById('edit_id_estudiante').value = "";
     document.getElementById('modalMatriculaTitulo').textContent = "Registro de Matrícula Nueva";
-    document.getElementById('btnSubmitMatricula').textContent = "Confirmar Matrícula ✨";
-
-    const txtCurso = document.getElementById('txtCursoSeleccionado');
-    if (txtCurso) txtCurso.textContent = `Curso: ${cursoActualNombre}`;
     document.getElementById('modalFormMatricula').style.display = 'grid';
 }
 
@@ -420,4 +402,4 @@ window.cerrarListaPre = cerrarListaPre;
 window.cerrarListaActual = cerrarListaActual;
 window.prepararEdicion = prepararEdicion;
 window.anularMatricula = anularMatricula;
-window.confirmarMatriculaPre = confirmarMatriculaPre;
+window.confirmarMatriculaPre = confirmarMatriculaPre; 
