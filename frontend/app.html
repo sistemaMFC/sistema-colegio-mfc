@@ -42,7 +42,7 @@
         <button class="menu-item active" data-view="dashboard">
           <span class="mi-ico">🏠</span><span>Inicio</span>
         </button>
-        <button class="menu-item" data-view="estudiantes">
+        <button class="menu-item" data-view="estudiantes" onclick="mostrarModuloEstudiantes()">
           <span class="mi-ico">🎓</span><span>Estudiantes</span>
         </button>
         <button class="menu-item" data-view="matriculas">
@@ -131,33 +131,7 @@
       </section>
 
       <section class="view" id="view-estudiantes" hidden>
-        <div class="card">
-            <div class="card-head d-flex justify-content-between align-items-center">
-                <h3>Listado Global de Estudiantes</h3>
-                <div class="d-flex gap-2">
-                    <input type="text" id="inputBuscarEstudianteGlobal" class="form-control form-control-sm" placeholder="🔍 Buscar por nombre o CI...">
-                    <button class="btn-soft" onclick="listarEstudiantesGlobal()">🔄 Refrescar</button>
-                </div>
-            </div>
-            <p class="muted">Listado de todos los estudiantes registrados (Activos e Inactivos).</p>
-            
-            <div class="table-wrap" style="margin-top: 15px;">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>CI Estudiante</th>
-                            <th>Apellidos y Nombres</th>
-                            <th>Estado</th>
-                            <th>Curso Asignado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="listaEstudiantesGlobal">
-                        <tr><td colspan="5" class="text-center muted">⏳ Cargando base de datos...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <div id="contenedor-estudiantes-global"></div>
       </section>
 
       <section class="view" id="view-matriculas" hidden>
@@ -167,6 +141,7 @@
           </div>
           <p class="muted">Seleccione un curso para ver los alumnos o registrar uno nuevo.</p>
           <div class="grid-cursos-mfc"></div>
+
           <div id="contenedor-pre-matriculados" style="display: none; margin-top: 30px; border-top: 2px solid #43e97b; padding-top: 20px;">
             <div class="card-head">
                <h3 id="txtCursoLista">Listado Oficial (Pre-Matriculados)</h3>
@@ -323,7 +298,6 @@
         </div>
         <form id="formNuevaMatricula" class="form-mfc">
             <input type="hidden" name="id_estudiante" id="edit_id_estudiante">
-            
             <div class="form-grid-mfc">
                 <fieldset class="form-section">
                     <legend>✨ Datos del Estudiante</legend>
@@ -384,5 +358,6 @@
   <script src="./assets/js/view-cursos.js"></script>
   
   <script src="./assets/js/view-estudiantes.js"></script>
+
 </body>
 </html>

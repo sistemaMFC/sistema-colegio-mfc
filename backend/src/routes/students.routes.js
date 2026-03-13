@@ -7,6 +7,7 @@ const router = express.Router();
 /**
  * 1. POST /api/students
  * (ADMIN) Registrar Matrícula Nueva
+ * Se mantiene validación de 10 dígitos y chequeo de duplicados.
  */
 router.post("/", authRequired, onlyAdmin, async (req, res) => {
   try {
@@ -38,7 +39,7 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
         (cedula_est, nombres_est, apellidos_est, fecha_nac, genero,
          nombre_rep, cedula_rep, parentesco_rep, celular_rep,
          direccion, sector, curso_id, estado, periodo)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', '2025-2026')`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', '2026-2027')`,
       [
         cedula_est, nombres_est, apellidos_est, fecha_nac, genero,
         nombre_rep, cedula_rep, parentesco_rep, celular_rep,
@@ -60,27 +61,31 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
 
 /**
  * 2. GET /api/students
- * Listar estudiantes con filtro de búsqueda
+ * Listar estudiantes con filtro de búsqueda.
+ * ACTUALIZADO: Incluye nombre del curso para el listado global.
  */
 router.get("/", authRequired, async (req, res) => {
   try {
     const q = (req.query.q || "").trim();
 
+    // Consultamos con LEFT JOIN para traer el nombre del curso si existe
     let sql = `
       SELECT
-        id, cedula_est, nombres_est, apellidos_est,
-        nombre_rep, cedula_rep, celular_rep, parentesco_rep,
-        estado, curso_id, fecha_matricula
-      FROM estudiantes
+        e.id, e.cedula_est, e.nombres_est, e.apellidos_est,
+        e.nombre_rep, e.cedula_rep, e.celular_rep, e.parentesco_rep,
+        e.estado, e.curso_id, e.fecha_matricula,
+        c.nombre AS nombre_curso
+      FROM estudiantes e
+      LEFT JOIN cursos c ON e.curso_id = c.id
     `;
     const params = [];
 
     if (q) {
-      sql += ` WHERE nombres_est LIKE ? OR apellidos_est LIKE ? OR cedula_est LIKE ? OR cedula_rep LIKE ? `;
+      sql += ` WHERE e.nombres_est LIKE ? OR e.apellidos_est LIKE ? OR e.cedula_est LIKE ? OR e.cedula_rep LIKE ? `;
       params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
     }
 
-    sql += ` ORDER BY apellidos_est ASC LIMIT 500`;
+    sql += ` ORDER BY e.apellidos_est ASC LIMIT 1000`;
 
     const [rows] = await pool.query(sql, params);
     return res.json(rows);
@@ -92,7 +97,7 @@ router.get("/", authRequired, async (req, res) => {
 
 /**
  * 3. PUT /api/students/:id
- * (ADMIN) ACTUALIZADO: Soporta anulación, promoción con curso_id y edición completa
+ * (ADMIN) ACTUALIZADO: Soporta anulación, promoción con curso_id y edición completa.
  */
 router.put("/:id", authRequired, onlyAdmin, async (req, res) => {
   try {
@@ -104,7 +109,6 @@ router.put("/:id", authRequired, onlyAdmin, async (req, res) => {
     } = req.body;
 
     // --- CASO A: ACTUALIZACIÓN RÁPIDA (Solo estado y/o curso) ---
-    // Detectamos si es una acción desde el listado oficial (solo vienen estado y curso_id)
     if (!cedula_est && (estado || curso_id)) {
       console.log(`🔄 Acción rápida ID ${id}: Estado=${estado}, Curso=${curso_id}`);
       
@@ -169,7 +173,7 @@ router.get("/:id", authRequired, async (req, res) => {
 
 /**
  * 5. DELETE /api/students/:id
- * (ADMIN) Eliminar definitivamente de la tabla de estudiantes
+ * (ADMIN) Eliminar definitivamente.
  */
 router.delete("/:id", authRequired, onlyAdmin, async (req, res) => {
   try {
