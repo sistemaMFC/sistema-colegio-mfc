@@ -1,6 +1,6 @@
 /* ========================================================
     SISTEMA COLEGIO MIGUEL FEBRES CORDERO - APP.JS 
-    VERSIÓN: DASHBOARD, USUARIOS Y MODO CLARO FIJO
+    VERSIÓN ACTUALIZADA: DASHBOARD, USUARIOS Y MÓDULOS
    ======================================================== */
 
 const API_BASE = "https://sistema-colegio-mfc.onrender.com";
@@ -37,13 +37,11 @@ function parseJWT(token) {
 }
 
 /* =========================
-    LÓGICA DE TEMAS (FIJO EN LIGHT)
+    LÓGICA DE TEMAS
 ========================= */
 
 function initTheme() {
     const btnTheme = $("#btnThemeToggle");
-    
-    // Forzamos siempre el modo claro para asegurar legibilidad total
     document.body.classList.add("light-mode");
     localStorage.setItem("mfc_theme", "light");
 
@@ -87,15 +85,12 @@ async function actualizarDashboard() {
     const kpiMatriculados = $("#kpiMatriculados");
 
     try {
-        // Obtenemos estadísticas de cursos y lista de estudiantes en paralelo
         const [cursosData, estudiantes] = await Promise.all([
             api("/api/admin/cursos/estadisticas"),
             api("/api/students")
         ]);
         
-        // Solo contamos a los que Gloria ya legalizó (ACTIVO)
         const matriculados = estudiantes.filter(est => est.estado === 'ACTIVO');
-
         if (kpiMatriculados) kpiMatriculados.textContent = matriculados.length;
 
         if (listaBody) {
@@ -105,11 +100,9 @@ async function actualizarDashboard() {
                 return;
             }
 
-            // Ordenamos por fecha de ingreso (ID más alto primero) y tomamos los 8 más recientes
             const recientes = [...matriculados].sort((a, b) => b.id - a.id).slice(0, 8);
 
             recientes.forEach(est => {
-                // Buscamos el nombre del curso según el curso_id
                 const infoCurso = cursosData.find(c => c.id == est.curso_id);
                 const nombreCurso = infoCurso ? infoCurso.nombre : `Nivel ID: ${est.curso_id}`;
 
@@ -174,12 +167,16 @@ function setActiveView(view) {
     const btn = document.querySelector(`.menu-item[data-view="${view}"]`);
     if (btn) btn.classList.add("active");
 
+    // Ocultar todas las secciones .view
     $$(".view").forEach(v => v.hidden = true);
+    
+    // Mostrar la sección correspondiente
     const section = $(`#view-${view}`);
     if (section) section.hidden = false;
 
     const titles = {
         dashboard: ["Dashboard", "Resumen general del sistema"],
+        estudiantes: ["Estudiantes", "Listado global de alumnos"],
         matriculas: ["Matrículas", "Gestión por Cursos"],
         pagos: ["Pagos", "Control de pensiones y abonos"],
         usuarios: ["Usuarios", "Administración de personal"],
@@ -189,45 +186,58 @@ function setActiveView(view) {
     if($("#pageTitle")) $("#pageTitle").textContent = t;
     if($("#pageSubtitle")) $("#pageSubtitle").textContent = s;
 
+    // Disparar cargas según la vista
     if (view === 'dashboard') {
         actualizarDashboard();
     } else if (view === 'matriculas') {
         if (typeof renderizarCursos === 'function') renderizarCursos();
     } else if (view === 'usuarios') {
         cargarUsuarios();
+    } else if (view === 'estudiantes') {
+        // Si el módulo de estudiantes es externo (view-estudiantes.js)
+        if (typeof mostrarModuloEstudiantes === 'function') mostrarModuloEstudiantes();
     }
 }
 
 /* =========================
-    LÓGICA DE USUARIOS
+    LÓGICA DE USUARIOS (PERSONAL)
 ========================= */
 
 async function cargarUsuarios() {
+    const tbody = $("#tblUsuarios tbody");
+    if(!tbody) return;
+
     try {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center">⏳ Cargando personal...</td></tr>`;
+
         const rows = await api("/api/admin/usuarios");
-        const tbody = $("#tblUsuarios tbody");
-        if(!tbody) return;
         tbody.innerHTML = "";
 
-        if (!rows?.length) {
-            tbody.innerHTML = `<tr><td colspan="5" class="muted">No hay usuarios registrados</td></tr>`;
+        if (!rows || rows.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="muted text-center">No hay personal registrado aún</td></tr>`;
             return;
         }
 
         rows.forEach(u => {
+            const badgeColor = u.rol === 'ADMIN' ? 'ok' : 'warn'; // Usando clases de su CSS
             tbody.innerHTML += `
                 <tr>
                     <td>${u.id}</td>
-                    <td>${u.nombres} ${u.apellidos}</td>
+                    <td style="text-transform: uppercase; font-weight: bold;">${u.apellidos}, ${u.nombres}</td>
                     <td>${u.cedula}</td>
-                    <td><span class="badge ok">${u.rol}</span></td>
-                    <td>${u.estado || 'ACTIVO'}</td>
+                    <td><span class="badge ${badgeColor}">${u.rol}</span></td>
+                    <td>
+                        <span class="badge ${u.estado === 'ACTIVO' ? 'ok' : 'warn'}">
+                            ${u.estado || 'ACTIVO'}
+                        </span>
+                    </td>
                 </tr>
             `;
         });
-        showAlert("ok", "Personal actualizado");
+        
     } catch (err) {
-        showAlert("bad", err.message);
+        console.error("Error UI Usuarios:", err);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">⚠️ Error: ${err.message}</td></tr>`;
     }
 }
 
@@ -291,7 +301,6 @@ function setupInteractions() {
     $("#btnCargarUsuarios")?.addEventListener("click", cargarUsuarios);
 }
 
-// Hacemos el dashboard actualizable desde otros scripts
 window.actualizarDashboard = actualizarDashboard;
 
 (function init() {
