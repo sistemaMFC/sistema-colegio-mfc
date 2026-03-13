@@ -42,6 +42,9 @@
         <button class="menu-item active" data-view="dashboard">
           <span class="mi-ico">🏠</span><span>Inicio</span>
         </button>
+        <button class="menu-item" data-view="estudiantes">
+          <span class="mi-ico">🎓</span><span>Estudiantes</span>
+        </button>
         <button class="menu-item" data-view="matriculas">
           <span class="mi-ico">🧾</span><span>Matrículas</span>
         </button>
@@ -81,49 +84,79 @@
 
       <section class="view" id="view-dashboard">
         <div class="grid-cards">
-          <div class="card kpi">
-            <div class="kpi-title">Estudiantes Matriculados</div>
-            <div class="kpi-value" id="kpiMatriculados">0</div>
-            <div class="kpi-foot muted">Periodo activo</div>
+            <div class="card kpi">
+              <div class="kpi-title">Estudiantes Matriculados</div>
+              <div class="kpi-value" id="kpiMatriculados">0</div>
+              <div class="kpi-foot muted">Periodo activo</div>
+            </div>
+            <div class="card kpi">
+              <div class="kpi-title">Total Pagos Realizados</div>
+              <div class="kpi-value" id="kpiTotalPagos">$0.00</div>
+              <div class="kpi-foot muted">Periodo activo</div>
+            </div>
+            <div class="card kpi">
+              <div class="kpi-title">Por Matricular</div>
+              <div class="kpi-value" id="kpiPorMatricular">0</div>
+              <div class="kpi-foot muted">Pendientes</div>
+            </div>
+            <div class="card kpi danger">
+              <div class="kpi-title">Pagos Pendientes</div>
+              <div class="kpi-value" id="kpiPendientes">0</div>
+              <div class="kpi-foot muted">Al día / No al día</div>
+            </div>
           </div>
-          <div class="card kpi">
-            <div class="kpi-title">Total Pagos Realizados</div>
-            <div class="kpi-value" id="kpiTotalPagos">$0.00</div>
-            <div class="kpi-foot muted">Periodo activo</div>
+  
+          <div class="card" style="margin-top: 25px;">
+            <div class="card-head d-flex justify-content-between align-items-center">
+              <h3>Últimos Estudiantes Matriculados</h3>
+              <button class="btn-soft" onclick="actualizarDashboard()">🔄 Actualizar</button>
+            </div>
+            <div class="table-wrap" style="margin-top: 15px;">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Cédula</th>
+                    <th>Estudiante (Apellidos, Nombres)</th>
+                    <th>Representante (Cédula)</th>
+                    <th>Curso / Nivel</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="listaDashboardMatriculados">
+                  <tr><td colspan="5" class="text-center muted">Cargando lista de estudiantes...</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div class="card kpi">
-            <div class="kpi-title">Por Matricular</div>
-            <div class="kpi-value" id="kpiPorMatricular">0</div>
-            <div class="kpi-foot muted">Pendientes</div>
-          </div>
-          <div class="card kpi danger">
-            <div class="kpi-title">Pagos Pendientes</div>
-            <div class="kpi-value" id="kpiPendientes">0</div>
-            <div class="kpi-foot muted">Al día / No al día</div>
-          </div>
-        </div>
+      </section>
 
-        <div class="card" style="margin-top: 25px;">
-          <div class="card-head d-flex justify-content-between align-items-center">
-            <h3>Últimos Estudiantes Matriculados</h3>
-            <button class="btn-soft" onclick="actualizarDashboard()">🔄 Actualizar</button>
-          </div>
-          <div class="table-wrap" style="margin-top: 15px;">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Cédula</th>
-                  <th>Estudiante (Apellidos, Nombres)</th>
-                  <th>Representante (Cédula)</th>
-                  <th>Curso / Nivel</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody id="listaDashboardMatriculados">
-                <tr><td colspan="5" class="text-center muted">Cargando lista de estudiantes...</td></tr>
-              </tbody>
-            </table>
-          </div>
+      <section class="view" id="view-estudiantes" hidden>
+        <div class="card">
+            <div class="card-head d-flex justify-content-between align-items-center">
+                <h3>Listado Global de Estudiantes</h3>
+                <div class="d-flex gap-2">
+                    <input type="text" id="inputBuscarEstudianteGlobal" class="form-control form-control-sm" placeholder="🔍 Buscar por nombre o CI...">
+                    <button class="btn-soft" onclick="listarEstudiantesGlobal()">🔄 Refrescar</button>
+                </div>
+            </div>
+            <p class="muted">Listado de todos los estudiantes registrados (Activos e Inactivos).</p>
+            
+            <div class="table-wrap" style="margin-top: 15px;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>CI Estudiante</th>
+                            <th>Apellidos y Nombres</th>
+                            <th>Estado</th>
+                            <th>Curso Asignado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaEstudiantesGlobal">
+                        <tr><td colspan="5" class="text-center muted">⏳ Cargando base de datos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
       </section>
 
@@ -134,7 +167,6 @@
           </div>
           <p class="muted">Seleccione un curso para ver los alumnos o registrar uno nuevo.</p>
           <div class="grid-cursos-mfc"></div>
-          
           <div id="contenedor-pre-matriculados" style="display: none; margin-top: 30px; border-top: 2px solid #43e97b; padding-top: 20px;">
             <div class="card-head">
                <h3 id="txtCursoLista">Listado Oficial (Pre-Matriculados)</h3>
@@ -186,67 +218,67 @@
 
       <section class="view" id="view-usuarios" hidden>
         <div class="grid-2">
-          <div class="card">
-            <div class="card-head">
-              <h3>✨ Registrar Nuevo Usuario</h3>
-            </div>
-            <form id="formCrearUsuario" class="form">
-              <div class="form-row">
-                <div class="form-group">
-                  <label>Nombres</label>
-                  <input type="text" name="nombres" placeholder="Ej: Juan" required>
+            <div class="card">
+              <div class="card-head">
+                <h3>✨ Registrar Nuevo Usuario</h3>
+              </div>
+              <form id="formCrearUsuario" class="form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Nombres</label>
+                    <input type="text" name="nombres" placeholder="Ej: Juan" required>
+                  </div>
+                  <div class="form-group">
+                    <label>Apellidos</label>
+                    <input type="text" name="apellidos" placeholder="Ej: Pérez" required>
+                  </div>
                 </div>
                 <div class="form-group">
-                  <label>Apellidos</label>
-                  <input type="text" name="apellidos" placeholder="Ej: Pérez" required>
+                  <label>Cédula (Usuario)</label>
+                  <input type="text" name="cedula" maxlength="10" placeholder="0900000000" required>
                 </div>
-              </div>
-              <div class="form-group">
-                <label>Cédula (Usuario)</label>
-                <input type="text" name="cedula" maxlength="10" placeholder="0900000000" required>
-              </div>
-              <div class="form-group">
-                <label>Contraseña</label>
-                <div class="pass-wrap">
-                  <input type="password" name="password" required>
-                  <button type="button" class="pass-toggle" data-toggle-pass>👁</button>
+                <div class="form-group">
+                  <label>Contraseña</label>
+                  <div class="pass-wrap">
+                    <input type="password" name="password" required>
+                    <button type="button" class="pass-toggle" data-toggle-pass>👁</button>
+                  </div>
                 </div>
-              </div>
-              <div class="form-group">
-                <label>Rol del Sistema</label>
-                <select name="rol">
-                  <option value="ADMIN">Administrador</option>
-                  <option value="COLECTOR">Colector / Pagos</option>
-                  <option value="SECRETARIA">Secretaría</option>
-                </select>
-              </div>
-              <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">Guardar Usuario ✅</button>
-            </form>
-          </div>
-
-          <div class="card">
-            <div class="card-head">
-              <h3>👥 Personal del Colegio</h3>
-              <button class="btn-soft" id="btnCargarUsuarios">🔄 Refrescar</button>
+                <div class="form-group">
+                  <label>Rol del Sistema</label>
+                  <select name="rol">
+                    <option value="ADMIN">Administrador</option>
+                    <option value="COLECTOR">Colector / Pagos</option>
+                    <option value="SECRETARIA">Secretaría</option>
+                  </select>
+                </div>
+                <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">Guardar Usuario ✅</button>
+              </form>
             </div>
-            <div class="table-wrap">
-              <table class="table" id="tblUsuarios">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Nombre Completo</th>
-                    <th>Cédula</th>
-                    <th>Rol</th>
-                    <th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td colspan="5" class="muted text-center">Cargando usuarios registrados...</td></tr>
-                </tbody>
-              </table>
+  
+            <div class="card">
+              <div class="card-head">
+                <h3>👥 Personal del Colegio</h3>
+                <button class="btn-soft" id="btnCargarUsuarios">🔄 Refrescar</button>
+              </div>
+              <div class="table-wrap">
+                <table class="table" id="tblUsuarios">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nombre Completo</th>
+                      <th>Cédula</th>
+                      <th>Rol</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td colspan="5" class="muted text-center">Cargando usuarios registrados...</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
       </section>
 
       <footer class="footer">
@@ -345,13 +377,12 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   
   <script src="./assets/app.js"></script>
-  
   <script src="./assets/js/reportes-mfc.js"></script>
-  
   <script src="./assets/js/view-cursos.js"></script>
+  
+  <script src="./assets/js/view-estudiantes.js"></script>
 </body>
 </html>
