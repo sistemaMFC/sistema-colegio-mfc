@@ -31,30 +31,26 @@ router.get("/cursos/estadisticas", authRequired, onlyAdmin, async (req, res) => 
 
 /**
  * 2. POST /api/admin/usuarios
- * Crea administradores, colectores o secretarias con contraseña encriptada
+ * (ADMIN) Crea administradores, colectores o secretarias con contraseña encriptada
  */
 router.post("/usuarios", authRequired, onlyAdmin, async (req, res) => {
   try {
     const { nombres, apellidos, cedula, password, rol } = req.body;
 
-    // Validación de campos obligatorios
     if (!nombres || !apellidos || !cedula || !password) {
       return res.status(400).json({ error: "Faltan datos obligatorios (Nombres, Cédula, Password)" });
     }
 
-    // Limpieza y validación de cédula (10 dígitos)
     const cedulaLimpia = String(cedula).trim();
     if (!/^\d{10}$/.test(cedulaLimpia)) {
       return res.status(400).json({ error: "La cédula debe tener exactamente 10 dígitos" });
     }
 
-    // Verificar si el usuario ya existe
     const [exist] = await db.query("SELECT id FROM usuarios WHERE cedula = ? LIMIT 1", [cedulaLimpia]);
     if (exist.length > 0) {
       return res.status(409).json({ error: "Ya existe un usuario registrado con esa cédula" });
     }
 
-    // Encriptación de contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
     const rolFinal = rol ? rol.toUpperCase() : "SECRETARIA";
 
@@ -78,17 +74,18 @@ router.post("/usuarios", authRequired, onlyAdmin, async (req, res) => {
 
 /**
  * 3. GET /api/admin/usuarios
- * ACTUALIZADO: Lista todo el personal ordenado por apellido para facilitar la búsqueda de Gloria
+ * ACTUALIZADO: Se quita 'onlyAdmin' para que el personal autorizado pueda ver la lista.
+ * Se mantiene ordenado por apellido para Gloria.
  */
-router.get("/usuarios", authRequired, onlyAdmin, async (req, res) => {
+router.get("/usuarios", authRequired, async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT id, nombres, apellidos, cedula, rol, estado, created_at
        FROM usuarios
-       ORDER BY apellidos ASC` // Ordenar por apellidos es más práctico en administración
+       ORDER BY apellidos ASC`
     );
     
-    // Devolvemos un array vacío en lugar de null si no hay datos
+    // IMPORTANTE: Retornar siempre un array para que el frontend no falle
     return res.json(rows || []);
   } catch (err) {
     console.error("❌ Error al listar usuarios:", err);
@@ -98,7 +95,7 @@ router.get("/usuarios", authRequired, onlyAdmin, async (req, res) => {
 
 /**
  * 4. PUT /api/admin/usuarios/:id/estado
- * Permite activar o desactivar personal (Baja administrativa)
+ * (ADMIN) Permite activar o desactivar personal (Baja administrativa)
  */
 router.put("/usuarios/:id/estado", authRequired, onlyAdmin, async (req, res) => {
   try {

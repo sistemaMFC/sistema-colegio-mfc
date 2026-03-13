@@ -42,6 +42,7 @@ function parseJWT(token) {
 
 function initTheme() {
     const btnTheme = $("#btnThemeToggle");
+    // Forzamos modo claro para garantizar legibilidad
     document.body.classList.add("light-mode");
     localStorage.setItem("mfc_theme", "light");
 
@@ -100,11 +101,12 @@ async function actualizarDashboard() {
                 return;
             }
 
+            // Ordenar por ID descendente para ver los más nuevos
             const recientes = [...matriculados].sort((a, b) => b.id - a.id).slice(0, 8);
 
             recientes.forEach(est => {
                 const infoCurso = cursosData.find(c => c.id == est.curso_id);
-                const nombreCurso = infoCurso ? infoCurso.nombre : `Nivel ID: ${est.curso_id}`;
+                const nombreCurso = infoCurso ? infoCurso.nombre : `ID: ${est.curso_id}`;
 
                 listaBody.innerHTML += `
                     <tr>
@@ -167,10 +169,8 @@ function setActiveView(view) {
     const btn = document.querySelector(`.menu-item[data-view="${view}"]`);
     if (btn) btn.classList.add("active");
 
-    // Ocultar todas las secciones .view
     $$(".view").forEach(v => v.hidden = true);
     
-    // Mostrar la sección correspondiente
     const section = $(`#view-${view}`);
     if (section) section.hidden = false;
 
@@ -186,7 +186,7 @@ function setActiveView(view) {
     if($("#pageTitle")) $("#pageTitle").textContent = t;
     if($("#pageSubtitle")) $("#pageSubtitle").textContent = s;
 
-    // Disparar cargas según la vista
+    // Disparar lógica según la vista activa
     if (view === 'dashboard') {
         actualizarDashboard();
     } else if (view === 'matriculas') {
@@ -194,7 +194,6 @@ function setActiveView(view) {
     } else if (view === 'usuarios') {
         cargarUsuarios();
     } else if (view === 'estudiantes') {
-        // Si el módulo de estudiantes es externo (view-estudiantes.js)
         if (typeof mostrarModuloEstudiantes === 'function') mostrarModuloEstudiantes();
     }
 }
@@ -208,35 +207,38 @@ async function cargarUsuarios() {
     if(!tbody) return;
 
     try {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center">⏳ Cargando personal...</td></tr>`;
+        // 1. Mostrar estado de carga
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center">⏳ Cargando personal del colegio...</td></tr>`;
 
+        // 2. Llamada a la API corregida (sin onlyAdmin para ver)
         const rows = await api("/api/admin/usuarios");
-        tbody.innerHTML = "";
+        
+        tbody.innerHTML = ""; // Limpiar
 
+        // 3. Validar si hay datos
         if (!rows || rows.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" class="muted text-center">No hay personal registrado aún</td></tr>`;
             return;
         }
 
+        // 4. Dibujar filas con formato MFC
         rows.forEach(u => {
-            const badgeColor = u.rol === 'ADMIN' ? 'ok' : 'warn'; // Usando clases de su CSS
+            const badgeRol = (u.rol === 'ADMIN') ? 'ok' : 'warn';
+            const badgeEstado = (u.estado === 'ACTIVO') ? 'ok' : 'warn';
+
             tbody.innerHTML += `
                 <tr>
                     <td>${u.id}</td>
                     <td style="text-transform: uppercase; font-weight: bold;">${u.apellidos}, ${u.nombres}</td>
                     <td>${u.cedula}</td>
-                    <td><span class="badge ${badgeColor}">${u.rol}</span></td>
-                    <td>
-                        <span class="badge ${u.estado === 'ACTIVO' ? 'ok' : 'warn'}">
-                            ${u.estado || 'ACTIVO'}
-                        </span>
-                    </td>
+                    <td><span class="badge ${badgeRol}">${u.rol}</span></td>
+                    <td><span class="badge ${badgeEstado}">${u.estado || 'ACTIVO'}</span></td>
                 </tr>
             `;
         });
         
     } catch (err) {
-        console.error("Error UI Usuarios:", err);
+        console.error("Error al cargar usuarios:", err);
         tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">⚠️ Error: ${err.message}</td></tr>`;
     }
 }
@@ -280,6 +282,7 @@ function setupInteractions() {
     $("#btnLogoutSide")?.addEventListener("click", logout);
     $("#btnLogoutTop")?.addEventListener("click", logout);
 
+    // Toggle de visibilidad de contraseña
     $$("[data-toggle-pass]").forEach(btn => {
         btn.addEventListener("click", () => {
             const input = btn.parentElement.querySelector("input");
@@ -290,6 +293,7 @@ function setupInteractions() {
         });
     });
 
+    // Formulario de creación
     const formUser = $("#formCrearUsuario");
     if (formUser) {
         formUser.addEventListener("submit", (e) => {
@@ -298,10 +302,13 @@ function setupInteractions() {
         });
     }
 
+    // Botón refrescar personal
     $("#btnCargarUsuarios")?.addEventListener("click", cargarUsuarios);
 }
 
+// Globales para otros módulos
 window.actualizarDashboard = actualizarDashboard;
+window.cargarUsuarios = cargarUsuarios;
 
 (function init() {
     fillUserUI();
