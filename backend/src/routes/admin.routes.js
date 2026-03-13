@@ -32,7 +32,7 @@ router.get("/cursos/estadisticas", authRequired, async (req, res) => {
 
 /**
  * 2. POST /api/admin/usuarios
- * (SOLO ADMIN) Crea administradores, colectores o secretarias.
+ * (SOLO ADMIN) Crea administradores, colectores o secretarias con contraseña encriptada.
  */
 router.post("/usuarios", authRequired, onlyAdmin, async (req, res) => {
   try {
@@ -76,18 +76,18 @@ router.post("/usuarios", authRequired, onlyAdmin, async (req, res) => {
 /**
  * 3. GET /api/admin/usuarios
  * Listado global de personal.
- * CORRECCIÓN: Se quita 'onlyAdmin' para que Secretaría también pueda ver el listado del personal,
- * pero se mantiene 'authRequired' para proteger la información.
+ * ACTUALIZACIÓN: Se eliminó el campo 'created_at' de la consulta SQL para evitar el error de columna desconocida.
  */
 router.get("/usuarios", authRequired, async (req, res) => {
   try {
+    // Se quitó 'created_at' porque la tabla en Railway no contiene esa columna
     const [rows] = await db.query(
-      `SELECT id, nombres, apellidos, cedula, rol, estado, created_at
+      `SELECT id, nombres, apellidos, cedula, rol, estado
        FROM usuarios
        ORDER BY apellidos ASC`
     );
     
-    // Retornamos array vacío si no hay datos para que el .map() o .forEach() del front no explote
+    // Retornamos array vacío si no hay datos para que el frontend no explote
     return res.json(rows || []);
   } catch (err) {
     console.error("❌ Error al listar usuarios:", err);
