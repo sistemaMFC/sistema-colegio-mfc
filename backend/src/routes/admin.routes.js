@@ -7,9 +7,10 @@ const router = express.Router();
 
 /**
  * 1. GET /api/admin/cursos/estadisticas
- * Obtiene la lista de cursos con el conteo REAL de matriculados para el Dashboard
+ * Obtiene la lista de cursos con el conteo REAL de matriculados para el Dashboard.
+ * Se permite a cualquier usuario autenticado ver las estadísticas.
  */
-router.get("/cursos/estadisticas", authRequired, onlyAdmin, async (req, res) => {
+router.get("/cursos/estadisticas", authRequired, async (req, res) => {
   try {
     const [rows] = await db.query(`
       SELECT 
@@ -31,7 +32,7 @@ router.get("/cursos/estadisticas", authRequired, onlyAdmin, async (req, res) => 
 
 /**
  * 2. POST /api/admin/usuarios
- * (ADMIN) Crea administradores, colectores o secretarias con contraseña encriptada
+ * (SOLO ADMIN) Crea administradores, colectores o secretarias.
  */
 router.post("/usuarios", authRequired, onlyAdmin, async (req, res) => {
   try {
@@ -74,8 +75,9 @@ router.post("/usuarios", authRequired, onlyAdmin, async (req, res) => {
 
 /**
  * 3. GET /api/admin/usuarios
- * ACTUALIZADO: Se quita 'onlyAdmin' para que el personal autorizado pueda ver la lista.
- * Se mantiene ordenado por apellido para Gloria.
+ * Listado global de personal.
+ * CORRECCIÓN: Se quita 'onlyAdmin' para que Secretaría también pueda ver el listado del personal,
+ * pero se mantiene 'authRequired' para proteger la información.
  */
 router.get("/usuarios", authRequired, async (req, res) => {
   try {
@@ -85,7 +87,7 @@ router.get("/usuarios", authRequired, async (req, res) => {
        ORDER BY apellidos ASC`
     );
     
-    // IMPORTANTE: Retornar siempre un array para que el frontend no falle
+    // Retornamos array vacío si no hay datos para que el .map() o .forEach() del front no explote
     return res.json(rows || []);
   } catch (err) {
     console.error("❌ Error al listar usuarios:", err);
@@ -95,7 +97,7 @@ router.get("/usuarios", authRequired, async (req, res) => {
 
 /**
  * 4. PUT /api/admin/usuarios/:id/estado
- * (ADMIN) Permite activar o desactivar personal (Baja administrativa)
+ * (SOLO ADMIN) Permite dar de baja o activar personal.
  */
 router.put("/usuarios/:id/estado", authRequired, onlyAdmin, async (req, res) => {
   try {

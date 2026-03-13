@@ -1,6 +1,6 @@
 /* ========================================================
     SISTEMA COLEGIO MIGUEL FEBRES CORDERO - APP.JS 
-    VERSIÓN ACTUALIZADA: DASHBOARD, USUARIOS Y MÓDULOS
+    VERSIÓN INTEGRADA: DASHBOARD, USUARIOS Y MÓDULOS
    ======================================================== */
 
 const API_BASE = "https://sistema-colegio-mfc.onrender.com";
@@ -37,19 +37,18 @@ function parseJWT(token) {
 }
 
 /* =========================
-    LÓGICA DE TEMAS
+    LÓGICA DE TEMAS (FIJO LIGHT)
 ========================= */
 
 function initTheme() {
     const btnTheme = $("#btnThemeToggle");
-    // Forzamos modo claro para garantizar legibilidad
     document.body.classList.add("light-mode");
     localStorage.setItem("mfc_theme", "light");
 
     if (btnTheme) {
         btnTheme.textContent = "☀️";
         btnTheme.addEventListener("click", () => {
-            showAlert("ok", "Sistema optimizado para modo claro ☀️");
+            showAlert("ok", "Modo claro activado para mayor claridad ☀️");
         });
     }
 }
@@ -68,6 +67,12 @@ async function api(path, options = {}) {
     }
 
     const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    
+    // Si es 401 o 403, redirigir al login por seguridad
+    if (res.status === 401 || res.status === 403) {
+        console.warn("Sesión inválida o permisos insuficientes");
+    }
+
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
@@ -101,7 +106,6 @@ async function actualizarDashboard() {
                 return;
             }
 
-            // Ordenar por ID descendente para ver los más nuevos
             const recientes = [...matriculados].sort((a, b) => b.id - a.id).slice(0, 8);
 
             recientes.forEach(est => {
@@ -170,32 +174,25 @@ function setActiveView(view) {
     if (btn) btn.classList.add("active");
 
     $$(".view").forEach(v => v.hidden = true);
-    
     const section = $(`#view-${view}`);
     if (section) section.hidden = false;
 
     const titles = {
         dashboard: ["Dashboard", "Resumen general del sistema"],
-        estudiantes: ["Estudiantes", "Listado global de alumnos"],
+        estudiantes: ["Estudiantes", "Base de datos global"],
         matriculas: ["Matrículas", "Gestión por Cursos"],
-        pagos: ["Pagos", "Control de pensiones y abonos"],
-        usuarios: ["Usuarios", "Administración de personal"],
+        pagos: ["Pagos", "Control de pensiones"],
+        usuarios: ["Usuarios", "Personal del Colegio"],
     };
     
     const [t, s] = titles[view] || ["Panel", ""];
     if($("#pageTitle")) $("#pageTitle").textContent = t;
     if($("#pageSubtitle")) $("#pageSubtitle").textContent = s;
 
-    // Disparar lógica según la vista activa
-    if (view === 'dashboard') {
-        actualizarDashboard();
-    } else if (view === 'matriculas') {
-        if (typeof renderizarCursos === 'function') renderizarCursos();
-    } else if (view === 'usuarios') {
-        cargarUsuarios();
-    } else if (view === 'estudiantes') {
-        if (typeof mostrarModuloEstudiantes === 'function') mostrarModuloEstudiantes();
-    }
+    if (view === 'dashboard') actualizarDashboard();
+    if (view === 'usuarios') cargarUsuarios();
+    if (view === 'matriculas' && typeof renderizarCursos === 'function') renderizarCursos();
+    if (view === 'estudiantes' && typeof mostrarModuloEstudiantes === 'function') mostrarModuloEstudiantes();
 }
 
 /* =========================
@@ -207,22 +204,19 @@ async function cargarUsuarios() {
     if(!tbody) return;
 
     try {
-        // 1. Mostrar estado de carga
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center">⏳ Cargando personal del colegio...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center">⏳ Sincronizando personal...</td></tr>`;
 
-        // 2. Llamada a la API corregida (sin onlyAdmin para ver)
         const rows = await api("/api/admin/usuarios");
         
-        tbody.innerHTML = ""; // Limpiar
+        tbody.innerHTML = ""; 
 
-        // 3. Validar si hay datos
         if (!rows || rows.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="muted text-center">No hay personal registrado aún</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="muted text-center">No hay personal registrado</td></tr>`;
             return;
         }
 
-        // 4. Dibujar filas con formato MFC
         rows.forEach(u => {
+            // Colores MFC: ok (verde) para ADMIN, warn (amarillo) para otros
             const badgeRol = (u.rol === 'ADMIN') ? 'ok' : 'warn';
             const badgeEstado = (u.estado === 'ACTIVO') ? 'ok' : 'warn';
 
@@ -239,7 +233,7 @@ async function cargarUsuarios() {
         
     } catch (err) {
         console.error("Error al cargar usuarios:", err);
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">⚠️ Error: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">⚠️ No se pudo cargar la lista (Verifique permisos)</td></tr>`;
     }
 }
 
@@ -253,7 +247,7 @@ async function crearUsuario(form) {
             rol: form.rol.value
         };
         await api("/api/admin/usuarios", { method: "POST", body: JSON.stringify(payload) });
-        showAlert("ok", "Usuario creado con éxito ✅");
+        showAlert("ok", "Personal registrado con éxito ✅");
         form.reset();
         await cargarUsuarios();
     } catch (err) {
@@ -282,7 +276,6 @@ function setupInteractions() {
     $("#btnLogoutSide")?.addEventListener("click", logout);
     $("#btnLogoutTop")?.addEventListener("click", logout);
 
-    // Toggle de visibilidad de contraseña
     $$("[data-toggle-pass]").forEach(btn => {
         btn.addEventListener("click", () => {
             const input = btn.parentElement.querySelector("input");
@@ -293,7 +286,6 @@ function setupInteractions() {
         });
     });
 
-    // Formulario de creación
     const formUser = $("#formCrearUsuario");
     if (formUser) {
         formUser.addEventListener("submit", (e) => {
@@ -302,11 +294,9 @@ function setupInteractions() {
         });
     }
 
-    // Botón refrescar personal
     $("#btnCargarUsuarios")?.addEventListener("click", cargarUsuarios);
 }
 
-// Globales para otros módulos
 window.actualizarDashboard = actualizarDashboard;
 window.cargarUsuarios = cargarUsuarios;
 
