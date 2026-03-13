@@ -1,6 +1,6 @@
 /* ========================================================
     MÓDULO INDEPENDIENTE: GESTIÓN GLOBAL DE ESTUDIANTES
-    Lógica separada para no saturar otros archivos
+    Lógica de visualización, edición y cambio de curso
    ======================================================== */
 
 async function mostrarModuloEstudiantes() {
@@ -50,7 +50,6 @@ async function mostrarModuloEstudiantes() {
 
 async function listarEstudiantesGlobal() {
     try {
-        // Llamada a la API (que ahora trae el nombre_curso gracias al JOIN)
         const estudiantes = await api('/api/students');
         const tbody = document.getElementById('listaEstudiantesGlobalCuerpo');
         
@@ -72,12 +71,10 @@ async function listarEstudiantesGlobal() {
                     <td>${est.nombre_curso || '<em class="muted">Sin curso</em>'}</td>
                     <td>
                         <div class="d-flex gap-1">
-                            <button class="btn-soft btn-sm" onclick="generarCertificadoMatricula('${est.id}', '${est.nombre_curso || ''}')" ${!esActivo ? 'disabled' : ''} title="Certificado">
-                                📜
-                            </button>
-                            <button class="btn-soft btn-sm" onclick="prepararEdicion('${est.id}')" title="Editar Ficha">
-                                ✏️
-                            </button>
+                            <button class="btn-soft btn-sm" onclick="verFichaCompleta('${est.id}')" title="Ver Información">👁️</button>
+                            <button class="btn-soft btn-sm" onclick="generarCertificadoMatricula('${est.id}', '${est.nombre_curso || ''}')" ${!esActivo ? 'disabled' : ''} title="Certificado">📜</button>
+                            <button class="btn-soft btn-sm" onclick="prepararEdicion('${est.id}')" title="Editar Ficha">✏️</button>
+                            <button class="btn-soft btn-sm" onclick="solicitarCambioCurso('${est.id}', '${est.apellidos_est} ${est.nombres_est}')" title="Cambiar de Curso">🔄</button>
                         </div>
                     </td>
                 </tr>
@@ -91,7 +88,80 @@ async function listarEstudiantesGlobal() {
     }
 }
 
-// Lógica de búsqueda en tiempo real (Escucha el input de búsqueda global)
+/* ========================================================
+    NUEVAS FUNCIONES SOLICITADAS
+   ======================================================== */
+
+// 1. FUNCIÓN VER: Muestra toda la información del estudiante
+async function verFichaCompleta(id) {
+    try {
+        const est = await api(`/api/students/${id}`);
+        // Formateamos la fecha para que sea legible
+        const fechaNac = est.fecha_nac ? new Date(est.fecha_nac).toLocaleDateString() : 'No registrada';
+        
+        // Usamos un alert estructurado para ver los datos
+        alert(`
+            📋 FICHA COMPLETA DEL ESTUDIANTE
+            ------------------------------------------
+            ESTUDIANTE: ${est.apellidos_est} ${est.nombres_est}
+            CÉDULA: ${est.cedula_est}
+            FECHA NAC: ${fechaNac}
+            GÉNERO: ${est.genero || 'N/A'}
+            DIRECCIÓN: ${est.direccion || 'N/A'}
+            SECTOR: ${est.sector || 'N/A'}
+            
+            👤 INFORMACIÓN DEL REPRESENTANTE
+            ------------------------------------------
+            NOMBRE: ${est.nombre_rep || 'N/A'}
+            CÉDULA REP: ${est.cedula_rep || 'N/A'}
+            CELULAR: ${est.celular_rep || 'N/A'}
+            PARENTESCO: ${est.parentesco_rep || 'N/A'}
+            
+            🎓 ESTADO ACADÉMICO
+            ------------------------------------------
+            ESTADO: ${est.estado}
+            PERIODO: ${est.periodo || '2026-2027'}
+        `);
+    } catch (err) {
+        alert("Error al obtener la ficha del estudiante.");
+    }
+}
+
+// 2. FUNCIÓN CAMBIAR CURSO: Con protección de contraseña "SistemaMFC"
+async function solicitarCambioCurso(id, nombreAlumno) {
+    const pass = prompt(`🔐 SEGURIDAD: Ingrese la contraseña de administrador para cambiar el curso de ${nombreAlumno}:`);
+    
+    if (pass === "SistemaMFC") {
+        const nuevoCursoId = prompt("Ingrese el ID del NUEVO CURSO (1: Inicial I, 2: Inicial II, 3: Primero EGB, etc):");
+        
+        if (nuevoCursoId && !isNaN(nuevoCursoId)) {
+            try {
+                const res = await api(`/api/students/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ curso_id: nuevoCursoId })
+                });
+                
+                if (res.success) {
+                    alert("✅ Curso actualizado exitosamente. Refrescando lista...");
+                    listarEstudiantesGlobal(); 
+                } else {
+                    alert("❌ No se pudo actualizar el curso.");
+                }
+            } catch (err) {
+                alert("❌ Error en la conexión al intentar cambiar el curso.");
+            }
+        } else if (nuevoCursoId !== null) {
+            alert("⚠️ ID de curso no válido.");
+        }
+    } else if (pass !== null) {
+        alert("🚫 Contraseña incorrecta. Acción denegada.");
+    }
+}
+
+/* ========================================================
+    EVENTOS DE BÚSQUEDA Y EXPOSICIÓN GLOBAL
+   ======================================================== */
+
 document.addEventListener('input', (e) => {
     if (e.target.id === 'inputBuscarEstudianteGlobal') {
         const busqueda = e.target.value.toLowerCase();
@@ -104,6 +174,7 @@ document.addEventListener('input', (e) => {
     }
 });
 
-// Exponer funciones al objeto global (window) para que el HTML las vea
 window.mostrarModuloEstudiantes = mostrarModuloEstudiantes;
 window.listarEstudiantesGlobal = listarEstudiantesGlobal;
+window.verFichaCompleta = verFichaCompleta;
+window.solicitarCambioCurso = solicitarCambioCurso;
