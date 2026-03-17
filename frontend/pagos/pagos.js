@@ -45,13 +45,13 @@ async function inicializarModuloPagos() {
         </div>
 
         <div id="panelDetallePago" class="grid-2 mt-4" style="display:none;">
-            </div>
+             </div>
     `;
 
-    // Carga la lista inicial de los que ya existen
+    // Carga inicial
     cargarListaEstudiantesInicial();
 
-    // Filtro de búsqueda en tiempo real
+    // Filtro de búsqueda
     const inputBusqueda = document.getElementById('inputBuscarAlumnoPago');
     inputBusqueda.addEventListener('input', e => {
         const valor = e.target.value.trim();
@@ -64,23 +64,18 @@ async function inicializarModuloPagos() {
 }
 
 /**
- * 2. Función para Inscribir (Abre el formulario de registro de matrícula como inscripción)
+ * 2. Abre el formulario para Alumnos Nuevos
  */
 function abrirModalInscripcionPagos() {
     const modal = document.getElementById('modalFormMatricula');
-    if(!modal) {
-        alert("Error: No se encontró el formulario de registro.");
-        return;
-    }
+    if(!modal) return;
 
-    // Cambiamos textos para que Gloria sepa que es Inscripción
     const titulo = document.getElementById('modalMatriculaTitulo');
     const boton = document.getElementById('btnSubmitMatricula');
     
     if(titulo) titulo.innerText = "📝 Formulario de Inscripción - Alumno Nuevo";
     if(boton) boton.innerText = "Guardar Estudiante e Inscribir ✨";
     
-    // Limpiamos los campos
     const form = document.getElementById('formNuevaMatricula');
     if(form) form.reset();
     
@@ -91,7 +86,7 @@ function abrirModalInscripcionPagos() {
 }
 
 /**
- * 3. Carga inicial de alumnos existentes
+ * 3. Carga inicial de la base de datos
  */
 async function cargarListaEstudiantesInicial() {
     const display = document.getElementById('resultadoBusquedaPagos');
@@ -120,13 +115,13 @@ async function buscarAlumnoParaPago(criterio) {
 }
 
 /**
- * 5. Renderiza la tabla de estudiantes
+ * 5. Dibujar Tabla
  */
 function renderizarTablaEstudiantes(lista, criterio = "") {
     const display = document.getElementById('resultadoBusquedaPagos');
 
     if (lista.length === 0) {
-        display.innerHTML = `<div class="alert alert-warning">No se encontraron resultados para "${criterio}"</div>`;
+        display.innerHTML = `<div class="alert alert-warning">No se encontraron estudiantes con "${criterio}"</div>`;
         return;
     }
 
@@ -161,7 +156,7 @@ function renderizarTablaEstudiantes(lista, criterio = "") {
 }
 
 /**
- * 6. Ficha de cobro (Se activa al seleccionar alguien de la tabla)
+ * 6. Ficha de cobro (Aquí es donde daba el error 500)
  */
 async function cargarEstadoCuenta(estudianteId) {
     const panel = document.getElementById('panelDetallePago');
@@ -185,7 +180,6 @@ async function cargarEstadoCuenta(estudianteId) {
                 <div class="card-body">
                     <p><strong>Representante:</strong> ${est.nombre_rep || 'S/I'}</p>
                     <p><strong>Cédula:</strong> ${est.cedula_rep || 'S/I'}</p>
-                    <p><strong>Teléfono:</strong> ${est.celular_rep || 'S/I'}</p>
                     <hr>
                     <div class="form-group">
                         <label>Seleccione Concepto</label>
@@ -204,8 +198,7 @@ async function cargarEstadoCuenta(estudianteId) {
             <div class="card">
                 <div class="card-head"><h4>💰 Estado de Pensiones</h4></div>
                 <div class="card-body">
-                    <div id="contenedor-dinamico-pagos">
-                         </div>
+                    <div id="contenedor-dinamico-pagos"></div>
                     <button class="btn-cobrar-principal w-100 mt-3" onclick="confirmarTransaccion('${est.id}')">
                         REGISTRAR PAGO AHORA
                     </button>
@@ -213,16 +206,16 @@ async function cargarEstadoCuenta(estudianteId) {
             </div>
         `;
         
-        // Carga inicial (por defecto Pensiones)
         cambiarVistaConcepto('pension', estudianteId);
         
     } catch (err) {
-        alert("Error al cargar datos del estudiante.");
+        console.error("Error al cargar estado de cuenta:", err);
+        alert("El estudiante no tiene pensiones generadas o hay un error en el servidor.");
     }
 }
 
 /**
- * 7. Control de vista (Pensión vs Otros)
+ * 7. Alternar vista
  */
 function cambiarVistaConcepto(valor, estudianteId) {
     const contenedor = document.getElementById('contenedor-dinamico-pagos');
@@ -230,12 +223,7 @@ function cambiarVistaConcepto(valor, estudianteId) {
     
     if (valor !== 'pension') {
         areaMonto.style.display = 'block';
-        contenedor.innerHTML = `
-            <div class="alert alert-warning">
-                <strong>Aviso:</strong> Está procesando un pago único de ${valor.toUpperCase()}.
-                Ingrese el monto manual en el panel izquierdo.
-            </div>
-        `;
+        contenedor.innerHTML = `<div class="alert alert-warning">Pago único de ${valor.toUpperCase()}.</div>`;
     } else {
         areaMonto.style.display = 'none';
         cargarSemaforoPensiones(estudianteId);
@@ -243,7 +231,7 @@ function cambiarVistaConcepto(valor, estudianteId) {
 }
 
 /**
- * 8. Semáforo de Pensiones (Conexión real con DB)
+ * 8. Semáforo Real
  */
 async function cargarSemaforoPensiones(id) {
     const contenedor = document.getElementById('contenedor-dinamico-pagos');
@@ -251,7 +239,7 @@ async function cargarSemaforoPensiones(id) {
         const deudas = await api(`/api/pagos/estado/${id}`);
         
         if (!deudas || deudas.length === 0) {
-            contenedor.innerHTML = `<div class="alert alert-info text-center">Este estudiante no tiene deudas de pensión generadas.</div>`;
+            contenedor.innerHTML = `<div class="alert alert-info">Sin pensiones registradas.</div>`;
             return;
         }
 
@@ -260,26 +248,22 @@ async function cargarSemaforoPensiones(id) {
                 ${deudas.map(d => `
                     <div class="mes-pago-card ${d.estado.toLowerCase()}" 
                          onclick="${d.estado === 'PENDIENTE' ? "this.classList.toggle('seleccionado')" : ""}">
-                        <span class="mes-name">${d.mes_nombre || 'MES'}</span>
-                        <span class="mes-status">$${d.monto_pendiente || '0.00'}</span>
+                        <span class="mes-name">${d.mes_nombre}</span>
+                        <span class="mes-status">$${d.monto_pendiente}</span>
                     </div>
                 `).join('')}
             </div>
         `;
     } catch (err) {
-        contenedor.innerHTML = `<p class="muted">Sincronizando cronograma...</p>`;
+        contenedor.innerHTML = `<p class="muted">No se pudo obtener el cronograma de la base de datos.</p>`;
     }
 }
 
-/**
- * 9. Procesar Transacción
- */
 function confirmarTransaccion(id) {
-    const concepto = document.getElementById('conceptoSeleccionado').value;
-    alert(`Procesando cobro de ${concepto.toUpperCase()}... Enlace con Backend activo.`);
+    alert("Procesando cobro...");
 }
 
-// Exportar al sistema global para que app.js lo vea
+// Globales
 window.inicializarModuloPagos = inicializarModuloPagos;
 window.abrirModalInscripcionPagos = abrirModalInscripcionPagos;
 window.cargarEstadoCuenta = cargarEstadoCuenta;

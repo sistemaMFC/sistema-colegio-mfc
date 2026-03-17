@@ -5,42 +5,60 @@ const pagosController = {
     getDeudas: async (req, res) => {
         const { id } = req.params;
         try {
+            // Verificamos si existen cargos para este estudiante
             const [rows] = await db.query(
-                "SELECT * FROM cargos_estudiante WHERE estudiante_id = ? ORDER BY fecha_vencimiento ASC",
+                "SELECT * FROM cargos_estudiante WHERE estudiante_id = ? ORDER BY id ASC",
                 [id]
             );
-            res.json(rows);
+            
+            // Si no hay deudas, devolvemos un array vacío pero con status 200 (OK)
+            res.json(rows || []);
         } catch (err) {
-            res.status(500).json({ error: "Error al consultar deudas" });
+            console.error("❌ Error en getDeudas:", err.message);
+            res.status(500).json({ error: "Error al consultar la tabla de cargos" });
         }
     },
 
     // 2. Registrar un Pago (Inscripción, Matrícula o Pensión)
     registrarPago: async (req, res) => {
         const { estudiante_id, concepto, monto, mes_id, metodo_pago } = req.body;
+        
+        // Validación de datos mínimos
+        if (!estudiante_id || !concepto || !monto) {
+            return res.status(400).json({ error: "Faltan datos obligatorios para el pago" });
+        }
+
         try {
-            // Iniciamos transacción para que si algo falla, no se guarde nada a medias
             await db.query("START TRANSACTION");
 
             // A. Insertar en la tabla de PAGOS
-            const [pago] = await db.query(
+            // Nota: Asegúrate que tu tabla 'pagos' tenga estas columnas exactas
+            const [resultado] = await db.query(
                 "INSERT INTO pagos (estudiante_id, concepto, monto, metodo_pago, fecha_pago) VALUES (?, ?, ?, ?, NOW())",
-                [estudiante_id, concepto, monto, metodo_pago]
+                [estudiante_id, concepto, monto, metodo_pago || 'EFECTIVO']
             );
 
-            // B. Si es pensión, actualizar la tabla de CARGOS
+            const nuevoPagoId = resultado.insertId;
+
+            // B. Si es pensión, actualizar el cargo correspondiente
             if (concepto === 'pension' && mes_id) {
                 await db.query(
                     "UPDATE cargos_estudiante SET estado = 'PAGADO', pago_id = ? WHERE id = ?",
-                    [pago.insertId, mes_id]
+                    [nuevoPagoId, mes_id]
                 );
             }
 
             await db.query("COMMIT");
-            res.json({ success: true, message: "Pago registrado correctamente ✅" });
+            res.json({ 
+                success: true, 
+                message: "Pago registrado correctamente ✅",
+                pagoId: nuevoPagoId 
+            });
+
         } catch (err) {
             await db.query("ROLLBACK");
-            res.status(500).json({ error: "Error al procesar el pago" });
+            console.error("❌ Error en registrarPago:", err.message);
+            res.status(500).json({ error: "No se pudo completar la transacción de pago" });
         }
     }
 };
