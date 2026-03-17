@@ -68,7 +68,6 @@ async function api(path, options = {}) {
 
     const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
     
-    // Si es 401 o 403, redirigir al login por seguridad
     if (res.status === 401 || res.status === 403) {
         console.warn("Sesión inválida o permisos insuficientes");
     }
@@ -181,7 +180,7 @@ function setActiveView(view) {
         dashboard: ["Dashboard", "Resumen general del sistema"],
         estudiantes: ["Estudiantes", "Base de datos global"],
         matriculas: ["Matrículas", "Gestión por Cursos"],
-        pagos: ["Pagos", "Control de pensiones"],
+        pagos: ["Pagos", "Control de pensiones y Colecturía"],
         usuarios: ["Usuarios", "Personal del Colegio"],
     };
     
@@ -189,10 +188,16 @@ function setActiveView(view) {
     if($("#pageTitle")) $("#pageTitle").textContent = t;
     if($("#pageSubtitle")) $("#pageSubtitle").textContent = s;
 
+    // Disparadores de lógica por vista
     if (view === 'dashboard') actualizarDashboard();
     if (view === 'usuarios') cargarUsuarios();
     if (view === 'matriculas' && typeof renderizarCursos === 'function') renderizarCursos();
     if (view === 'estudiantes' && typeof mostrarModuloEstudiantes === 'function') mostrarModuloEstudiantes();
+    
+    // --- MODIFICACIÓN PARA PAGOS ---
+    if (view === 'pagos' && typeof inicializarModuloPagos === 'function') {
+        inicializarModuloPagos();
+    }
 }
 
 /* =========================
@@ -205,9 +210,7 @@ async function cargarUsuarios() {
 
     try {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center">⏳ Sincronizando personal...</td></tr>`;
-
         const rows = await api("/api/admin/usuarios");
-        
         tbody.innerHTML = ""; 
 
         if (!rows || rows.length === 0) {
@@ -216,7 +219,6 @@ async function cargarUsuarios() {
         }
 
         rows.forEach(u => {
-            // Colores MFC: ok (verde) para ADMIN, warn (amarillo) para otros
             const badgeRol = (u.rol === 'ADMIN') ? 'ok' : 'warn';
             const badgeEstado = (u.estado === 'ACTIVO') ? 'ok' : 'warn';
 
@@ -233,7 +235,7 @@ async function cargarUsuarios() {
         
     } catch (err) {
         console.error("Error al cargar usuarios:", err);
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">⚠️ No se pudo cargar la lista (Verifique permisos)</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">⚠️ No se pudo cargar la lista</td></tr>`;
     }
 }
 

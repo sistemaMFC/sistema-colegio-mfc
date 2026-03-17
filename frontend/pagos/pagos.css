@@ -1,0 +1,125 @@
+/* ========================================================
+   DISEÑO DEL MÓDULO DE PAGOS - COLEGIO MFC
+   ======================================================== */
+
+#contenedor-pago-modulo {
+    animation: fadeIn 0.4s ease-out;
+}
+
+/* Buscador de Pagos */
+.search-box-pagos {
+    position: relative;
+}
+
+.search-box-pagos input {
+    padding-left: 40px;
+    border: 2px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+
+.search-box-pagos input:focus {
+    border-color: #43e97b;
+    box-shadow: 0 0 0 4px rgba(67, 233, 123, 0.15);
+}
+
+/* Grid de Información y Cobro */
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+}
+
+@media (max-width: 992px) {
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Semáforo de Meses */
+.grid-meses-pagos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.mes-pago-card {
+    padding: 12px;
+    text-align: center;
+    border-radius: 12px;
+    border: 2px solid #edf2f7;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.mes-pago-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Estados del Semáforo */
+.mes-pago-card.pendiente {
+    background: #fff5f5;
+    border-color: #feb2b2;
+    color: #c53030;
+}
+
+.mes-pago-card.pagado {
+    background: #f0fff4;
+    border-color: #9ae6b4;
+    color: #276749;
+}
+
+.mes-pago-card.parcial {
+    background: #fffaf0;
+    border-color: #fbd38d;
+    color: #9c4221;
+}
+
+.mes-pago-card.seleccionado {
+    background: #43e97b;
+    border-color: #43e97b;
+    color: white;
+    transform: scale(1.05);
+}
+
+/* Detalle de Facturación */
+.card-body hr {
+    margin: 20px 0;
+    border-color: #e2e8f0;
+}
+
+.form-group label {
+    font-weight: bold;
+    color: #4a5568;
+    margin-bottom: 8px;
+    display: block;
+}
+
+/* Botón de Cobro */
+.btn-cobrar-principal {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 1rem;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 20px rgba(67, 233, 123, 0.2);
+}
+
+.btn-cobrar-principal:hover {
+    transform: scale(1.02);
+    box-shadow: 0 15px 25px rgba(67, 233, 123, 0.3);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
