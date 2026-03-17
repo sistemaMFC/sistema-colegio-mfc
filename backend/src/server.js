@@ -9,7 +9,8 @@ require("dotenv").config();
 // IMPORTACIÓN DE RUTAS
 const authRoutes = require("./routes/auth.routes");
 const adminRoutes = require("./routes/admin.routes");
-const studentRoutes = require("./routes/students.routes"); // <--- NUEVA RUTA
+const studentRoutes = require("./routes/students.routes"); 
+const pagosRoutes = require("./routes/pagos.routes"); // <--- NUEVA RUTA DE PAGOS
 
 const app = express();
 
@@ -28,8 +29,11 @@ app.use("/auth", authRoutes);
 // Rutas de Administración (Usuarios y Cursos)
 app.use("/api/admin", adminRoutes);
 
-// Rutas de Estudiantes y Matrículas (NUEVO)
-app.use("/api/students", studentRoutes); // <--- REGISTRADA AQUÍ
+// Rutas de Estudiantes y Matrículas
+app.use("/api/students", studentRoutes);
+
+// Rutas de Colecturía y Pagos (NUEVO)
+app.use("/api/pagos", pagosRoutes); // <--- REGISTRADA AQUÍ ✅
 
 /* =========================
     ARCHIVOS ESTÁTICOS
@@ -53,6 +57,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
   console.log(`✅ Rutas de administración cargadas en /api/admin`);
   console.log(`✅ Rutas de estudiantes cargadas en /api/students`);
+  console.log(`✅ Rutas de pagos cargadas en /api/pagos`); // Confirmación en consola
 });
 
 module.exports = app;

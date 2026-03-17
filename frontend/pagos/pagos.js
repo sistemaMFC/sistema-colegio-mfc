@@ -1,20 +1,24 @@
 /* ========================================================
     MÓDULO DE PAGOS - COLEGIO MFC (FRONTEND)
-    Lógica de búsqueda, visualización de deuda y cobro
+    Lógica de búsqueda, Inscripción, Matrícula y Pensiones
    ======================================================== */
 
 console.log("✅ Motor de Pagos cargado.");
 
-// Función principal que se llama desde app.js
+/**
+ * 1. Inicializa la vista principal del módulo de pagos
+ */
 async function inicializarModuloPagos() {
     const contenedor = document.getElementById('contenedor-pago-modulo');
     if (!contenedor) return;
 
-    // 1. Dibujamos la interfaz base (Buscador y Paneles vacíos)
     contenedor.innerHTML = `
         <div class="card" style="border-top: 4px solid #43e97b;">
             <div class="card-head d-flex justify-content-between align-items-center">
-                <h3>💰 Gestión de Colecturía</h3>
+                <div>
+                    <h3>💰 Gestión de Colecturía</h3>
+                    <p class="muted">Inscripciones, Matrículas y Pensiones</p>
+                </div>
                 <div class="search-box-pagos">
                     <input type="text" id="inputBuscarAlumnoPago" class="form-control" 
                            placeholder="🔍 Buscar por cédula o apellido..." 
@@ -26,7 +30,7 @@ async function inicializarModuloPagos() {
                 <div id="resultadoBusquedaPagos" class="mt-3">
                     <div class="text-center muted p-5">
                         <span style="font-size: 3rem;">🔎</span>
-                        <p>Ingrese los datos del estudiante para consultar saldos.</p>
+                        <p>Busque un estudiante para gestionar sus pagos.</p>
                     </div>
                 </div>
             </div>
@@ -36,22 +40,22 @@ async function inicializarModuloPagos() {
             </div>
     `;
 
-    // 2. Escuchador de eventos para la búsqueda en tiempo real
     const inputBusqueda = document.getElementById('inputBuscarAlumnoPago');
     inputBusqueda.addEventListener('input', e => {
         const valor = e.target.value.trim();
-        if (valor.length > 3) {
+        if (valor.length > 2) {
             buscarAlumnoParaPago(valor);
         }
     });
 }
 
-// Función para buscar alumnos en la base de datos
+/**
+ * 2. Busca alumnos en tiempo real
+ */
 async function buscarAlumnoParaPago(criterio) {
     const display = document.getElementById('resultadoBusquedaPagos');
     
     try {
-        // Reutilizamos el endpoint de estudiantes que ya tienes
         const estudiantes = await api('/api/students'); 
         const filtrados = estudiantes.filter(est => 
             est.cedula_est.includes(criterio) || 
@@ -59,7 +63,7 @@ async function buscarAlumnoParaPago(criterio) {
         );
 
         if (filtrados.length === 0) {
-            display.innerHTML = `<div class="alert alert-warning">No se encontraron estudiantes con "${criterio}"</div>`;
+            display.innerHTML = `<div class="alert alert-warning">No se encontró al estudiante "${criterio}"</div>`;
             return;
         }
 
@@ -70,7 +74,7 @@ async function buscarAlumnoParaPago(criterio) {
                         <tr>
                             <th>Cédula</th>
                             <th>Estudiante</th>
-                            <th>Curso</th>
+                            <th>Estado Actual</th>
                             <th>Acción</th>
                         </tr>
                     </thead>
@@ -78,8 +82,8 @@ async function buscarAlumnoParaPago(criterio) {
                         ${filtrados.map(est => `
                             <tr>
                                 <td>${est.cedula_est}</td>
-                                <td>${est.apellidos_est}, ${est.nombres_est}</td>
-                                <td>${est.nombre_curso || 'No matriculado'}</td>
+                                <td style="text-transform:uppercase;"><strong>${est.apellidos_est}, ${est.nombres_est}</strong></td>
+                                <td><span class="badge ${est.estado === 'ACTIVO' ? 'ok' : 'warn'}">${est.estado}</span></td>
                                 <td>
                                     <button class="btn-soft btn-sm" onclick="cargarEstadoCuenta('${est.id}')">
                                         Seleccionar ✅
@@ -92,26 +96,27 @@ async function buscarAlumnoParaPago(criterio) {
             </div>
         `;
     } catch (err) {
-        console.error("Error en búsqueda de pagos:", err);
+        console.error("Error en búsqueda:", err);
     }
 }
 
-// Función para cargar los meses y deudas del alumno seleccionado
+/**
+ * 3. Carga la ficha de cobro del alumno
+ */
 async function cargarEstadoCuenta(estudianteId) {
     const panel = document.getElementById('panelDetallePago');
     const displayBusqueda = document.getElementById('resultadoBusquedaPagos');
     
-    // Ocultamos la búsqueda y mostramos el panel de cobro
-    displayBusqueda.innerHTML = `<div class="text-center p-3">⏳ Cargando estado de cuenta...</div>`;
+    displayBusqueda.innerHTML = `<div class="text-center p-3">⏳ Obteniendo información financiera...</div>`;
     
     try {
         const est = await api(`/api/students/${estudianteId}`);
         
         panel.style.display = 'grid';
         displayBusqueda.innerHTML = `
-            <div class="alert alert-success d-flex justify-content-between align-items-center">
-                <span>Estudiante seleccionado: <strong>${est.apellidos_est} ${est.nombres_est}</strong></span>
-                <button class="btn btn-sm btn-outline-dark" onclick="inicializarModuloPagos()">Cambiar Estudiante</button>
+            <div class="alert alert-success d-flex justify-content-between align-items-center mb-0">
+                <span>Trámite para: <strong>${est.apellidos_est} ${est.nombres_est}</strong></span>
+                <button class="btn btn-sm btn-dark" onclick="inicializarModuloPagos()">Volver a buscar</button>
             </div>
         `;
 
@@ -119,40 +124,114 @@ async function cargarEstadoCuenta(estudianteId) {
             <div class="card">
                 <div class="card-head"><h4>👤 Información de Facturación</h4></div>
                 <div class="card-body">
-                    <p><strong>Representante:</strong> ${est.nombre_rep || 'N/A'}</p>
-                    <p><strong>Cédula:</strong> ${est.cedula_rep || 'N/A'}</p>
-                    <p><strong>Teléfono:</strong> ${est.celular_rep || 'N/A'}</p>
+                    <p><strong>Representante:</strong> ${est.nombre_rep || 'S/I'}</p>
+                    <p><strong>Cédula RUC:</strong> ${est.cedula_rep || 'S/I'}</p>
+                    <p><strong>Teléfono:</strong> ${est.celular_rep || 'S/I'}</p>
                     <hr>
                     <div class="form-group">
-                        <label>Concepto de Pago</label>
-                        <select id="conceptoSeleccionado" class="form-control">
-                            <option value="pension">Pensión Mensual</option>
-                            <option value="matricula">Matrícula</option>
-                            <option value="otros">Otros Servicios</option>
+                        <label>Concepto a Cobrar</label>
+                        <select id="conceptoSeleccionado" class="form-select" onchange="cambiarVistaConcepto(this.value, '${est.id}')">
+                            <option value="pension" selected>📅 Pensión Mensual (Estudiantes Matriculados)</option>
+                            <option value="inscripcion">📝 Inscripción (Estudiantes Nuevos)</option>
+                            <option value="matricula">🧾 Matrícula (Derecho a Cupo)</option>
+                            <option value="otros">🎟 Otros Servicios</option>
                         </select>
+                    </div>
+                    <div id="area-monto-fijo" class="mt-3" style="display:none;">
+                        <label>Valor del Trámite ($)</label>
+                        <input type="number" id="montoConceptoFijo" class="form-control" step="0.01" placeholder="0.00">
                     </div>
                 </div>
             </div>
 
             <div class="card">
-                <div class="card-head"><h4>📅 Control de Pensiones</h4></div>
+                <div class="card-head"><h4>💰 Control de Valores</h4></div>
                 <div class="card-body">
-                    <div class="grid-meses-pagos">
-                        <div class="alert alert-info text-center">
-                            Conectando con el historial de pagos...
+                    <div id="contenedor-dinamico-pagos">
+                        <div class="grid-meses-pagos">
+                            <div class="alert alert-info text-center w-100">
+                                Cargando cronograma de pensiones...
+                            </div>
                         </div>
                     </div>
-                    <button class="btn w-100 mt-3" style="background:#43e97b; color:white; font-weight:bold;">
-                        REGISTRAR PAGO SELECCIONADO
+                    
+                    <button class="btn-cobrar-principal w-100 mt-3" onclick="confirmarTransaccion('${est.id}')">
+                        PROCESAR PAGO Y GENERAR RECIBO
                     </button>
                 </div>
             </div>
         `;
+        
+        // Iniciamos por defecto cargando pensiones si está matriculado
+        cambiarVistaConcepto('pension', estudianteId);
+
     } catch (err) {
-        alert("Error al cargar detalle del alumno.");
+        alert("Error al cargar la ficha del alumno.");
     }
 }
 
-// Exponer al sistema global
+/**
+ * 4. Cambia la interfaz entre Inscripción/Matrícula y Pensiones
+ */
+function cambiarVistaConcepto(valor, estudianteId) {
+    const contenedor = document.getElementById('contenedor-dinamico-pagos');
+    const areaMonto = document.getElementById('area-monto-fijo');
+
+    if (valor === 'inscripcion' || valor === 'matricula' || valor === 'otros') {
+        // Para pagos únicos: Inscripción o Matrícula
+        areaMonto.style.display = 'block';
+        contenedor.innerHTML = `
+            <div class="alert alert-warning">
+                <h5 class="mb-2">⚠️ Pago Único</h5>
+                <p>Usted está cobrando la <strong>${valor.toUpperCase()}</strong>.</p>
+                <small>Este valor no afecta el cronograma mensual de pensiones.</small>
+            </div>
+        `;
+    } else {
+        // Para Pensiones: Mostrar semáforo
+        areaMonto.style.display = 'none';
+        areaMonto.querySelector('input').value = "";
+        cargarSemaforoPensiones(estudianteId);
+    }
+}
+
+/**
+ * 5. Carga el semáforo de colores de los meses (Próximo paso con Backend)
+ */
+async function cargarSemaforoPensiones(id) {
+    const contenedor = document.getElementById('contenedor-dinamico-pagos');
+    // Simulación de meses hasta conectar con Backend
+    const meses = ["MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC", "ENE", "FEB"];
+    
+    contenedor.innerHTML = `
+        <div class="grid-meses-pagos">
+            ${meses.map(m => `
+                <div class="mes-pago-card pendiente" onclick="this.classList.toggle('seleccionado')">
+                    <span class="mes-name">${m}</span>
+                    <span class="mes-status">$40.00</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+/**
+ * 6. Registra el pago (Envío al Backend)
+ */
+function confirmarTransaccion(id) {
+    const concepto = document.getElementById('conceptoSeleccionado').value;
+    const monto = document.getElementById('montoConceptoFijo').value;
+    
+    if ((concepto === 'inscripcion' || concepto === 'matricula') && !monto) {
+        return showAlert('bad', "Debe ingresar el monto del cobro");
+    }
+
+    console.log(`Registrando ${concepto} para estudiante ${id}`);
+    alert("Procesando pago... (Esperando conexión con Backend)");
+}
+
+// Exponer funciones al scope global
 window.inicializarModuloPagos = inicializarModuloPagos;
 window.cargarEstadoCuenta = cargarEstadoCuenta;
+window.cambiarVistaConcepto = cambiarVistaConcepto;
+window.confirmarTransaccion = confirmarTransaccion;
