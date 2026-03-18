@@ -1,6 +1,6 @@
 /* ========================================================
     MÓDULO DE PAGOS - COLEGIO MFC (FRONTEND)
-    Lógica de búsqueda, Inscripción de Nuevos y Colecturía
+    Lógica de búsqueda, Inscripción, Matrícula y Pensiones
    ======================================================== */
 
 console.log("✅ Motor de Pagos cargado.");
@@ -17,7 +17,7 @@ async function inicializarModuloPagos() {
             <div class="card-head d-flex justify-content-between align-items-center">
                 <div>
                     <h3>💰 Gestión de Colecturía</h3>
-                    <p class="muted">Inscriba nuevos estudiantes o gestione pensiones de alumnos registrados.</p>
+                    <p class="muted">Ciclo Escolar: Abril a Febrero</p>
                 </div>
                 <button class="btn" style="background: #2d3436; color: white; border-radius: 12px; padding: 10px 20px; font-weight: bold;" 
                         onclick="abrirModalInscripcionPagos()">
@@ -44,14 +44,11 @@ async function inicializarModuloPagos() {
             </div>
         </div>
 
-        <div id="panelDetallePago" class="grid-2 mt-4" style="display:none;">
-             </div>
+        <div id="panelDetallePago" class="grid-2 mt-4" style="display:none;"></div>
     `;
 
-    // Carga inicial
     cargarListaEstudiantesInicial();
 
-    // Filtro de búsqueda
     const inputBusqueda = document.getElementById('inputBuscarAlumnoPago');
     inputBusqueda.addEventListener('input', e => {
         const valor = e.target.value.trim();
@@ -69,19 +66,10 @@ async function inicializarModuloPagos() {
 function abrirModalInscripcionPagos() {
     const modal = document.getElementById('modalFormMatricula');
     if(!modal) return;
-
-    const titulo = document.getElementById('modalMatriculaTitulo');
-    const boton = document.getElementById('btnSubmitMatricula');
-    
-    if(titulo) titulo.innerText = "📝 Formulario de Inscripción - Alumno Nuevo";
-    if(boton) boton.innerText = "Guardar Estudiante e Inscribir ✨";
-    
-    const form = document.getElementById('formNuevaMatricula');
-    if(form) form.reset();
-    
-    const idField = document.getElementById('edit_id_estudiante');
-    if(idField) idField.value = ""; 
-    
+    document.getElementById('modalMatriculaTitulo').innerText = "📝 Formulario de Inscripción - Alumno Nuevo";
+    document.getElementById('btnSubmitMatricula').innerText = "Guardar Estudiante e Inscribir ✨";
+    document.getElementById('formNuevaMatricula').reset();
+    document.getElementById('edit_id_estudiante').value = ""; 
     modal.style.display = "flex";
 }
 
@@ -119,7 +107,6 @@ async function buscarAlumnoParaPago(criterio) {
  */
 function renderizarTablaEstudiantes(lista, criterio = "") {
     const display = document.getElementById('resultadoBusquedaPagos');
-
     if (lista.length === 0) {
         display.innerHTML = `<div class="alert alert-warning">No se encontraron estudiantes con "${criterio}"</div>`;
         return;
@@ -144,7 +131,7 @@ function renderizarTablaEstudiantes(lista, criterio = "") {
                             <td><span class="badge ${est.estado === 'ACTIVO' ? 'ok' : 'warn'}">${est.estado}</span></td>
                             <td>
                                 <button class="btn-soft btn-sm" onclick="cargarEstadoCuenta('${est.id}')">
-                                    Cobrar Pensión 💳
+                                    Cobrar / Ver Saldos 💳
                                 </button>
                             </td>
                         </tr>
@@ -156,13 +143,13 @@ function renderizarTablaEstudiantes(lista, criterio = "") {
 }
 
 /**
- * 6. Ficha de cobro (Aquí es donde daba el error 500)
+ * 6. Ficha de cobro (Semáforo y Detalle)
  */
 async function cargarEstadoCuenta(estudianteId) {
     const panel = document.getElementById('panelDetallePago');
     const displayBusqueda = document.getElementById('resultadoBusquedaPagos');
     
-    displayBusqueda.innerHTML = `<div class="text-center p-3">⏳ Cargando deudas del estudiante...</div>`;
+    displayBusqueda.innerHTML = `<div class="text-center p-3">⏳ Sincronizando deudas...</div>`;
     
     try {
         const est = await api(`/api/students/${estudianteId}`);
@@ -184,8 +171,8 @@ async function cargarEstadoCuenta(estudianteId) {
                     <div class="form-group">
                         <label>Seleccione Concepto</label>
                         <select id="conceptoSeleccionado" class="form-select" onchange="cambiarVistaConcepto(this.value, '${est.id}')">
-                            <option value="pension" selected>📅 Pensión Mensual</option>
-                            <option value="matricula">🧾 Pago de Matrícula</option>
+                            <option value="pension" selected>📅 Pensión / Matrícula (Lista)</option>
+                            <option value="inscripcion">📝 Inscripción (Manual)</option>
                             <option value="otros">🎟 Otros Servicios</option>
                         </select>
                     </div>
@@ -196,11 +183,14 @@ async function cargarEstadoCuenta(estudianteId) {
                 </div>
             </div>
             <div class="card">
-                <div class="card-head"><h4>💰 Estado de Pensiones</h4></div>
+                <div class="card-head d-flex justify-content-between align-items-center">
+                    <h4>💰 Semáforo de Pagos</h4>
+                    <button class="btn-soft btn-sm" onclick="abrirPromptExtra('${est.id}')">➕ Cargo Extra</button>
+                </div>
                 <div class="card-body">
                     <div id="contenedor-dinamico-pagos"></div>
                     <button class="btn-cobrar-principal w-100 mt-3" onclick="confirmarTransaccion('${est.id}')">
-                        REGISTRAR PAGO AHORA
+                        REGISTRAR PAGO SELECCIONADO
                     </button>
                 </div>
             </div>
@@ -209,8 +199,8 @@ async function cargarEstadoCuenta(estudianteId) {
         cambiarVistaConcepto('pension', estudianteId);
         
     } catch (err) {
-        console.error("Error al cargar estado de cuenta:", err);
-        alert("El estudiante no tiene pensiones generadas o hay un error en el servidor.");
+        console.error("Error:", err);
+        alert("Error al cargar datos del servidor.");
     }
 }
 
@@ -223,7 +213,7 @@ function cambiarVistaConcepto(valor, estudianteId) {
     
     if (valor !== 'pension') {
         areaMonto.style.display = 'block';
-        contenedor.innerHTML = `<div class="alert alert-warning">Pago único de ${valor.toUpperCase()}.</div>`;
+        contenedor.innerHTML = `<div class="alert alert-warning">Pago único de ${valor.toUpperCase()}. Ingrese el monto a la izquierda.</div>`;
     } else {
         areaMonto.style.display = 'none';
         cargarSemaforoPensiones(estudianteId);
@@ -231,7 +221,7 @@ function cambiarVistaConcepto(valor, estudianteId) {
 }
 
 /**
- * 8. Semáforo Real
+ * 8. Semáforo Real (Abril a Febrero)
  */
 async function cargarSemaforoPensiones(id) {
     const contenedor = document.getElementById('contenedor-dinamico-pagos');
@@ -239,7 +229,11 @@ async function cargarSemaforoPensiones(id) {
         const deudas = await api(`/api/pagos/estado/${id}`);
         
         if (!deudas || deudas.length === 0) {
-            contenedor.innerHTML = `<div class="alert alert-info">Sin pensiones registradas.</div>`;
+            contenedor.innerHTML = `
+                <div class="alert alert-info text-center">
+                    <p>No hay deudas registradas.</p>
+                    <button class="btn btn-sm btn-primary mt-2" onclick="generarCicloNuevo('${id}')">Generar Ciclo Abril-Feb</button>
+                </div>`;
             return;
         }
 
@@ -247,20 +241,50 @@ async function cargarSemaforoPensiones(id) {
             <div class="grid-meses-pagos">
                 ${deudas.map(d => `
                     <div class="mes-pago-card ${d.estado.toLowerCase()}" 
+                         data-id="${d.id}" data-monto="${d.monto_pendiente}"
                          onclick="${d.estado === 'PENDIENTE' ? "this.classList.toggle('seleccionado')" : ""}">
                         <span class="mes-name">${d.mes_nombre}</span>
-                        <span class="mes-status">$${d.monto_pendiente}</span>
+                        <span class="mes-status">$${parseFloat(d.monto_pendiente).toFixed(2)}</span>
                     </div>
                 `).join('')}
             </div>
         `;
     } catch (err) {
-        contenedor.innerHTML = `<p class="muted">No se pudo obtener el cronograma de la base de datos.</p>`;
+        contenedor.innerHTML = `<p class="muted">Error al cargar cronograma.</p>`;
+    }
+}
+
+/**
+ * 9. Funciones de apoyo para el Ciclo Escolar y Cargos Extra
+ */
+async function generarCicloNuevo(estudianteId) {
+    if(!confirm("¿Desea generar automáticamente Matrícula ($27.33) y Pensiones ($40.00) para este alumno?")) return;
+    try {
+        await api('/api/pagos/generar-ciclo', {
+            method: 'POST',
+            body: { estudiante_id: estudianteId }
+        });
+        cargarEstadoCuenta(estudianteId);
+    } catch (err) { alert("Error al generar ciclo."); }
+}
+
+async function abrirPromptExtra(estudianteId) {
+    const concepto = prompt("Nombre del concepto (ej: Vacacional, Marzo, Certificado):");
+    const monto = prompt("Monto a cobrar:", "40.00");
+    if(concepto && monto) {
+        try {
+            await api('/api/pagos/agregar-extra', {
+                method: 'POST',
+                body: { estudiante_id: estudianteId, nombre_concepto: concepto, monto: monto }
+            });
+            cargarEstadoCuenta(estudianteId);
+        } catch (err) { alert("Error al agregar cargo."); }
     }
 }
 
 function confirmarTransaccion(id) {
-    alert("Procesando cobro...");
+    // Aquí implementaremos el registro final del pago
+    alert("Función de cobro seleccionada. Generando registro...");
 }
 
 // Globales
@@ -268,3 +292,5 @@ window.inicializarModuloPagos = inicializarModuloPagos;
 window.abrirModalInscripcionPagos = abrirModalInscripcionPagos;
 window.cargarEstadoCuenta = cargarEstadoCuenta;
 window.cambiarVistaConcepto = cambiarVistaConcepto;
+window.generarCicloNuevo = generarCicloNuevo;
+window.abrirPromptExtra = abrirPromptExtra;

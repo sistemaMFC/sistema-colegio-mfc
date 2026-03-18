@@ -1,19 +1,16 @@
 /* ========================================================
     CONTROLADOR DE PAGOS - COLEGIO MFC
-    Manejo de deudas, semáforo y transacciones de cobro
+    Manejo de Ciclo Escolar (Abril-Feb), Pensiones y Extras
    ======================================================== */
 const db = require("../db");
 
 const pagosController = {
     /**
      * 1. Obtener deudas (El Semáforo)
-     * Diseñado para evitar el Error 500 si no hay datos o faltan columnas.
      */
     getDeudas: async (req, res) => {
         const { id } = req.params;
         try {
-            // Usamos COALESCE para enviar valores por defecto si la DB tiene nulos
-            // Así el Frontend nunca recibe basura y el semáforo carga bien.
             const [rows] = await db.query(
                 `SELECT 
                     id, 
@@ -26,34 +23,27 @@ const pagosController = {
                  ORDER BY id ASC`,
                 [id]
             );
-            
-            // Enviamos los datos. Si está vacío, enviamos [] (status 200 siempre).
             res.json(rows || []);
-
         } catch (err) {
             console.error("❌ ERROR EN GET_DEUDAS:", err.message);
-            // Si la tabla no existe o hay error, enviamos vacío para que el frontend no colapse
             res.json([]); 
         }
     },
 
     /**
-     * 2. Registrar un Pago
-     * Procesa Inscripción, Matrícula o Pensiones usando Transacciones SQL.
+     * 2. Registrar un Pago (Inscripción, Matrícula o Pensión)
      */
     registrarPago: async (req, res) => {
         const { estudiante_id, concepto, monto, mes_id, metodo_pago } = req.body;
         
-        // Validación de seguridad para no guardar datos vacíos
         if (!estudiante_id || !concepto || !monto) {
-            return res.status(400).json({ error: "Faltan datos obligatorios (ID, Concepto o Monto)" });
+            return res.status(400).json({ error: "Faltan datos obligatorios" });
         }
 
         try {
-            // Iniciamos TRANSACCIÓN: Si el UPDATE falla, el PAGO no se guarda.
             await db.query("START TRANSACTION");
 
-            // A. Insertamos el registro en la tabla histórica de pagos
+            // A. Registrar en tabla pagos
             const [resultado] = await db.query(
                 `INSERT INTO pagos (estudiante_id, concepto, monto, metodo_pago, fecha_pago) 
                  VALUES (?, ?, ?, ?, NOW())`,
@@ -62,8 +52,8 @@ const pagosController = {
 
             const nuevoPagoId = resultado.insertId;
 
-            // B. Si el pago es una 'pension' y tenemos el ID del mes, actualizamos el cargo
-            if (concepto === 'pension' && mes_id) {
+            // B. Si es pensión o matrícula de la lista, actualizar cargos_estudiante
+            if (mes_id) {
                 await db.query(
                     `UPDATE cargos_estudiante 
                      SET estado = 'PAGADO', pago_id = ? 
@@ -72,20 +62,65 @@ const pagosController = {
                 );
             }
 
-            // Si todo salió bien, guardamos los cambios permanentemente
             await db.query("COMMIT");
-
-            res.json({ 
-                success: true, 
-                message: "Pago procesado y registrado correctamente ✅",
-                pagoId: nuevoPagoId 
-            });
+            res.json({ success: true, message: "Pago registrado ✅", pagoId: nuevoPagoId });
 
         } catch (err) {
-            // Si algo falló, deshacemos todo para no ensuciar la base de datos
             await db.query("ROLLBACK");
             console.error("❌ ERROR EN REGISTRAR_PAGO:", err.message);
-            res.status(500).json({ error: "No se pudo completar la operación de cobro" });
+            res.status(500).json({ error: "No se pudo procesar el cobro" });
+        }
+    },
+
+    /**
+     * 3. Generar Ciclo Escolar Automático (Abril a Febrero)
+     * Se llama cuando Gloria inscribe o matricula a un alumno.
+     */
+    generarCicloEscolar: async (req, res) => {
+        const { estudiante_id } = req.body;
+        const meses = [
+            'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 
+            'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE', 'ENERO', 'FEBRERO'
+        ];
+
+        try {
+            await db.query("START TRANSACTION");
+
+            // A. Cargo de Matrícula ($27.33)
+            await db.query(
+                "INSERT INTO cargos_estudiante (estudiante_id, mes_nombre, monto_pendiente, estado) VALUES (?, ?, ?, ?)",
+                [estudiante_id, 'MATRÍCULA', 27.33, 'PENDIENTE']
+            );
+
+            // B. Cargos de Pensión ($40.00)
+            for (let mes of meses) {
+                await db.query(
+                    "INSERT INTO cargos_estudiante (estudiante_id, mes_nombre, monto_pendiente, estado) VALUES (?, ?, ?, ?)",
+                    [estudiante_id, mes, 40.00, 'PENDIENTE']
+                );
+            }
+
+            await db.query("COMMIT");
+            res.json({ success: true, message: "Ciclo Abril-Febrero generado ✅" });
+        } catch (err) {
+            await db.query("ROLLBACK");
+            res.status(500).json({ error: "Error al generar pensiones" });
+        }
+    },
+
+    /**
+     * 4. Agregar Mes/Concepto Extra (Flexibilidad para Gloria)
+     */
+    agregarExtra: async (req, res) => {
+        const { estudiante_id, nombre_concepto, monto } = req.body;
+        try {
+            await db.query(
+                "INSERT INTO cargos_estudiante (estudiante_id, mes_nombre, monto_pendiente, estado) VALUES (?, ?, ?, ?)",
+                [estudiante_id, nombre_concepto.toUpperCase(), monto, 'PENDIENTE']
+            );
+            res.json({ success: true, message: "Concepto extra agregado ✅" });
+        } catch (err) {
+            res.status(500).json({ error: "Error al agregar concepto" });
         }
     }
 };
