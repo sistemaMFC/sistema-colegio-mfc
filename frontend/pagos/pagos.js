@@ -237,30 +237,30 @@ async function cargarSemaforoPensiones(id) {
             return;
         }
 
-        // SEPARAMOS MATRÍCULA DE PENSIONES
+        // --- LÓGICA DE SEPARACIÓN ---
         const matricula = deudas.find(d => d.tipo_cargo === 'MATRICULA' || d.mes_nombre === 'MATRÍCULA');
         const pensiones = deudas.filter(d => d.tipo_cargo === 'PENSION' || (d.tipo_cargo !== 'MATRICULA' && d.mes_nombre !== 'MATRÍCULA'));
 
         let html = "";
 
-        // SECCIÓN MATRÍCULA
+        // --- SECCIÓN MATRÍCULA (DESTACADA) ---
         if (matricula) {
             html += `
                 <div class="mb-4">
-                    <h6 class="muted small text-uppercase mb-2">📋 Derecho de Matrícula</h6>
+                    <h6 class="text-uppercase muted small mb-2" style="letter-spacing: 1px;">📋 Derecho de Matrícula ($27.33)</h6>
                     <div class="mes-pago-card ${matricula.estado.toLowerCase()} w-100 d-flex justify-content-between align-items-center p-3" 
                          data-id="${matricula.id}" data-monto="${matricula.monto_pendiente}"
-                         style="border-left: 5px solid #43e97b; cursor:pointer;"
+                         style="border-left: 6px solid #43e97b; border-radius: 8px; cursor:pointer;"
                          onclick="${matricula.estado === 'PENDIENTE' ? "this.classList.toggle('seleccionado')" : ""}">
                         <strong>${matricula.mes_nombre}</strong>
-                        <span>$${parseFloat(matricula.monto_pendiente).toFixed(2)}</span>
+                        <span style="font-weight:bold; font-size:1.1rem;">$${parseFloat(matricula.monto_pendiente).toFixed(2)}</span>
                     </div>
                 </div>
             `;
         }
 
-        // SECCIÓN PENSIONES
-        html += `<h6 class="muted small text-uppercase mb-2">📅 Semáforo de Pensiones (Abr-Feb)</h6>`;
+        // --- SECCIÓN PENSIONES (SEMÁFORO) ---
+        html += `<h6 class="text-uppercase muted small mb-2" style="letter-spacing: 1px;">📅 Pensiones Mensuales (Abr-Feb)</h6>`;
         html += `<div class="grid-meses-pagos">`;
         html += pensiones.map(d => `
             <div class="mes-pago-card ${d.estado.toLowerCase()}" 
@@ -308,6 +308,7 @@ async function abrirPromptExtra(estudianteId) {
 }
 
 function confirmarTransaccion(id) {
+    // Aquí implementaremos el registro final del pago más adelante
     alert("Procesando registro de pago...");
 }
 
