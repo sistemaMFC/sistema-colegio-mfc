@@ -6,7 +6,7 @@
 console.log("✅ Motor de Pagos cargado.");
 
 /**
- * 1. Inicializa la vista con el botón de "Nuevo Estudiante" arriba
+ * 1. Inicializa la vista principal
  */
 async function inicializarModuloPagos() {
     const contenedor = document.getElementById('contenedor-pago-modulo');
@@ -61,7 +61,7 @@ async function inicializarModuloPagos() {
 }
 
 /**
- * 2. Abre el formulario para Alumnos Nuevos
+ * 2. Formulario Alumnos Nuevos
  */
 function abrirModalInscripcionPagos() {
     const modal = document.getElementById('modalFormMatricula');
@@ -74,7 +74,7 @@ function abrirModalInscripcionPagos() {
 }
 
 /**
- * 3. Carga inicial de la base de datos
+ * 3. Carga inicial
  */
 async function cargarListaEstudiantesInicial() {
     const display = document.getElementById('resultadoBusquedaPagos');
@@ -87,7 +87,7 @@ async function cargarListaEstudiantesInicial() {
 }
 
 /**
- * 4. Filtro de búsqueda
+ * 4. Filtro
  */
 async function buscarAlumnoParaPago(criterio) {
     try {
@@ -103,7 +103,7 @@ async function buscarAlumnoParaPago(criterio) {
 }
 
 /**
- * 5. Dibujar Tabla
+ * 5. Tabla de Estudiantes
  */
 function renderizarTablaEstudiantes(lista, criterio = "") {
     const display = document.getElementById('resultadoBusquedaPagos');
@@ -119,7 +119,7 @@ function renderizarTablaEstudiantes(lista, criterio = "") {
                     <tr>
                         <th>Cédula</th>
                         <th>Estudiante</th>
-                        <th>Estado Actual</th>
+                        <th>Estado</th>
                         <th>Acción</th>
                     </tr>
                 </thead>
@@ -143,7 +143,7 @@ function renderizarTablaEstudiantes(lista, criterio = "") {
 }
 
 /**
- * 6. Ficha de cobro (Semáforo y Detalle)
+ * 6. Ficha de cobro principal
  */
 async function cargarEstadoCuenta(estudianteId) {
     const panel = document.getElementById('panelDetallePago');
@@ -163,16 +163,16 @@ async function cargarEstadoCuenta(estudianteId) {
 
         panel.innerHTML = `
             <div class="card">
-                <div class="card-head"><h4>👤 Información Fiscal</h4></div>
+                <div class="card-head"><h4>👤 Datos de Facturación</h4></div>
                 <div class="card-body">
                     <p><strong>Representante:</strong> ${est.nombre_rep || 'S/I'}</p>
                     <p><strong>Cédula:</strong> ${est.cedula_rep || 'S/I'}</p>
                     <hr>
                     <div class="form-group">
-                        <label>Seleccione Concepto</label>
+                        <label>Concepto Manual (Solo Inscripción/Otros)</label>
                         <select id="conceptoSeleccionado" class="form-select" onchange="cambiarVistaConcepto(this.value, '${est.id}')">
-                            <option value="pension" selected>📅 Pensión / Matrícula (Lista)</option>
-                            <option value="inscripcion">📝 Inscripción (Manual)</option>
+                            <option value="pension" selected>📅 Lista de Deudas (Matrícula/Pensión)</option>
+                            <option value="inscripcion">📝 Cobro de Inscripción</option>
                             <option value="otros">🎟 Otros Servicios</option>
                         </select>
                     </div>
@@ -184,13 +184,13 @@ async function cargarEstadoCuenta(estudianteId) {
             </div>
             <div class="card">
                 <div class="card-head d-flex justify-content-between align-items-center">
-                    <h4>💰 Semáforo de Pagos</h4>
-                    <button class="btn-soft btn-sm" onclick="abrirPromptExtra('${est.id}')">➕ Cargo Extra</button>
+                    <h4>💰 Control de Valores</h4>
+                    <button class="btn-soft btn-sm" onclick="abrirPromptExtra('${est.id}')">➕ Agregar Mes Extra</button>
                 </div>
                 <div class="card-body">
                     <div id="contenedor-dinamico-pagos"></div>
                     <button class="btn-cobrar-principal w-100 mt-3" onclick="confirmarTransaccion('${est.id}')">
-                        REGISTRAR PAGO SELECCIONADO
+                        PROCESAR PAGOS SELECCIONADOS
                     </button>
                 </div>
             </div>
@@ -200,7 +200,7 @@ async function cargarEstadoCuenta(estudianteId) {
         
     } catch (err) {
         console.error("Error:", err);
-        alert("Error al cargar datos del servidor.");
+        alert("Error al cargar datos.");
     }
 }
 
@@ -213,7 +213,7 @@ function cambiarVistaConcepto(valor, estudianteId) {
     
     if (valor !== 'pension') {
         areaMonto.style.display = 'block';
-        contenedor.innerHTML = `<div class="alert alert-warning">Pago único de ${valor.toUpperCase()}. Ingrese el monto a la izquierda.</div>`;
+        contenedor.innerHTML = `<div class="alert alert-warning">Está procesando un cobro manual de ${valor.toUpperCase()}.</div>`;
     } else {
         areaMonto.style.display = 'none';
         cargarSemaforoPensiones(estudianteId);
@@ -221,7 +221,7 @@ function cambiarVistaConcepto(valor, estudianteId) {
 }
 
 /**
- * 8. Semáforo Real (Abril a Febrero)
+ * 8. Semáforo Real (SEPARACIÓN DE MATRÍCULA Y PENSIONES)
  */
 async function cargarSemaforoPensiones(id) {
     const contenedor = document.getElementById('contenedor-dinamico-pagos');
@@ -231,34 +231,59 @@ async function cargarSemaforoPensiones(id) {
         if (!deudas || deudas.length === 0) {
             contenedor.innerHTML = `
                 <div class="alert alert-info text-center">
-                    <p>No hay deudas registradas.</p>
-                    <button class="btn btn-sm btn-primary mt-2" onclick="generarCicloNuevo('${id}')">Generar Ciclo Abril-Feb</button>
+                    <p>No hay valores registrados para este alumno.</p>
+                    <button class="btn btn-sm btn-primary mt-2" onclick="generarCicloNuevo('${id}')">🚀 Generar Matrícula y Pensiones</button>
                 </div>`;
             return;
         }
 
-        contenedor.innerHTML = `
-            <div class="grid-meses-pagos">
-                ${deudas.map(d => `
-                    <div class="mes-pago-card ${d.estado.toLowerCase()}" 
-                         data-id="${d.id}" data-monto="${d.monto_pendiente}"
-                         onclick="${d.estado === 'PENDIENTE' ? "this.classList.toggle('seleccionado')" : ""}">
-                        <span class="mes-name">${d.mes_nombre}</span>
-                        <span class="mes-status">$${parseFloat(d.monto_pendiente).toFixed(2)}</span>
+        // SEPARAMOS MATRÍCULA DE PENSIONES
+        const matricula = deudas.find(d => d.tipo_cargo === 'MATRICULA' || d.mes_nombre === 'MATRÍCULA');
+        const pensiones = deudas.filter(d => d.tipo_cargo === 'PENSION' || (d.tipo_cargo !== 'MATRICULA' && d.mes_nombre !== 'MATRÍCULA'));
+
+        let html = "";
+
+        // SECCIÓN MATRÍCULA
+        if (matricula) {
+            html += `
+                <div class="mb-4">
+                    <h6 class="muted small text-uppercase mb-2">📋 Derecho de Matrícula</h6>
+                    <div class="mes-pago-card ${matricula.estado.toLowerCase()} w-100 d-flex justify-content-between align-items-center p-3" 
+                         data-id="${matricula.id}" data-monto="${matricula.monto_pendiente}"
+                         style="border-left: 5px solid #43e97b; cursor:pointer;"
+                         onclick="${matricula.estado === 'PENDIENTE' ? "this.classList.toggle('seleccionado')" : ""}">
+                        <strong>${matricula.mes_nombre}</strong>
+                        <span>$${parseFloat(matricula.monto_pendiente).toFixed(2)}</span>
                     </div>
-                `).join('')}
+                </div>
+            `;
+        }
+
+        // SECCIÓN PENSIONES
+        html += `<h6 class="muted small text-uppercase mb-2">📅 Semáforo de Pensiones (Abr-Feb)</h6>`;
+        html += `<div class="grid-meses-pagos">`;
+        html += pensiones.map(d => `
+            <div class="mes-pago-card ${d.estado.toLowerCase()}" 
+                 data-id="${d.id}" data-monto="${d.monto_pendiente}"
+                 onclick="${d.estado === 'PENDIENTE' ? "this.classList.toggle('seleccionado')" : ""}">
+                <span class="mes-name">${d.mes_nombre}</span>
+                <span class="mes-status">$${parseFloat(d.monto_pendiente).toFixed(2)}</span>
             </div>
-        `;
+        `).join('');
+        html += `</div>`;
+
+        contenedor.innerHTML = html;
+
     } catch (err) {
         contenedor.innerHTML = `<p class="muted">Error al cargar cronograma.</p>`;
     }
 }
 
 /**
- * 9. Funciones de apoyo para el Ciclo Escolar y Cargos Extra
+ * 9. Funciones de Apoyo
  */
 async function generarCicloNuevo(estudianteId) {
-    if(!confirm("¿Desea generar automáticamente Matrícula ($27.33) y Pensiones ($40.00) para este alumno?")) return;
+    if(!confirm("¿Generar Matrícula ($27.33) y Pensiones ($40.00)?")) return;
     try {
         await api('/api/pagos/generar-ciclo', {
             method: 'POST',
@@ -269,7 +294,7 @@ async function generarCicloNuevo(estudianteId) {
 }
 
 async function abrirPromptExtra(estudianteId) {
-    const concepto = prompt("Nombre del concepto (ej: Vacacional, Marzo, Certificado):");
+    const concepto = prompt("Nombre del mes extra o concepto:");
     const monto = prompt("Monto a cobrar:", "40.00");
     if(concepto && monto) {
         try {
@@ -278,13 +303,12 @@ async function abrirPromptExtra(estudianteId) {
                 body: { estudiante_id: estudianteId, nombre_concepto: concepto, monto: monto }
             });
             cargarEstadoCuenta(estudianteId);
-        } catch (err) { alert("Error al agregar cargo."); }
+        } catch (err) { alert("Error."); }
     }
 }
 
 function confirmarTransaccion(id) {
-    // Aquí implementaremos el registro final del pago
-    alert("Función de cobro seleccionada. Generando registro...");
+    alert("Procesando registro de pago...");
 }
 
 // Globales
