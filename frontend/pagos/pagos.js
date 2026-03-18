@@ -143,7 +143,7 @@ function renderizarTablaEstudiantes(lista, criterio = "") {
 }
 
 /**
- * 6. Ficha de cobro principal
+ * 6. Ficha de cobro principal (AQUÍ ESTÁ LA SEPARACIÓN DEL MENÚ)
  */
 async function cargarEstadoCuenta(estudianteId) {
     const panel = document.getElementById('panelDetallePago');
@@ -169,11 +169,12 @@ async function cargarEstadoCuenta(estudianteId) {
                     <p><strong>Cédula:</strong> ${est.cedula_rep || 'S/I'}</p>
                     <hr>
                     <div class="form-group">
-                        <label>Concepto Manual (Solo Inscripción/Otros)</label>
+                        <label>Seleccione Concepto a Cobrar</label>
                         <select id="conceptoSeleccionado" class="form-select" onchange="cambiarVistaConcepto(this.value, '${est.id}')">
-                            <option value="pension" selected>📅 Lista de Deudas (Matrícula/Pensión)</option>
-                            <option value="inscripcion">📝 Cobro de Inscripción</option>
-                            <option value="otros">🎟 Otros Servicios</option>
+                            <option value="pension" selected>📅 Pensiones Mensuales (Semáforo)</option>
+                            <option value="matricula">🧾 Matrícula ($27.33)</option>
+                            <option value="inscripcion">📝 Inscripción ($15.00)</option>
+                            <option value="otros">🎟 Otros Conceptos</option>
                         </select>
                     </div>
                     <div id="area-monto-fijo" class="mt-3" style="display:none;">
@@ -210,10 +211,16 @@ async function cargarEstadoCuenta(estudianteId) {
 function cambiarVistaConcepto(valor, estudianteId) {
     const contenedor = document.getElementById('contenedor-dinamico-pagos');
     const areaMonto = document.getElementById('area-monto-fijo');
+    const inputMonto = document.getElementById('montoConceptoFijo');
     
     if (valor !== 'pension') {
         areaMonto.style.display = 'block';
-        contenedor.innerHTML = `<div class="alert alert-warning">Está procesando un cobro manual de ${valor.toUpperCase()}.</div>`;
+        // Ponemos montos sugeridos
+        if(valor === 'matricula') inputMonto.value = "27.33";
+        if(valor === 'inscripcion') inputMonto.value = "15.00";
+        if(valor === 'otros') inputMonto.value = "";
+
+        contenedor.innerHTML = `<div class="alert alert-warning">Cobro Manual de: <strong>${valor.toUpperCase()}</strong>. Verifique el monto a la izquierda.</div>`;
     } else {
         areaMonto.style.display = 'none';
         cargarSemaforoPensiones(estudianteId);
@@ -237,13 +244,12 @@ async function cargarSemaforoPensiones(id) {
             return;
         }
 
-        // --- LÓGICA DE SEPARACIÓN ---
+        // --- LÓGICA DE SEPARACIÓN VISUAL EN EL SEMÁFORO ---
         const matricula = deudas.find(d => d.tipo_cargo === 'MATRICULA' || d.mes_nombre === 'MATRÍCULA');
         const pensiones = deudas.filter(d => d.tipo_cargo === 'PENSION' || (d.tipo_cargo !== 'MATRICULA' && d.mes_nombre !== 'MATRÍCULA'));
 
         let html = "";
 
-        // --- SECCIÓN MATRÍCULA (DESTACADA) ---
         if (matricula) {
             html += `
                 <div class="mb-4">
@@ -259,7 +265,6 @@ async function cargarSemaforoPensiones(id) {
             `;
         }
 
-        // --- SECCIÓN PENSIONES (SEMÁFORO) ---
         html += `<h6 class="text-uppercase muted small mb-2" style="letter-spacing: 1px;">📅 Pensiones Mensuales (Abr-Feb)</h6>`;
         html += `<div class="grid-meses-pagos">`;
         html += pensiones.map(d => `
@@ -308,7 +313,6 @@ async function abrirPromptExtra(estudianteId) {
 }
 
 function confirmarTransaccion(id) {
-    // Aquí implementaremos el registro final del pago más adelante
     alert("Procesando registro de pago...");
 }
 
