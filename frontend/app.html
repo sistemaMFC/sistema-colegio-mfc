@@ -49,6 +49,11 @@
         <button class="menu-item" data-view="matriculas">
           <span class="mi-ico">🧾</span><span>Matrículas</span>
         </button>
+        <button class="menu-item" data-view="academico"
+                onclick="mostrarModuloAcademico()">
+          <span class="mi-ico">📐</span>
+          <span>Académico</span>
+        </button>
         <button class="menu-item" data-view="pagos">
           <span class="mi-ico">💳</span><span>Pagos</span>
         </button>
@@ -188,6 +193,10 @@
             </div>
           </div>
         </div>
+      </section>
+
+       <section class="view" id="view-academico" hidden>
+        <div id="contenedor-academico"></div>
       </section>
 
       <section class="view" id="view-pagos" hidden>
@@ -451,6 +460,7 @@
   <script src="./assets/js/reportes-mfc.js"></script>
   <script src="./assets/js/view-cursos.js"></script>
   <script src="./assets/js/view-estudiantes.js"></script>
+  <script src="./assets/js/view-academico.js"></script>
   <script src="./pagos/pagos.js"></script>
 
   <!-- Lógica de foto en el modal de matrícula de view-cursos -->

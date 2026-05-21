@@ -193,7 +193,9 @@ function setActiveView(view) {
     if (view === 'usuarios') cargarUsuarios();
     if (view === 'matriculas' && typeof renderizarCursos === 'function') renderizarCursos();
     if (view === 'estudiantes' && typeof mostrarModuloEstudiantes === 'function') mostrarModuloEstudiantes();
-    
+    if (view === 'academico' && typeof mostrarModuloAcademico === 'function') {
+        mostrarModuloAcademico();
+    }
     // --- MODIFICACIÓN PARA PAGOS ---
     if (view === 'pagos' && typeof inicializarModuloPagos === 'function') {
         inicializarModuloPagos();
