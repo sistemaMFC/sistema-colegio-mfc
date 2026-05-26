@@ -31,14 +31,38 @@ const adminOProfesor = (req, res, next) => {
     return res.status(403).json({ error: 'Acceso restringido al personal docente' });
 };
 
+async function obtenerColumnasTabla(nombreTabla) {
+    const permitidas = new Set(['asignaciones_docente']);
+    if (!permitidas.has(nombreTabla)) throw new Error('Tabla no permitida');
+    const [cols] = await pool.query(`SHOW COLUMNS FROM ${nombreTabla}`);
+    return new Set(cols.map(col => col.Field));
+}
+
+async function obtenerConfigProfesorAsignacion() {
+    const cols = await obtenerColumnasTabla('asignaciones_docente');
+    if (cols.has('docente_id')) return { col: 'docente_id', tipo: 'docente' };
+    if (cols.has('profesor_id')) return { col: 'profesor_id', tipo: 'usuario' };
+    if (cols.has('usuario_id')) return { col: 'usuario_id', tipo: 'usuario' };
+    if (cols.has('docente_usuario_id')) return { col: 'docente_usuario_id', tipo: 'usuario' };
+    throw new Error('asignaciones_docente no tiene columna de profesor reconocida');
+}
+
 async function profesorPuedeAsignacion(user, asignacionId) {
     if (user.rol !== 'PROFESOR') return true;
+
+    const cfg = await obtenerConfigProfesorAsignacion();
+    const joinProfesor = cfg.tipo === 'docente'
+        ? `JOIN docentes d ON d.id = ad.${cfg.col}`
+        : '';
+    const whereProfesor = cfg.tipo === 'docente'
+        ? 'd.usuario_id = ?'
+        : `ad.${cfg.col} = ?`;
 
     const [rows] = await pool.query(
         `SELECT ad.id
          FROM asignaciones_docente ad
-         JOIN docentes d ON d.id = ad.docente_id
-         WHERE ad.id = ? AND d.usuario_id = ? AND ad.estado = 'ACTIVO'
+         ${joinProfesor}
+         WHERE ad.id = ? AND ${whereProfesor} AND ad.estado = 'ACTIVO'
          LIMIT 1`,
         [asignacionId, user.id]
     );
@@ -48,12 +72,20 @@ async function profesorPuedeAsignacion(user, asignacionId) {
 async function profesorPuedeCurso(user, cursoId, paraleloId, periodoId) {
     if (user.rol !== 'PROFESOR') return true;
 
+    const cfg = await obtenerConfigProfesorAsignacion();
+    const joinProfesor = cfg.tipo === 'docente'
+        ? `JOIN docentes d ON d.id = ad.${cfg.col}`
+        : '';
+    const whereProfesor = cfg.tipo === 'docente'
+        ? 'd.usuario_id = ?'
+        : `ad.${cfg.col} = ?`;
+
     const [rows] = await pool.query(
         `SELECT ad.id
          FROM asignaciones_docente ad
-         JOIN docentes d ON d.id = ad.docente_id
+         ${joinProfesor}
          WHERE ad.curso_id = ? AND ad.paralelo_id = ? AND ad.periodo_id = ?
-           AND d.usuario_id = ? AND ad.estado = 'ACTIVO'
+           AND ${whereProfesor} AND ad.estado = 'ACTIVO'
          LIMIT 1`,
         [cursoId, paraleloId, periodoId, user.id]
     );
@@ -63,6 +95,14 @@ async function profesorPuedeCurso(user, cursoId, paraleloId, periodoId) {
 async function profesorPuedeMatricula(user, matriculaId) {
     if (user.rol !== 'PROFESOR') return true;
 
+    const cfg = await obtenerConfigProfesorAsignacion();
+    const joinProfesor = cfg.tipo === 'docente'
+        ? `JOIN docentes d ON d.id = ad.${cfg.col}`
+        : '';
+    const whereProfesor = cfg.tipo === 'docente'
+        ? 'd.usuario_id = ?'
+        : `ad.${cfg.col} = ?`;
+
     const [rows] = await pool.query(
         `SELECT m.id
          FROM matriculas m
@@ -70,8 +110,8 @@ async function profesorPuedeMatricula(user, matriculaId) {
            ON ad.curso_id = m.curso_id
           AND ad.paralelo_id = m.paralelo_id
           AND ad.periodo_id = m.periodo_id
-         JOIN docentes d ON d.id = ad.docente_id
-         WHERE m.id = ? AND d.usuario_id = ? AND ad.estado = 'ACTIVO'
+         ${joinProfesor}
+         WHERE m.id = ? AND ${whereProfesor} AND ad.estado = 'ACTIVO'
          LIMIT 1`,
         [matriculaId, user.id]
     );
@@ -172,19 +212,28 @@ router.get('/cursos-paralelos', authRequired, async (req, res) => {
 router.get('/asignaciones', authRequired, adminOProfesor, async (req, res) => {
     try {
         const { curso_id, paralelo_id, periodo_id } = req.query;
+        const cfg = await obtenerConfigProfesorAsignacion();
         const params = [];
         let where = `WHERE ad.estado = 'ACTIVO'`;
         if (periodo_id) { where += ' AND ad.periodo_id = ?';  params.push(periodo_id); }
         if (curso_id)   { where += ' AND ad.curso_id = ?';    params.push(curso_id); }
         if (paralelo_id){ where += ' AND ad.paralelo_id = ?'; params.push(paralelo_id); }
         if (req.user.rol === 'PROFESOR') {
-            where += ' AND d.usuario_id = ?';
+            where += cfg.tipo === 'docente'
+                ? ' AND d.usuario_id = ?'
+                : ` AND ad.${cfg.col} = ?`;
             params.push(req.user.id);
         }
 
+        const joinProfesor = cfg.tipo === 'docente'
+            ? `JOIN docentes  d ON d.id = ad.${cfg.col}
+               JOIN usuarios  u ON u.id = d.usuario_id`
+            : `JOIN usuarios  u ON u.id = ad.${cfg.col}
+               LEFT JOIN docentes d ON d.usuario_id = u.id`;
+
         const [rows] = await pool.query(
             `SELECT
-               ad.id, ad.docente_id, ad.materia_id,
+               ad.id, ad.${cfg.col} AS docente_id, ad.materia_id,
                ad.curso_id, ad.paralelo_id, ad.periodo_id,
                m.nombre    AS materia,
                m.codigo    AS materia_codigo,
@@ -196,8 +245,7 @@ router.get('/asignaciones', authRequired, adminOProfesor, async (req, res) => {
              JOIN materias  m ON m.id = ad.materia_id
              JOIN cursos    c ON c.id = ad.curso_id
              JOIN paralelos p ON p.id = ad.paralelo_id
-             JOIN docentes  d ON d.id = ad.docente_id
-             JOIN usuarios  u ON u.id = d.usuario_id
+             ${joinProfesor}
              ${where}
              ORDER BY c.orden, m.nombre`,
             params

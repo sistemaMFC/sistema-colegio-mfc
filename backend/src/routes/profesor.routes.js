@@ -15,6 +15,22 @@ const soloDocente = (req, res, next) => {
     return res.status(403).json({ error: 'Acceso restringido al personal docente' });
 };
 
+async function obtenerColumnasTabla(nombreTabla) {
+    const permitidas = new Set(['asignaciones_docente']);
+    if (!permitidas.has(nombreTabla)) throw new Error('Tabla no permitida');
+    const [cols] = await pool.query(`SHOW COLUMNS FROM ${nombreTabla}`);
+    return new Set(cols.map(col => col.Field));
+}
+
+async function obtenerConfigProfesorAsignacion() {
+    const cols = await obtenerColumnasTabla('asignaciones_docente');
+    if (cols.has('docente_id')) return { col: 'docente_id', tipo: 'docente' };
+    if (cols.has('profesor_id')) return { col: 'profesor_id', tipo: 'usuario' };
+    if (cols.has('usuario_id')) return { col: 'usuario_id', tipo: 'usuario' };
+    if (cols.has('docente_usuario_id')) return { col: 'docente_usuario_id', tipo: 'usuario' };
+    throw new Error('asignaciones_docente no tiene columna de profesor reconocida');
+}
+
 /* ── GET /api/profesor/mi-docente ──────────────────────────────
    Devuelve: datos del docente + sus asignaciones + sus tutorias
    El portal del profesor usa esto para construir toda la UI.
@@ -22,6 +38,7 @@ const soloDocente = (req, res, next) => {
 router.get('/mi-docente', authRequired, soloDocente, async (req, res) => {
     try {
         const usuarioId = req.user.id;
+        const cfg = await obtenerConfigProfesorAsignacion();
 
         // Datos del docente
         const [docRows] = await pool.query(
@@ -36,13 +53,17 @@ router.get('/mi-docente', authRequired, soloDocente, async (req, res) => {
 
         let asignaciones = [], tutorias = [];
 
-        if (docente.id) {
+        if (docente.id || cfg.tipo === 'usuario') {
             const [periodo] = await pool.query(
                 `SELECT id FROM periodos_lectivos WHERE estado = 'ACTIVO' LIMIT 1`
             );
             const periodoId = periodo[0]?.id;
 
             if (periodoId) {
+                const filtroProfesor = cfg.tipo === 'docente'
+                    ? `ad.${cfg.col} = ?`
+                    : `ad.${cfg.col} = ?`;
+                const profesorValor = cfg.tipo === 'docente' ? docente.id : usuarioId;
                 const [asig] = await pool.query(
                     `SELECT ad.id, ad.materia_id, ad.curso_id, ad.paralelo_id,
                             m.nombre AS materia, m.codigo AS materia_codigo,
@@ -51,9 +72,9 @@ router.get('/mi-docente', authRequired, soloDocente, async (req, res) => {
                      JOIN materias  m ON m.id = ad.materia_id
                      JOIN cursos    c ON c.id = ad.curso_id
                      JOIN paralelos p ON p.id = ad.paralelo_id
-                     WHERE ad.docente_id = ? AND ad.periodo_id = ? AND ad.estado = 'ACTIVO'
+                     WHERE ${filtroProfesor} AND ad.periodo_id = ? AND ad.estado = 'ACTIVO'
                      ORDER BY c.nombre, m.nombre`,
-                    [docente.id, periodoId]
+                    [profesorValor, periodoId]
                 );
                 asignaciones = asig;
 

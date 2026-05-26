@@ -181,6 +181,17 @@ async function obtenerColumnasTabla(nombreTabla) {
   return new Set(cols.map(col => col.Field));
 }
 
+async function obtenerConfigProfesorAsignacion() {
+  const cols = await obtenerColumnasTabla("asignaciones_docente");
+  if (cols.has("docente_id")) return { col: "docente_id", tipo: "docente" };
+  if (cols.has("profesor_id")) return { col: "profesor_id", tipo: "usuario" };
+  if (cols.has("usuario_id")) return { col: "usuario_id", tipo: "usuario" };
+  if (cols.has("docente_usuario_id")) return { col: "docente_usuario_id", tipo: "usuario" };
+  const error = new Error("La tabla asignaciones_docente no tiene columna de profesor reconocida");
+  error.status = 500;
+  throw error;
+}
+
 async function asegurarDocenteDesdeUsuario(usuarioId) {
   const [usuarios] = await db.query(
     `SELECT id, cedula, rol, estado FROM usuarios WHERE id = ? LIMIT 1`,
@@ -688,6 +699,7 @@ router.get("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) =>
       obtenerColumnasTabla("asignaciones_docente"),
       obtenerColumnasTabla("cursos"),
     ]);
+    const profConfig = await obtenerConfigProfesorAsignacion();
 
     const params = [];
     let where = "WHERE 1=1";
@@ -702,8 +714,14 @@ router.get("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) =>
     if (periodo_id && tienePeriodo) { where += " AND ad.periodo_id = ?"; params.push(periodo_id); }
     if (tieneEstado) { where += " AND ad.estado = 'ACTIVO'"; }
 
+    const joinProfesor = profConfig.tipo === "docente"
+      ? `JOIN docentes d ON d.id = ad.${profConfig.col}
+         JOIN usuarios u ON u.id = d.usuario_id`
+      : `JOIN usuarios u ON u.id = ad.${profConfig.col}
+         LEFT JOIN docentes d ON d.usuario_id = u.id`;
+
     const [rows] = await db.query(
-      `SELECT ad.id, ad.docente_id, ad.materia_id, ad.curso_id, ad.paralelo_id,
+      `SELECT ad.id, ad.${profConfig.col} AS docente_id, ad.materia_id, ad.curso_id, ad.paralelo_id,
               ${selectPeriodo} AS periodo_id, ${selectEstado} AS estado,
               m.codigo AS materia_codigo, m.nombre AS materia,
               c.nombre AS curso, p.nombre AS paralelo,
@@ -712,8 +730,7 @@ router.get("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) =>
        JOIN materias m ON m.id = ad.materia_id
        JOIN cursos c ON c.id = ad.curso_id
        JOIN paralelos p ON p.id = ad.paralelo_id
-       JOIN docentes d ON d.id = ad.docente_id
-       JOIN usuarios u ON u.id = d.usuario_id
+       ${joinProfesor}
        ${where}
        ORDER BY ${orderCurso}, p.nombre ASC, m.nombre ASC`,
       params
@@ -760,23 +777,31 @@ router.post("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) =
     if (!materia.length) return res.status(400).json({ error: "La materia no esta activa" });
     if (!paralelo.length) return res.status(400).json({ error: "El paralelo no esta activo" });
 
+    const adCols = await obtenerColumnasTabla("asignaciones_docente");
+    const profConfig = await obtenerConfigProfesorAsignacion();
+    const tienePeriodo = adCols.has("periodo_id");
+    const tieneEstado = adCols.has("estado");
     const docenteId = await asegurarDocenteDesdeUsuario(usuario_id);
+    const profesorValor = profConfig.tipo === "docente" ? docenteId : usuario_id;
+    const estadoFiltro = tieneEstado ? " AND ad.estado = 'ACTIVO'" : "";
+    const periodoFiltro = tienePeriodo ? " AND ad.periodo_id = ?" : "";
+    const periodoParams = tienePeriodo ? [periodoFinal] : [];
 
     const [duplicadaActiva] = await db.query(
       `SELECT ad.id
        FROM asignaciones_docente ad
        WHERE ad.materia_id = ? AND ad.curso_id = ? AND ad.paralelo_id = ?
-         AND ad.periodo_id = ? AND ad.estado = 'ACTIVO'
+         ${periodoFiltro}${estadoFiltro}
        LIMIT 1`,
-      [materia_id, curso_id, paralelo_id, periodoFinal]
+      [materia_id, curso_id, paralelo_id, ...periodoParams]
     );
 
     if (duplicadaActiva.length) {
       const [result] = await db.query(
         `UPDATE asignaciones_docente
-         SET docente_id = ?, estado = 'ACTIVO'
+         SET ${profConfig.col} = ?${tieneEstado ? ", estado = 'ACTIVO'" : ""}
          WHERE id = ?`,
-        [docenteId, duplicadaActiva[0].id]
+        [profesorValor, duplicadaActiva[0].id]
       );
       return res.json({
         success: true,
@@ -789,17 +814,17 @@ router.post("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) =
     const [inactiva] = await db.query(
       `SELECT id
        FROM asignaciones_docente
-       WHERE materia_id = ? AND curso_id = ? AND paralelo_id = ? AND periodo_id = ?
+       WHERE materia_id = ? AND curso_id = ? AND paralelo_id = ?${tienePeriodo ? " AND periodo_id = ?" : ""}
        LIMIT 1`,
-      [materia_id, curso_id, paralelo_id, periodoFinal]
+      [materia_id, curso_id, paralelo_id, ...periodoParams]
     );
 
     if (inactiva.length) {
       await db.query(
         `UPDATE asignaciones_docente
-         SET docente_id = ?, estado = 'ACTIVO'
+         SET ${profConfig.col} = ?${tieneEstado ? ", estado = 'ACTIVO'" : ""}
          WHERE id = ?`,
-        [docenteId, inactiva[0].id]
+        [profesorValor, inactiva[0].id]
       );
       return res.json({
         success: true,
@@ -808,11 +833,23 @@ router.post("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) =
       });
     }
 
+    const columnas = [profConfig.col, "materia_id", "curso_id", "paralelo_id"];
+    const valores = [profesorValor, materia_id, curso_id, paralelo_id];
+    if (tienePeriodo) {
+      columnas.push("periodo_id");
+      valores.push(periodoFinal);
+    }
+    if (tieneEstado) {
+      columnas.push("estado");
+      valores.push("ACTIVO");
+    }
+    const placeholders = columnas.map(() => "?").join(", ");
+
     const [result] = await db.query(
       `INSERT INTO asignaciones_docente
-       (docente_id, materia_id, curso_id, paralelo_id, periodo_id, estado)
-       VALUES (?, ?, ?, ?, ?, 'ACTIVO')`,
-      [docenteId, materia_id, curso_id, paralelo_id, periodoFinal]
+       (${columnas.join(", ")})
+       VALUES (${placeholders})`,
+      valores
     );
 
     return res.status(201).json({

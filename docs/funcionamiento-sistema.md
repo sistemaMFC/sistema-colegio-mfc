@@ -241,6 +241,7 @@ Regla:
 - Todo lo que el admin habilite en `asignaciones_docente` con estado `ACTIVO` aparece en el portal del profesor.
 - La pantalla de `Cursos` debe cargar cursos, materias, paralelos y profesores aunque la lista de asignaciones tenga un problema temporal.
 - La ruta `GET /api/admin/asignaciones-docente` inspecciona columnas reales de Railway para evitar errores por diferencias menores de estructura.
+- `asignaciones_docente` puede usar `docente_id` o `profesor_id` segun la estructura real de la base. El backend detecta la columna y usa la que exista.
 - Para que una materia aparezca al profesor debe cumplirse:
   - curso activo,
   - materia activa,
@@ -440,6 +441,7 @@ Motivo:
 13. Se creo la seccion administrativa `Materias` para crear, editar, cargar el listado oficial y quitar/inactivar materias.
 14. Se creo la seccion administrativa `Cursos` para habilitar cursos y asignar materias con profesor por curso/paralelo/periodo.
 15. Se hizo mas resistente la carga de `Cursos`: si falla el listado de asignaciones, no bloquea la carga de cursos, materias, paralelos y profesores.
+16. Se adapto `asignaciones_docente` para soportar bases que usan `profesor_id` en lugar de `docente_id`.
 
 ## Procedimiento para continuar
 
