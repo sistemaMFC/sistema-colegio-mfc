@@ -1,24 +1,29 @@
+/* ============================================================
+   CONEXIÓN BD — COLEGIO MFC
+   ✅ CORREGIDO: Credenciales en .env, nunca en el código
+   ============================================================ */
+require('dotenv').config();
 const mysql = require('mysql2/promise');
 
 const pool = mysql.createPool({
-    host: 'tramway.proxy.rlwy.net',
-    user: 'root',
-    password: 'rKgcXCzZQsmLNYSWrvXDSDfePhaKFrLf',
-    database: 'sistema_educativo', // Nombre real de sus tablas
-    port: 26000,                    // Puerto público para conectar desde afuera
+    host:     process.env.DB_HOST,
+    user:     process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port:     Number(process.env.DB_PORT) || 3306,
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
 });
 
-// Prueba automática de conexión
 (async () => {
     try {
-        const connection = await pool.getConnection();
-        console.log('✅ CONECTADO EXITOSAMENTE A SISTEMA_EDUCATIVO');
-        connection.release();
+        const conn = await pool.getConnection();
+        console.log('✅ CONECTADO A:', process.env.DB_NAME);
+        conn.release();
     } catch (err) {
         console.error('❌ ERROR DE CONEXIÓN:', err.message);
+        process.exit(1);
     }
 })();
 

@@ -1,25 +1,30 @@
-/* ========================================================
-    RUTAS DE PAGOS - COLEGIO MFC
-    Define los puntos de acceso para Colecturía
-   ======================================================== */
-const express = require("express");
-const router = express.Router();
-const pagosController = require("../controllers/pagos.controller");
+/* ============================================================
+   RUTAS DE PAGOS — COLEGIO MFC
+   ✅ CORREGIDO: Todas las rutas requieren autenticación.
+   Antes cualquier persona con la URL podía cobrar o
+   generar deudas sin estar logueada.
+   ============================================================ */
+const express         = require('express');
+const router          = express.Router();
+const pagosController = require('../controllers/pagos.controller');
+const { authRequired } = require('../middlewares/auth');
 
-// 1. Obtener el semáforo de deudas de un estudiante (Abril - Febrero)
-// GET: /api/pagos/estado/42
-router.get("/estado/:id", pagosController.getDeudas);
+// Solo ADMIN y COLECTOR pueden gestionar pagos
+const soloColector = (req, res, next) => {
+    if (['ADMIN', 'COLECTOR', 'SECRETARIA'].includes(req.user.rol)) return next();
+    return res.status(403).json({ error: 'Acceso restringido a Colecturía' });
+};
 
-// 2. Procesar el cobro de una pensión, matrícula o inscripción
-// POST: /api/pagos/cobrar
-router.post("/cobrar", pagosController.registrarPago);
+// GET /api/pagos/estado/:id — semáforo de deudas
+router.get('/estado/:id',    authRequired, soloColector, pagosController.getDeudas);
 
-// 3. Generar automáticamente todo el año lectivo (Abril a Febrero)
-// POST: /api/pagos/generar-ciclo
-router.post("/generar-ciclo", pagosController.generarCicloEscolar);
+// POST /api/pagos/cobrar — registrar un cobro
+router.post('/cobrar',       authRequired, soloColector, pagosController.registrarPago);
 
-// 4. Agregar un cargo personalizado o mes extra (Botón de Gloria)
-// POST: /api/pagos/agregar-extra
-router.post("/agregar-extra", pagosController.agregarExtra);
+// POST /api/pagos/generar-ciclo — generar ciclo escolar
+router.post('/generar-ciclo', authRequired, soloColector, pagosController.generarCicloEscolar);
+
+// POST /api/pagos/agregar-extra — cargo extra
+router.post('/agregar-extra', authRequired, soloColector, pagosController.agregarExtra);
 
 module.exports = router;
