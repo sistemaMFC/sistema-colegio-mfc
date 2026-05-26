@@ -33,6 +33,8 @@ Funcionamiento:
 - Guarda `mfc_token` y `mfc_user` en `localStorage`.
 - Si el rol es `PROFESOR`, redirige a `profesor-academico.html`.
 - Si el rol es `ADMIN`, `SECRETARIA` o `COLECTOR`, redirige a `app.html`.
+- Cualquier usuario autenticado puede consultar y editar su perfil con `GET /auth/me` y `PUT /auth/me`.
+- Cualquier usuario autenticado puede cambiar su propia contrasena con `PUT /auth/me/password`.
 
 ### Panel administrativo
 
@@ -52,6 +54,13 @@ Modulos actuales:
 
 Este panel queda como vista completa para administracion y secretaria.
 
+Regla de administracion:
+
+- El rol `ADMIN` tiene acceso total al sistema.
+- Un administrador puede ver, crear, editar y eliminar usuarios.
+- Si un usuario tiene historial vinculado y no se puede borrar fisicamente, el sistema lo marca como `INACTIVO`.
+- Un administrador no puede eliminar su propio usuario desde el panel para evitar bloquearse a si mismo.
+
 ### Portal profesor
 
 Archivos:
@@ -67,6 +76,7 @@ Funcionamiento:
 - Carga trimestres con `GET /api/academico/trimestres`.
 - Carga alumnos y notas con `GET /api/academico/notas`.
 - Guarda notas con `POST /api/academico/notas`.
+- Permite editar perfil propio y cambiar contrasena.
 
 Regla importante:
 
@@ -88,6 +98,16 @@ Uso:
 - Estado de usuario: `ACTIVO` o `INACTIVO`.
 
 No duplicar usuarios en otra tabla.
+
+Reglas de perfiles:
+
+- Todo usuario puede editar sus propios nombres, apellidos y cedula.
+- Todo usuario puede cambiar su propia contrasena si conoce la contrasena actual.
+- Solo `ADMIN` puede crear usuarios.
+- Solo `ADMIN` puede editar rol, estado o resetear contrasena de otro usuario.
+- Solo `ADMIN` puede eliminar usuarios.
+- `ADMIN` es un rol superior: puede ver y modificar todo, incluso informacion academica.
+- Si una persona debe ser administradora y tambien docente, la cuenta puede ser `ADMIN` para acceso total; si se necesita que aparezca como docente en asignaciones, tambien debe existir el registro correspondiente en `docentes`.
 
 ### Docentes
 
@@ -295,6 +315,9 @@ Motivo:
 4. El backend valida que el profesor solo acceda a sus asignaciones.
 5. Academico acepta matriculas con estado `ACTIVO` o `MATRICULADO`.
 6. `/api/enrollments` lista estudiantes usando columnas reales: `apellidos_est`, `nombres_est`, `cedula_est`.
+7. El formulario de usuarios permite crear `PROFESOR`.
+8. Cada usuario puede editar su perfil y cambiar su propia contrasena.
+9. El administrador puede editar usuarios, cambiar roles, resetear contrasenas y eliminar/inactivar usuarios.
 
 ## Procedimiento para continuar
 

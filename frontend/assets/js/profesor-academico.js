@@ -61,6 +61,27 @@ function showAlert(type, message) {
     }, 3500);
 }
 
+function cerrarModalProfesor(id) {
+    document.getElementById(id)?.remove();
+}
+
+function crearModalProfesor(id, titulo, bodyHTML) {
+    cerrarModalProfesor(id);
+    const overlay = document.createElement("div");
+    overlay.id = id;
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:2000;display:flex;align-items:center;justify-content:center;padding:18px;";
+    overlay.innerHTML = `
+        <div class="card" style="width:min(720px,100%);max-height:92vh;overflow:auto;">
+            <div class="card-head">
+                <h3>${escapeHTML(titulo)}</h3>
+                <button class="btn-soft" onclick="cerrarModalProfesor('${id}')">Cerrar</button>
+            </div>
+            <div style="padding:14px">${bodyHTML}</div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+}
+
 async function api(path, options = {}) {
     const token = getToken();
     if (!token) {
@@ -315,11 +336,95 @@ async function handleNotaChange(event) {
     }
 }
 
+async function abrirPerfilProfesor() {
+    try {
+        const perfil = await api("/auth/me");
+        crearModalProfesor("modalPerfilProfesor", "Mi perfil", `
+            <div class="prof-grid" style="grid-template-columns:1fr 1fr">
+                <form class="form" onsubmit="guardarPerfilProfesor(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nombres</label>
+                            <input name="nombres" value="${escapeHTML(perfil.nombres)}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Apellidos</label>
+                            <input name="apellidos" value="${escapeHTML(perfil.apellidos)}" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Cedula</label>
+                        <input name="cedula" maxlength="10" value="${escapeHTML(perfil.cedula)}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Rol</label>
+                        <input value="${escapeHTML(perfil.rol)}" disabled>
+                    </div>
+                    <button class="btn" type="submit">Guardar perfil</button>
+                </form>
+                <form class="form" onsubmit="guardarPasswordProfesor(event)">
+                    <div class="form-group">
+                        <label>Contrasena actual</label>
+                        <input type="password" name="current_password" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nueva contrasena</label>
+                        <input type="password" name="new_password" minlength="6" required>
+                    </div>
+                    <button class="btn" type="submit">Cambiar contrasena</button>
+                </form>
+            </div>
+        `);
+    } catch (err) {
+        showAlert("bad", err.message || "No se pudo cargar el perfil.");
+    }
+}
+
+async function guardarPerfilProfesor(event) {
+    event.preventDefault();
+    const form = event.target;
+    try {
+        const data = await api("/auth/me", {
+            method: "PUT",
+            body: {
+                nombres: form.nombres.value.trim(),
+                apellidos: form.apellidos.value.trim(),
+                cedula: form.cedula.value.trim(),
+            }
+        });
+        localStorage.setItem("mfc_user", JSON.stringify(data.user));
+        fillUserUI(parseJWT(getToken()), data.user);
+        cerrarModalProfesor("modalPerfilProfesor");
+        showAlert("ok", "Perfil actualizado.");
+    } catch (err) {
+        showAlert("bad", err.message || "No se pudo guardar.");
+    }
+}
+
+async function guardarPasswordProfesor(event) {
+    event.preventDefault();
+    const form = event.target;
+    try {
+        await api("/auth/me/password", {
+            method: "PUT",
+            body: {
+                current_password: form.current_password.value,
+                new_password: form.new_password.value,
+            }
+        });
+        form.reset();
+        showAlert("ok", "Contrasena actualizada.");
+    } catch (err) {
+        showAlert("bad", err.message || "No se pudo cambiar la contrasena.");
+    }
+}
+
 async function init() {
     const decoded = requireSession();
     if (!decoded) return;
 
     $("#btnLogout").addEventListener("click", logout);
+    $("#btnPerfilProfesor")?.addEventListener("click", abrirPerfilProfesor);
     $("#profTrimSelect").addEventListener("change", async (event) => {
         state.selectedTrimestreId = Number(event.target.value);
         await loadNotas();
@@ -352,3 +457,6 @@ async function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+window.cerrarModalProfesor = cerrarModalProfesor;
+window.guardarPerfilProfesor = guardarPerfilProfesor;
+window.guardarPasswordProfesor = guardarPasswordProfesor;
