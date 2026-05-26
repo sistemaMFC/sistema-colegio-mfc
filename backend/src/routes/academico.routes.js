@@ -31,6 +31,69 @@ const adminOProfesor = (req, res, next) => {
     return res.status(403).json({ error: 'Acceso restringido al personal docente' });
 };
 
+async function profesorPuedeAsignacion(user, asignacionId) {
+    if (user.rol !== 'PROFESOR') return true;
+
+    const [rows] = await pool.query(
+        `SELECT ad.id
+         FROM asignaciones_docente ad
+         JOIN docentes d ON d.id = ad.docente_id
+         WHERE ad.id = ? AND d.usuario_id = ? AND ad.estado = 'ACTIVO'
+         LIMIT 1`,
+        [asignacionId, user.id]
+    );
+    return rows.length > 0;
+}
+
+async function profesorPuedeCurso(user, cursoId, paraleloId, periodoId) {
+    if (user.rol !== 'PROFESOR') return true;
+
+    const [rows] = await pool.query(
+        `SELECT ad.id
+         FROM asignaciones_docente ad
+         JOIN docentes d ON d.id = ad.docente_id
+         WHERE ad.curso_id = ? AND ad.paralelo_id = ? AND ad.periodo_id = ?
+           AND d.usuario_id = ? AND ad.estado = 'ACTIVO'
+         LIMIT 1`,
+        [cursoId, paraleloId, periodoId, user.id]
+    );
+    return rows.length > 0;
+}
+
+async function profesorPuedeMatricula(user, matriculaId) {
+    if (user.rol !== 'PROFESOR') return true;
+
+    const [rows] = await pool.query(
+        `SELECT m.id
+         FROM matriculas m
+         JOIN asignaciones_docente ad
+           ON ad.curso_id = m.curso_id
+          AND ad.paralelo_id = m.paralelo_id
+          AND ad.periodo_id = m.periodo_id
+         JOIN docentes d ON d.id = ad.docente_id
+         WHERE m.id = ? AND d.usuario_id = ? AND ad.estado = 'ACTIVO'
+         LIMIT 1`,
+        [matriculaId, user.id]
+    );
+    return rows.length > 0;
+}
+
+async function matriculaPerteneceAsignacion(matriculaId, asignacionId) {
+    const [rows] = await pool.query(
+        `SELECT m.id
+         FROM matriculas m
+         JOIN asignaciones_docente ad
+           ON ad.id = ?
+          AND ad.curso_id = m.curso_id
+          AND ad.paralelo_id = m.paralelo_id
+          AND ad.periodo_id = m.periodo_id
+         WHERE m.id = ?
+         LIMIT 1`,
+        [asignacionId, matriculaId]
+    );
+    return rows.length > 0;
+}
+
 /* ════════════════════════════════════
    1. CATÁLOGOS
    ════════════════════════════════════ */
@@ -106,7 +169,7 @@ router.get('/cursos-paralelos', authRequired, async (req, res) => {
    ════════════════════════════════════ */
 
 // GET /api/academico/asignaciones?curso_id=X&paralelo_id=Y&periodo_id=Z
-router.get('/asignaciones', authRequired, async (req, res) => {
+router.get('/asignaciones', authRequired, adminOProfesor, async (req, res) => {
     try {
         const { curso_id, paralelo_id, periodo_id } = req.query;
         const params = [];
@@ -114,6 +177,10 @@ router.get('/asignaciones', authRequired, async (req, res) => {
         if (periodo_id) { where += ' AND ad.periodo_id = ?';  params.push(periodo_id); }
         if (curso_id)   { where += ' AND ad.curso_id = ?';    params.push(curso_id); }
         if (paralelo_id){ where += ' AND ad.paralelo_id = ?'; params.push(paralelo_id); }
+        if (req.user.rol === 'PROFESOR') {
+            where += ' AND d.usuario_id = ?';
+            params.push(req.user.id);
+        }
 
         const [rows] = await pool.query(
             `SELECT
@@ -150,6 +217,9 @@ router.get('/asignaciones', authRequired, async (req, res) => {
 router.get('/notas', authRequired, adminOProfesor, async (req, res) => {
     try {
         const { asignacion_id, trimestre_id } = req.query;
+        if (asignacion_id && !(await profesorPuedeAsignacion(req.user, asignacion_id))) {
+            return res.status(403).json({ error: 'No tienes permiso para esta asignacion' });
+        }
         if (!asignacion_id || !trimestre_id)
             return res.status(400).json({ error: 'Faltan parámetros: asignacion_id, trimestre_id' });
 
@@ -252,6 +322,14 @@ router.post('/notas', authRequired, adminOProfesor, async (req, res) => {
         if (!matricula_id || !asignacion_id || !trimestre_id || !tipo_evaluacion_id || nota === undefined)
             return res.status(400).json({ error: 'Faltan campos obligatorios' });
 
+        if (!(await profesorPuedeAsignacion(req.user, asignacion_id))) {
+            return res.status(403).json({ error: 'No tienes permiso para esta asignacion' });
+        }
+
+        if (!(await matriculaPerteneceAsignacion(matricula_id, asignacion_id))) {
+            return res.status(400).json({ error: 'La matricula no pertenece a esta asignacion' });
+        }
+
         const v = parseFloat(nota);
         if (isNaN(v) || v < 0 || v > 10)
             return res.status(400).json({ error: 'La nota debe estar entre 0 y 10' });
@@ -291,9 +369,13 @@ router.delete('/notas/:id', authRequired, onlyAdmin, async (req, res) => {
       Usa vw_promedios_trimestrales si existe
    ════════════════════════════════════ */
 
-router.get('/reporte/:matricula_id', authRequired, async (req, res) => {
+router.get('/reporte/:matricula_id', authRequired, adminOProfesor, async (req, res) => {
     try {
         const { matricula_id } = req.params;
+
+        if (!(await profesorPuedeMatricula(req.user, matricula_id))) {
+            return res.status(403).json({ error: 'No tienes permiso para esta matricula' });
+        }
 
         const [mat] = await pool.query(
             `SELECT m.id AS matricula_id, m.periodo_id, m.curso_id, m.paralelo_id,
@@ -393,6 +475,9 @@ router.get('/reporte/:matricula_id', authRequired, async (req, res) => {
 router.get('/resumen-curso', authRequired, adminOProfesor, async (req, res) => {
     try {
         const { curso_id, paralelo_id, periodo_id, trimestre_id } = req.query;
+        if (curso_id && paralelo_id && periodo_id && !(await profesorPuedeCurso(req.user, curso_id, paralelo_id, periodo_id))) {
+            return res.status(403).json({ error: 'No tienes permiso para este curso' });
+        }
         if (!curso_id || !paralelo_id || !periodo_id)
             return res.status(400).json({ error: 'Faltan parámetros' });
 

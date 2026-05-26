@@ -11,7 +11,14 @@ if(document.getElementById("year")) {
 /* =========================
     CONFIGURACIÓN DE API
    ========================= */
-const API_URL = "https://sistema-colegio-mfc.onrender.com/auth/login";
+const API_BASE = window.MFC_API_BASE || "https://sistema-colegio-mfc.onrender.com";
+const API_URL = `${API_BASE}/auth/login`;
+
+function getHomeByRole(role) {
+    const rol = String(role || "").toUpperCase();
+    if (rol === "PROFESOR") return "./profesor-academico.html";
+    return "./app.html";
+}
 
 /* =========================
     TOGGLE CONTRASEÑA
@@ -72,11 +79,11 @@ if (form) {
             localStorage.setItem("mfc_user", JSON.stringify(data.user));
 
             statusEl.className = "status ok";
-            statusEl.textContent = `¡Bienvenido/a ${data.user.nombres}! ✅`;
+            statusEl.textContent = `Bienvenido/a ${data.user.nombres}. Redirigiendo...`;
 
-            // Redirección suave al Dashboard
+            // Redirección por rol
             setTimeout(() => {
-                window.location.href = "./app.html";
+                window.location.href = getHomeByRole(data.user.rol);
             }, 1200);
 
         } catch (err) {
