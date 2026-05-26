@@ -442,6 +442,47 @@ input:focus, select:focus { border-color: var(--blue); background: white; }
   text-align: center;
 }
 
+.catalog-panel {
+  margin: 0 14px 14px;
+  padding: 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  background: var(--panel2);
+}
+
+.catalog-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.catalog-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.catalog-list span {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 7px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.actions-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 /* --- Responsive --- */
 @media (max-width: 1100px){
   .grid-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -517,6 +558,10 @@ input:focus, select:focus { border-color: var(--blue); background: white; }
   }
   .btn, .btn-soft, .btn-outline, .icon-btn {
     min-height: 40px;
+  }
+  .catalog-panel-head {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 

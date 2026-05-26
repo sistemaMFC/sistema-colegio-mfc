@@ -5,6 +5,7 @@
 -- 1. Crear o reactivar las materias oficiales que se usaran por ahora.
 -- 2. No eliminar materias antiguas automaticamente.
 -- 3. Evitar duplicados por codigo o por nombre.
+-- 4. Guardar los nombres en MAYUSCULAS para mantener un catalogo uniforme.
 --
 -- Ejecutar en Railway / MySQL sobre la base de datos de produccion.
 
@@ -16,30 +17,30 @@ CREATE TEMPORARY TABLE tmp_materias_oficiales (
 );
 
 INSERT INTO tmp_materias_oficiales (codigo, nombre) VALUES
-  ('CEL', 'Comprensión y Expresión del Lenguaje'),
-  ('RLM', 'Relación Lógico Matemático'),
-  ('RLG', 'Relaciones Lógicas Matemáticas'),
-  ('IAU', 'Identidad y autonomía'),
-  ('RMN', 'Relación con el medio natural y cultural'),
-  ('RMC', 'Relaciones con el medio natural y cultural'),
-  ('ING', 'Inglés'),
-  ('CON', 'Convivencia'),
-  ('ECA', 'Educación Cultural y Artística'),
-  ('EAR', 'Expresión Artística'),
-  ('EFI', 'Educación Física'),
-  ('LEN', 'Lengua y Literatura'),
-  ('MAT', 'Matemáticas'),
-  ('CNT', 'Ciencias Naturales'),
-  ('SOC', 'Estudios Sociales'),
-  ('ACO', 'Acompañamiento'),
-  ('ALE', 'Animación a la lectura'),
-  ('FCR', 'Formación Cristiana'),
-  ('COM', 'Computación'),
-  ('CIV', 'Cívica'),
-  ('ECO', 'Expresión Corporal'),
-  ('LEX', 'Lengua Extranjera'),
-  ('ECF', 'Educación Cultural y Física'),
-  ('FCV', 'Formación Cristiana y Valores');
+  ('CEL', 'COMPRENSIÓN Y EXPRESIÓN DEL LENGUAJE'),
+  ('RLM', 'RELACIÓN LÓGICO MATEMÁTICO'),
+  ('RLG', 'RELACIONES LÓGICAS MATEMÁTICAS'),
+  ('IAU', 'IDENTIDAD Y AUTONOMÍA'),
+  ('RMN', 'RELACIÓN CON EL MEDIO NATURAL Y CULTURAL'),
+  ('RMC', 'RELACIONES CON EL MEDIO NATURAL Y CULTURAL'),
+  ('ING', 'INGLÉS'),
+  ('CON', 'CONVIVENCIA'),
+  ('ECA', 'EDUCACIÓN CULTURAL Y ARTÍSTICA'),
+  ('EAR', 'EXPRESIÓN ARTÍSTICA'),
+  ('EFI', 'EDUCACIÓN FÍSICA'),
+  ('LEN', 'LENGUA Y LITERATURA'),
+  ('MAT', 'MATEMÁTICAS'),
+  ('CNT', 'CIENCIAS NATURALES'),
+  ('SOC', 'ESTUDIOS SOCIALES'),
+  ('ACO', 'ACOMPAÑAMIENTO'),
+  ('ALE', 'ANIMACIÓN A LA LECTURA'),
+  ('FCR', 'FORMACIÓN CRISTIANA'),
+  ('COM', 'COMPUTACIÓN'),
+  ('CIV', 'CÍVICA'),
+  ('ECO', 'EXPRESIÓN CORPORAL'),
+  ('LEX', 'LENGUA EXTRANJERA'),
+  ('ECF', 'EDUCACIÓN CULTURAL Y FÍSICA'),
+  ('FCV', 'FORMACIÓN CRISTIANA Y VALORES');
 
 -- Si ya existe el codigo, se actualiza el nombre y se reactiva.
 UPDATE materias m
@@ -85,4 +86,3 @@ WHERE t.codigo IS NULL
 ORDER BY m.nombre;
 
 COMMIT;
-

@@ -5,6 +5,159 @@ const { authRequired, onlyAdmin } = require("../middlewares/auth");
 
 const router = express.Router();
 const ROLES_PERMITIDOS = ["ADMIN", "SECRETARIA", "COLECTOR", "PROFESOR"];
+const MATERIAS_OFICIALES = [
+  { codigo: "CEL", nombre: "COMPRENSIÓN Y EXPRESIÓN DEL LENGUAJE" },
+  { codigo: "RLM", nombre: "RELACIÓN LÓGICO MATEMÁTICO" },
+  { codigo: "RLG", nombre: "RELACIONES LÓGICAS MATEMÁTICAS" },
+  { codigo: "IAU", nombre: "IDENTIDAD Y AUTONOMÍA" },
+  { codigo: "RMN", nombre: "RELACIÓN CON EL MEDIO NATURAL Y CULTURAL" },
+  { codigo: "RMC", nombre: "RELACIONES CON EL MEDIO NATURAL Y CULTURAL" },
+  { codigo: "ING", nombre: "INGLÉS" },
+  { codigo: "CON", nombre: "CONVIVENCIA" },
+  { codigo: "ECA", nombre: "EDUCACIÓN CULTURAL Y ARTÍSTICA" },
+  { codigo: "EAR", nombre: "EXPRESIÓN ARTÍSTICA" },
+  { codigo: "EFI", nombre: "EDUCACIÓN FÍSICA" },
+  { codigo: "LEN", nombre: "LENGUA Y LITERATURA" },
+  { codigo: "MAT", nombre: "MATEMÁTICAS" },
+  { codigo: "CNT", nombre: "CIENCIAS NATURALES" },
+  { codigo: "SOC", nombre: "ESTUDIOS SOCIALES" },
+  { codigo: "ACO", nombre: "ACOMPAÑAMIENTO" },
+  { codigo: "ALE", nombre: "ANIMACIÓN A LA LECTURA" },
+  { codigo: "FCR", nombre: "FORMACIÓN CRISTIANA" },
+  { codigo: "COM", nombre: "COMPUTACIÓN" },
+  { codigo: "CIV", nombre: "CÍVICA" },
+  { codigo: "ECO", nombre: "EXPRESIÓN CORPORAL" },
+  { codigo: "LEX", nombre: "LENGUA EXTRANJERA" },
+  { codigo: "ECF", nombre: "EDUCACIÓN CULTURAL Y FÍSICA" },
+  { codigo: "FCV", nombre: "FORMACIÓN CRISTIANA Y VALORES" },
+];
+
+function normalizarTextoMayuscula(value) {
+  return String(value || "").trim().replace(/\s+/g, " ").toUpperCase();
+}
+
+function normalizarCodigoMateria(value) {
+  return normalizarTextoMayuscula(value).replace(/[^A-Z0-9]/g, "").slice(0, 20);
+}
+
+function claveComparacionMateria(value) {
+  return normalizarTextoMayuscula(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Z0-9]/g, "");
+}
+
+function generarCodigoMateria(nombre) {
+  const base = normalizarTextoMayuscula(nombre)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(" ")
+    .filter(word => !["Y", "DE", "DEL", "LA", "EL", "LOS", "LAS", "CON"].includes(word))
+    .map(word => word[0])
+    .join("");
+  return (base || normalizarTextoMayuscula(nombre).replace(/[^A-Z0-9]/g, "")).slice(0, 8);
+}
+
+async function guardarMateriaCatalogo({ codigo, nombre }, id = null) {
+  const nombreFinal = normalizarTextoMayuscula(nombre);
+  const codigoFinal = normalizarCodigoMateria(codigo || generarCodigoMateria(nombreFinal));
+
+  if (!nombreFinal) {
+    const error = new Error("El nombre de la materia es obligatorio");
+    error.status = 400;
+    throw error;
+  }
+
+  if (!codigoFinal) {
+    const error = new Error("El codigo de la materia es obligatorio");
+    error.status = 400;
+    throw error;
+  }
+
+  const [existentes] = await db.query(`SELECT id, codigo, nombre FROM materias`);
+  const dupNombre = existentes.find(row =>
+    (!id || Number(row.id) !== Number(id)) &&
+    claveComparacionMateria(row.nombre) === claveComparacionMateria(nombreFinal)
+  );
+  if (dupNombre) {
+    const error = new Error("Ya existe una materia con ese nombre");
+    error.status = 409;
+    throw error;
+  }
+
+  const dupCodigo = existentes.find(row =>
+    (!id || Number(row.id) !== Number(id)) &&
+    normalizarCodigoMateria(row.codigo) === codigoFinal
+  );
+  if (dupCodigo) {
+    const error = new Error("Ya existe una materia con ese codigo");
+    error.status = 409;
+    throw error;
+  }
+
+  const paramsNombre = [nombreFinal];
+  const paramsCodigo = [codigoFinal];
+  let filtroId = "";
+  if (id) {
+    filtroId = " AND id <> ?";
+    paramsNombre.push(id);
+    paramsCodigo.push(id);
+  }
+
+  const [porNombre] = await db.query(
+    `SELECT id FROM materias WHERE UPPER(TRIM(nombre)) = ?${filtroId} LIMIT 1`,
+    paramsNombre
+  );
+  if (porNombre.length > 0) {
+    const error = new Error("Ya existe una materia con ese nombre");
+    error.status = 409;
+    throw error;
+  }
+
+  const [porCodigo] = await db.query(
+    `SELECT id FROM materias WHERE UPPER(TRIM(codigo)) = ?${filtroId} LIMIT 1`,
+    paramsCodigo
+  );
+  if (porCodigo.length > 0) {
+    const error = new Error("Ya existe una materia con ese codigo");
+    error.status = 409;
+    throw error;
+  }
+
+  return { codigo: codigoFinal, nombre: nombreFinal };
+}
+
+async function upsertMateriaOficial(item) {
+  const nombreFinal = normalizarTextoMayuscula(item.nombre);
+  const codigoFinal = normalizarCodigoMateria(item.codigo);
+
+  const [existentes] = await db.query(`SELECT id, codigo, nombre FROM materias`);
+  const porNombre = existentes.filter(row =>
+    claveComparacionMateria(row.nombre) === claveComparacionMateria(nombreFinal)
+  );
+  const porCodigo = existentes.filter(row =>
+    normalizarCodigoMateria(row.codigo) === codigoFinal
+  );
+
+  if (porNombre.length && porCodigo.length && Number(porNombre[0].id) !== Number(porCodigo[0].id)) {
+    return { codigo: codigoFinal, nombre: nombreFinal, status: "conflicto" };
+  }
+
+  const existente = porNombre[0] || porCodigo[0];
+  if (existente) {
+    await db.query(
+      `UPDATE materias SET codigo = ?, nombre = ?, estado = 'ACTIVO' WHERE id = ?`,
+      [codigoFinal, nombreFinal, existente.id]
+    );
+    return { id: existente.id, codigo: codigoFinal, nombre: nombreFinal, status: "actualizada" };
+  }
+
+  const [result] = await db.query(
+    `INSERT INTO materias (codigo, nombre, estado) VALUES (?, ?, 'ACTIVO')`,
+    [codigoFinal, nombreFinal]
+  );
+  return { id: result.insertId, codigo: codigoFinal, nombre: nombreFinal, status: "creada" };
+}
 
 /**
  * 1. GET /api/admin/cursos/estadisticas
@@ -235,6 +388,145 @@ router.delete("/usuarios/:id", authRequired, onlyAdmin, async (req, res) => {
   } catch (err) {
     console.error("Error al eliminar usuario:", err);
     return res.status(500).json({ error: "Error interno al eliminar usuario" });
+  }
+});
+
+/**
+ * 7. GET /api/admin/materias
+ * (SOLO ADMIN) Lista el catalogo completo de materias.
+ */
+router.get("/materias", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT id, codigo, nombre, estado
+       FROM materias
+       ORDER BY nombre ASC`
+    );
+    return res.json(rows || []);
+  } catch (err) {
+    console.error("Error al listar materias:", err);
+    return res.status(500).json({ error: "Error al obtener materias" });
+  }
+});
+
+/**
+ * 8. POST /api/admin/materias/oficiales
+ * (SOLO ADMIN) Carga o reactiva el listado oficial inicial.
+ */
+router.post("/materias/oficiales", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const resultados = [];
+    for (const materia of MATERIAS_OFICIALES) {
+      resultados.push(await upsertMateriaOficial(materia));
+    }
+
+    const conflictos = resultados.filter(item => item.status === "conflicto");
+    return res.json({
+      success: true,
+      message: conflictos.length
+        ? "Catalogo cargado con algunos conflictos por revisar"
+        : "Catalogo oficial de materias cargado correctamente",
+      total: resultados.length,
+      conflictos,
+      resultados,
+    });
+  } catch (err) {
+    console.error("Error al cargar materias oficiales:", err);
+    return res.status(500).json({ error: "Error al cargar materias oficiales" });
+  }
+});
+
+/**
+ * 9. POST /api/admin/materias
+ * (SOLO ADMIN) Crea una materia nueva en mayusculas.
+ */
+router.post("/materias", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const materia = await guardarMateriaCatalogo(req.body);
+    const estado = normalizarTextoMayuscula(req.body.estado || "ACTIVO");
+    if (!["ACTIVO", "INACTIVO"].includes(estado)) {
+      return res.status(400).json({ error: "Estado invalido" });
+    }
+    const [result] = await db.query(
+      `INSERT INTO materias (codigo, nombre, estado) VALUES (?, ?, ?)`,
+      [materia.codigo, materia.nombre, estado]
+    );
+    return res.status(201).json({
+      success: true,
+      message: "Materia creada correctamente",
+      materia: { id: result.insertId, ...materia, estado },
+    });
+  } catch (err) {
+    console.error("Error al crear materia:", err);
+    return res.status(err.status || 500).json({ error: err.message || "Error al crear materia" });
+  }
+});
+
+/**
+ * 10. PUT /api/admin/materias/:id
+ * (SOLO ADMIN) Edita codigo, nombre y estado.
+ */
+router.put("/materias/:id", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const estado = normalizarTextoMayuscula(req.body.estado || "ACTIVO");
+
+    if (!["ACTIVO", "INACTIVO"].includes(estado)) {
+      return res.status(400).json({ error: "Estado invalido" });
+    }
+
+    const materia = await guardarMateriaCatalogo(req.body, id);
+    const [result] = await db.query(
+      `UPDATE materias SET codigo = ?, nombre = ?, estado = ? WHERE id = ?`,
+      [materia.codigo, materia.nombre, estado, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Materia no encontrada" });
+    }
+
+    return res.json({
+      success: true,
+      message: "Materia actualizada correctamente",
+      materia: { id: Number(id), ...materia, estado },
+    });
+  } catch (err) {
+    console.error("Error al editar materia:", err);
+    return res.status(err.status || 500).json({ error: err.message || "Error al editar materia" });
+  }
+});
+
+/**
+ * 11. DELETE /api/admin/materias/:id
+ * (SOLO ADMIN) Elimina si no tiene historial; si tiene relaciones, la inactiva.
+ */
+router.delete("/materias/:id", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    try {
+      const [result] = await db.query("DELETE FROM materias WHERE id = ?", [id]);
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Materia no encontrada" });
+      }
+      return res.json({ success: true, message: "Materia eliminada correctamente" });
+    } catch (deleteErr) {
+      if (!["ER_ROW_IS_REFERENCED_2", "ER_ROW_IS_REFERENCED"].includes(deleteErr.code)) {
+        throw deleteErr;
+      }
+
+      const [result] = await db.query("UPDATE materias SET estado = 'INACTIVO' WHERE id = ?", [id]);
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Materia no encontrada" });
+      }
+      return res.json({
+        success: true,
+        message: "La materia tiene historial vinculado; se marco como INACTIVA",
+      });
+    }
+  } catch (err) {
+    console.error("Error al quitar materia:", err);
+    return res.status(500).json({ error: "Error al quitar materia" });
   }
 });
 

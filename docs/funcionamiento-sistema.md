@@ -49,6 +49,7 @@ Modulos actuales:
 - Estudiantes
 - Matriculas
 - Academico
+- Materias
 - Pagos
 - Usuarios
 
@@ -218,34 +219,48 @@ Nota:
 
 Catalogo oficial de materias por ahora:
 
-- Comprensión y Expresión del Lenguaje
-- Relación Lógico Matemático
-- Relaciones Lógicas Matemáticas
-- Identidad y autonomía
-- Relación con el medio natural y cultural
-- Relaciones con el medio natural y cultural
-- Inglés
-- Convivencia
-- Educación Cultural y Artística
-- Expresión Artística
-- Educación Física
-- Lengua y Literatura
-- Matemáticas
-- Ciencias Naturales
-- Estudios Sociales
-- Acompañamiento
-- Animación a la lectura
-- Formación Cristiana
-- Computación
-- Cívica
-- Expresión Corporal
-- Lengua Extranjera
-- Educación Cultural y Física
-- Formación Cristiana y Valores
+- COMPRENSIÓN Y EXPRESIÓN DEL LENGUAJE
+- RELACIÓN LÓGICO MATEMÁTICO
+- RELACIONES LÓGICAS MATEMÁTICAS
+- IDENTIDAD Y AUTONOMÍA
+- RELACIÓN CON EL MEDIO NATURAL Y CULTURAL
+- RELACIONES CON EL MEDIO NATURAL Y CULTURAL
+- INGLÉS
+- CONVIVENCIA
+- EDUCACIÓN CULTURAL Y ARTÍSTICA
+- EXPRESIÓN ARTÍSTICA
+- EDUCACIÓN FÍSICA
+- LENGUA Y LITERATURA
+- MATEMÁTICAS
+- CIENCIAS NATURALES
+- ESTUDIOS SOCIALES
+- ACOMPAÑAMIENTO
+- ANIMACIÓN A LA LECTURA
+- FORMACIÓN CRISTIANA
+- COMPUTACIÓN
+- CÍVICA
+- EXPRESIÓN CORPORAL
+- LENGUA EXTRANJERA
+- EDUCACIÓN CULTURAL Y FÍSICA
+- FORMACIÓN CRISTIANA Y VALORES
 
 Script de carga:
 
 - `database/seed-materias-oficiales.sql`
+
+Pantalla administrativa:
+
+- Menu `Materias` en `frontend/app.html`.
+- Logica de la pantalla en `frontend/assets/app.js`.
+- Rutas backend en `backend/src/routes/admin.routes.js`.
+
+Reglas:
+
+- Solo `ADMIN` puede crear, editar, cargar listado oficial o quitar materias.
+- Las materias se guardan en MAYUSCULAS.
+- El backend valida duplicados por `codigo` y por `nombre`, ignorando diferencias de tildes y espacios.
+- Quitar una materia intenta eliminarla; si tiene historial, se marca como `INACTIVO`.
+- Academico y profesor solo deben consumir materias con `estado = 'ACTIVO'`.
 
 Procedimiento:
 
@@ -388,7 +403,8 @@ Motivo:
 9. El administrador puede editar usuarios, cambiar roles, resetear contrasenas y eliminar/inactivar usuarios.
 10. `LOGO.jpeg` se usa como favicon y como imagen de marca en login, admin, profesor y reportes.
 11. Se mejoro la responsividad movil de login, panel administrativo, portal profesor y modulo de pagos.
-12. Se definio el catalogo oficial inicial de materias y se creo `database/seed-materias-oficiales.sql` para cargarlo en MySQL.
+12. Se definio el catalogo oficial inicial de materias en MAYUSCULAS y se creo `database/seed-materias-oficiales.sql` para cargarlo en MySQL.
+13. Se creo la seccion administrativa `Materias` para crear, editar, cargar el listado oficial y quitar/inactivar materias.
 
 ## Procedimiento para continuar
 

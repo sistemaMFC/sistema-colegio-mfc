@@ -58,6 +58,9 @@
           <span class="mi-ico">📐</span>
           <span>Académico</span>
         </button>
+        <button class="menu-item" data-view="materias">
+          <span class="mi-ico">M</span><span>Materias</span>
+        </button>
         <button class="menu-item" data-view="pagos">
           <span class="mi-ico">💳</span><span>Pagos</span>
         </button>
@@ -201,6 +204,92 @@
 
        <section class="view" id="view-academico" hidden>
         <div id="contenedor-academico"></div>
+      </section>
+
+      <section class="view" id="view-materias" hidden>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <h3>Catalogo de materias</h3>
+            </div>
+            <form id="formCrearMateria" class="form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Codigo</label>
+                  <input type="text" name="codigo" maxlength="20" placeholder="MAT" style="text-transform:uppercase;">
+                </div>
+                <div class="form-group">
+                  <label>Estado</label>
+                  <select name="estado">
+                    <option value="ACTIVO">ACTIVO</option>
+                    <option value="INACTIVO">INACTIVO</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Nombre de la materia</label>
+                <input type="text" name="nombre" placeholder="MATEMATICAS" style="text-transform:uppercase;" required>
+              </div>
+              <button type="submit" class="btn" style="width:100%;">Guardar materia</button>
+            </form>
+
+            <div class="catalog-panel">
+              <div class="catalog-panel-head">
+                <strong>Materias oficiales iniciales</strong>
+                <button class="btn-soft" id="btnSeedMateriasOficiales">Cargar listado oficial</button>
+              </div>
+              <div class="catalog-list">
+                <span>COMPRENSIÓN Y EXPRESIÓN DEL LENGUAJE</span>
+                <span>RELACIÓN LÓGICO MATEMÁTICO</span>
+                <span>RELACIONES LÓGICAS MATEMÁTICAS</span>
+                <span>IDENTIDAD Y AUTONOMÍA</span>
+                <span>RELACIÓN CON EL MEDIO NATURAL Y CULTURAL</span>
+                <span>RELACIONES CON EL MEDIO NATURAL Y CULTURAL</span>
+                <span>INGLÉS</span>
+                <span>CONVIVENCIA</span>
+                <span>EDUCACIÓN CULTURAL Y ARTÍSTICA</span>
+                <span>EXPRESIÓN ARTÍSTICA</span>
+                <span>EDUCACIÓN FÍSICA</span>
+                <span>LENGUA Y LITERATURA</span>
+                <span>MATEMÁTICAS</span>
+                <span>CIENCIAS NATURALES</span>
+                <span>ESTUDIOS SOCIALES</span>
+                <span>ACOMPAÑAMIENTO</span>
+                <span>ANIMACIÓN A LA LECTURA</span>
+                <span>FORMACIÓN CRISTIANA</span>
+                <span>COMPUTACIÓN</span>
+                <span>CÍVICA</span>
+                <span>EXPRESIÓN CORPORAL</span>
+                <span>LENGUA EXTRANJERA</span>
+                <span>EDUCACIÓN CULTURAL Y FÍSICA</span>
+                <span>FORMACIÓN CRISTIANA Y VALORES</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>Materias registradas</h3>
+              <button class="btn-soft" id="btnCargarMaterias">Refrescar</button>
+            </div>
+            <div class="table-wrap">
+              <table class="table" id="tblMaterias">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Codigo</th>
+                    <th>Materia</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="5" class="muted text-center">Cargando materias...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="view" id="view-pagos" hidden>

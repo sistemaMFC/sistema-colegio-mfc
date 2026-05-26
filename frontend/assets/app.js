@@ -203,6 +203,7 @@ function setActiveView(view) {
 
     const titles = {
         dashboard: ["Dashboard", "Resumen general del sistema"],
+        materias: ["Materias", "Catalogo oficial en mayusculas"],
         estudiantes: ["Estudiantes", "Base de datos global"],
         matriculas: ["Matrículas", "Gestión por Cursos"],
         pagos: ["Pagos", "Control de pensiones y Colecturía"],
@@ -216,6 +217,7 @@ function setActiveView(view) {
     // Disparadores de lógica por vista
     if (view === 'dashboard') actualizarDashboard();
     if (view === 'usuarios') cargarUsuarios();
+    if (view === 'materias') cargarMaterias();
     if (view === 'matriculas' && typeof renderizarCursos === 'function') renderizarCursos();
     if (view === 'estudiantes' && typeof mostrarModuloEstudiantes === 'function') mostrarModuloEstudiantes();
     if (view === 'academico' && typeof mostrarModuloAcademico === 'function') {
@@ -528,6 +530,148 @@ async function eliminarUsuario(id) {
 cargarUsuarios = cargarUsuariosMejorado;
 
 /* =========================
+    LOGICA DE MATERIAS
+========================= */
+
+let materiasCache = [];
+
+function normalizarMayuscula(value) {
+    return String(value || "").trim().replace(/\s+/g, " ").toUpperCase();
+}
+
+async function cargarMaterias() {
+    const tbody = $("#tblMaterias tbody");
+    if (!tbody) return;
+
+    try {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center">Cargando materias...</td></tr>`;
+        const rows = await api("/api/admin/materias");
+        materiasCache = rows || [];
+        tbody.innerHTML = "";
+
+        if (!materiasCache.length) {
+            tbody.innerHTML = `<tr><td colspan="5" class="muted text-center">No hay materias registradas</td></tr>`;
+            return;
+        }
+
+        materiasCache.forEach(materia => {
+            const badgeEstado = materia.estado === "ACTIVO" ? "ok" : "warn";
+            tbody.innerHTML += `
+                <tr>
+                    <td>${escapeHTML(materia.id)}</td>
+                    <td><strong>${escapeHTML(materia.codigo)}</strong></td>
+                    <td style="font-weight:800;text-transform:uppercase;">${escapeHTML(materia.nombre)}</td>
+                    <td><span class="badge ${badgeEstado}">${escapeHTML(materia.estado || "ACTIVO")}</span></td>
+                    <td>
+                        <div class="actions-inline">
+                            <button class="btn-soft" style="padding:6px 9px;font-size:12px" onclick="abrirModalEditarMateria(${materia.id})">Editar</button>
+                            <button class="btn-soft" style="padding:6px 9px;font-size:12px" onclick="quitarMateria(${materia.id})">Quitar</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+    } catch (err) {
+        console.error("Error al cargar materias:", err);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">No se pudo cargar materias</td></tr>`;
+    }
+}
+
+async function crearMateria(form) {
+    const payload = {
+        codigo: normalizarMayuscula(form.codigo.value),
+        nombre: normalizarMayuscula(form.nombre.value),
+        estado: normalizarMayuscula(form.estado.value || "ACTIVO"),
+    };
+
+    try {
+        await api("/api/admin/materias", { method: "POST", body: payload });
+        showAlert("ok", "Materia guardada en mayusculas");
+        form.reset();
+        await cargarMaterias();
+    } catch (err) {
+        showAlert("bad", err.message);
+    }
+}
+
+async function cargarMateriasOficiales() {
+    if (!confirm("Cargar o reactivar el listado oficial de materias en MAYUSCULAS?")) return;
+
+    try {
+        const data = await api("/api/admin/materias/oficiales", { method: "POST" });
+        const conflictos = data.conflictos?.length || 0;
+        showAlert(conflictos ? "bad" : "ok", data.message || "Catalogo cargado");
+        await cargarMaterias();
+    } catch (err) {
+        showAlert("bad", err.message);
+    }
+}
+
+function abrirModalEditarMateria(id) {
+    const materia = materiasCache.find(item => Number(item.id) === Number(id));
+    if (!materia) {
+        showAlert("bad", "Materia no encontrada en la lista");
+        return;
+    }
+
+    crearOverlaySistema("modalEditarMateria", `Editar materia #${id}`, `
+        <form class="form" onsubmit="guardarMateriaAdmin(event, ${id})">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Codigo</label>
+                    <input name="codigo" maxlength="20" value="${escapeHTML(materia.codigo)}" style="text-transform:uppercase;" required>
+                </div>
+                <div class="form-group">
+                    <label>Estado</label>
+                    <select name="estado">
+                        <option value="ACTIVO" ${materia.estado === "ACTIVO" ? "selected" : ""}>ACTIVO</option>
+                        <option value="INACTIVO" ${materia.estado === "INACTIVO" ? "selected" : ""}>INACTIVO</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Nombre</label>
+                <input name="nombre" value="${escapeHTML(materia.nombre)}" style="text-transform:uppercase;" required>
+            </div>
+            <button class="btn" type="submit">Guardar materia</button>
+        </form>
+    `);
+}
+
+async function guardarMateriaAdmin(event, id) {
+    event.preventDefault();
+    const form = event.target;
+    const payload = {
+        codigo: normalizarMayuscula(form.codigo.value),
+        nombre: normalizarMayuscula(form.nombre.value),
+        estado: normalizarMayuscula(form.estado.value),
+    };
+
+    try {
+        await api(`/api/admin/materias/${id}`, { method: "PUT", body: payload });
+        cerrarModalSistema("modalEditarMateria");
+        showAlert("ok", "Materia actualizada");
+        await cargarMaterias();
+    } catch (err) {
+        showAlert("bad", err.message);
+    }
+}
+
+async function quitarMateria(id) {
+    const materia = materiasCache.find(item => Number(item.id) === Number(id));
+    const nombre = materia ? materia.nombre : `ID ${id}`;
+    if (!confirm(`Quitar materia ${nombre}? Si tiene historial, se marcara como INACTIVA.`)) return;
+
+    try {
+        const data = await api(`/api/admin/materias/${id}`, { method: "DELETE" });
+        showAlert("ok", data.message || "Materia quitada");
+        await cargarMaterias();
+    } catch (err) {
+        showAlert("bad", err.message);
+    }
+}
+
+/* =========================
     CONFIGURACIÓN INICIAL
 ========================= */
 
@@ -567,7 +711,17 @@ function setupInteractions() {
         });
     }
 
+    const formMateria = $("#formCrearMateria");
+    if (formMateria) {
+        formMateria.addEventListener("submit", (e) => {
+            e.preventDefault();
+            crearMateria(e.target);
+        });
+    }
+
     $("#btnCargarUsuarios")?.addEventListener("click", cargarUsuarios);
+    $("#btnCargarMaterias")?.addEventListener("click", cargarMaterias);
+    $("#btnSeedMateriasOficiales")?.addEventListener("click", cargarMateriasOficiales);
 }
 
 window.actualizarDashboard = actualizarDashboard;
@@ -579,6 +733,10 @@ window.cerrarModalSistema = cerrarModalSistema;
 window.abrirModalEditarUsuario = abrirModalEditarUsuario;
 window.guardarUsuarioAdmin = guardarUsuarioAdmin;
 window.eliminarUsuario = eliminarUsuario;
+window.cargarMaterias = cargarMaterias;
+window.abrirModalEditarMateria = abrirModalEditarMateria;
+window.guardarMateriaAdmin = guardarMateriaAdmin;
+window.quitarMateria = quitarMateria;
 
 (function init() {
     fillUserUI();
