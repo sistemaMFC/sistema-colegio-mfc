@@ -216,6 +216,45 @@ Nota:
 
 - `trimestres` ya tiene campos de bloqueo. Mas adelante se puede usar `bloqueado` para cerrar ingreso de notas.
 
+Catalogo oficial de materias por ahora:
+
+- Comprensión y Expresión del Lenguaje
+- Relación Lógico Matemático
+- Relaciones Lógicas Matemáticas
+- Identidad y autonomía
+- Relación con el medio natural y cultural
+- Relaciones con el medio natural y cultural
+- Inglés
+- Convivencia
+- Educación Cultural y Artística
+- Expresión Artística
+- Educación Física
+- Lengua y Literatura
+- Matemáticas
+- Ciencias Naturales
+- Estudios Sociales
+- Acompañamiento
+- Animación a la lectura
+- Formación Cristiana
+- Computación
+- Cívica
+- Expresión Corporal
+- Lengua Extranjera
+- Educación Cultural y Física
+- Formación Cristiana y Valores
+
+Script de carga:
+
+- `database/seed-materias-oficiales.sql`
+
+Procedimiento:
+
+1. Subir primero este catalogo a la tabla `materias`.
+2. Revisar que materias antiguas quedan activas fuera del catalogo.
+3. No borrar ni inactivar materias antiguas hasta confirmar que no tienen asignaciones ni calificaciones.
+4. Despues de cerrar el catalogo, crear o actualizar `asignaciones_docente` usando estas materias.
+5. Recién despues ajustar pantallas si se necesita filtrar por nivel, curso o seccion.
+
 ### Asignaciones docentes
 
 Usar como oficial:
@@ -349,6 +388,7 @@ Motivo:
 9. El administrador puede editar usuarios, cambiar roles, resetear contrasenas y eliminar/inactivar usuarios.
 10. `LOGO.jpeg` se usa como favicon y como imagen de marca en login, admin, profesor y reportes.
 11. Se mejoro la responsividad movil de login, panel administrativo, portal profesor y modulo de pagos.
+12. Se definio el catalogo oficial inicial de materias y se creo `database/seed-materias-oficiales.sql` para cargarlo en MySQL.
 
 ## Procedimiento para continuar
 
