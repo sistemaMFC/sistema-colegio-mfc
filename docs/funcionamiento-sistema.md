@@ -83,6 +83,35 @@ Regla importante:
 - Un profesor solo debe ver y editar sus propias asignaciones.
 - El backend ya valida esta regla en `backend/src/routes/academico.routes.js`.
 
+## Imagen de marca y responsividad
+
+Logo oficial usado:
+
+- `frontend/LOGO.jpeg`
+
+Uso actual:
+
+- Favicon de la pestana en `frontend/index.html`, `frontend/app.html` y `frontend/profesor-academico.html`.
+- Logo visible en el login.
+- Logo visible en la barra superior del panel administrativo.
+- Logo visible en la barra superior del portal profesor.
+- Logo visible en el menu lateral administrativo.
+- Logo usado en certificados/reportes desde `frontend/assets/js/reportes-mfc.js`.
+
+Archivos de estilos:
+
+- `frontend/styles.css`: estilos del login y su vista movil.
+- `frontend/assets/app.css`: estilos compartidos del panel administrativo y portal profesor.
+- `frontend/pagos/pagos.css`: ajustes propios del modulo de pagos.
+
+Regla:
+
+- La responsividad debe resolverse principalmente con CSS.
+- No crear una version separada de la pagina para movil.
+- Las tablas pueden usar desplazamiento horizontal en pantallas pequenas.
+- Los formularios deben pasar a una sola columna en celular.
+- El menu lateral administrativo debe comportarse como panel deslizable en celular.
+
 ## Tablas oficiales
 
 ### Usuarios y roles
@@ -318,6 +347,8 @@ Motivo:
 7. El formulario de usuarios permite crear `PROFESOR`.
 8. Cada usuario puede editar su perfil y cambiar su propia contrasena.
 9. El administrador puede editar usuarios, cambiar roles, resetear contrasenas y eliminar/inactivar usuarios.
+10. `LOGO.jpeg` se usa como favicon y como imagen de marca en login, admin, profesor y reportes.
+11. Se mejoro la responsividad movil de login, panel administrativo, portal profesor y modulo de pagos.
 
 ## Procedimiento para continuar
 

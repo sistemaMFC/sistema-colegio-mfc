@@ -61,6 +61,7 @@ body {
 .topbar-title {
   display: flex; gap: 10px; align-items: center;
   font-weight: 700;
+  min-width: 0;
 }
 
 .brand-mini {
@@ -69,6 +70,15 @@ body {
   border-radius: 12px;
   border: 1px solid var(--stroke);
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(37, 99, 235, 0.1));
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.brand-mini img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .topbar-right { display: flex; gap: 10px; align-items: center; }
@@ -120,6 +130,7 @@ body {
 }
 
 .brand-logo {
+  position: relative;
   width: 52px; height: 52px; border-radius: 16px;
   border: 1px solid var(--stroke);
   display: grid; place-items: center;
@@ -127,12 +138,26 @@ body {
   background: rgba(0, 0, 0, 0.05);
 }
 
-.brand-logo img { width: 100%; height: 100%; object-fit: cover; }
+.brand-logo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
 .brand-fallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
   font-weight: 900;
   letter-spacing: 1px;
   color: var(--yellow);
+}
+
+.brand-logo img:not([style*="display: none"]) + .brand-fallback {
+  display: none;
 }
 
 .brand-text .brand-title { font-weight: 900; }
@@ -297,6 +322,8 @@ h1 { margin: 0; font-size: 28px; letter-spacing: .2px; }
 
 /* --- Table --- */
 .table-wrap { padding: 14px; overflow: auto; }
+.table-wrap::-webkit-scrollbar { height: 8px; }
+.table-wrap::-webkit-scrollbar-thumb { background: rgba(37, 99, 235, .22); border-radius: 999px; }
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -422,18 +449,130 @@ input:focus, select:focus { border-color: var(--blue); background: white; }
 }
 
 @media (max-width: 900px){
-  .layout { grid-template-columns: 1fr; }
+  .topbar {
+    align-items: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px 12px;
+  }
+  .topbar-title {
+    flex: 1 1 auto;
+    max-width: calc(100vw - 76px);
+  }
+  .topbar-title > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .topbar-right {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .layout {
+    grid-template-columns: 1fr;
+    min-height: calc(100vh - 104px);
+  }
   .sidebar {
     position: fixed;
-    top: 64px;
+    top: 104px;
     left: 0;
-    width: 280px;
+    width: min(300px, 86vw);
+    height: calc(100vh - 104px);
     transform: translateX(-110%);
     transition: .22s ease;
     z-index: 60;
+    box-shadow: 20px 0 45px rgba(15, 23, 42, .16);
   }
   .sidebar.open { transform: translateX(0); }
-  .content { padding: 14px; }
+  .content {
+    padding: 12px;
+    max-width: 100%;
+  }
+  .content-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+  h1 { font-size: 24px; }
+  .userbox {
+    width: 100%;
+    border-radius: 14px;
+  }
   .grid-2 { grid-template-columns: 1fr; }
+  .grid-cards { grid-template-columns: 1fr; }
+  .card-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .quick-btn {
+    min-height: 72px;
+  }
   .form-row { grid-template-columns: 1fr; }
+  .table-wrap {
+    padding: 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .btn, .btn-soft, .btn-outline, .icon-btn {
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 520px){
+  .topbar-right {
+    justify-content: stretch;
+  }
+  .topbar-right .btn-outline,
+  .topbar-right .btn-soft,
+  .topbar-right .btn {
+    flex: 1 1 auto;
+  }
+  .topbar-right .pill {
+    display: none;
+  }
+  .sidebar {
+    top: 122px;
+    height: calc(100vh - 122px);
+  }
+  .layout {
+    min-height: calc(100vh - 122px);
+  }
+  .brand {
+    border-radius: 14px;
+    padding: 10px;
+  }
+  .brand-logo {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+  }
+  .content {
+    padding: 10px;
+  }
+  h1 { font-size: 22px; }
+  .muted { line-height: 1.45; }
+  .card {
+    border-radius: 14px;
+  }
+  .card-head,
+  .form,
+  .quick,
+  .kpi {
+    padding: 12px;
+  }
+  .kpi-value {
+    font-size: 24px;
+  }
+  .form-group label,
+  .small,
+  .table th,
+  .table td {
+    font-size: 12px;
+  }
+  input, select, textarea {
+    border-radius: 12px;
+    padding: 11px;
+  }
 }

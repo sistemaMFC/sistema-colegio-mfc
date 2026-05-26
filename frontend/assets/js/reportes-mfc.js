@@ -93,7 +93,7 @@ async function generarCertificadoMatricula(idEstudiante, nombreCursoCorto) {
         });
 
         const imgMin  = await cargarImagen('/img/Ministerio.png');
-        const imgLogo = await cargarImagen('/img/LOGO.jpeg');
+        const imgLogo = await cargarImagen('./LOGO.jpeg');
 
         // ── BORDE EXTERIOR ──────────────────────────────────────
         doc.setDrawColor(20, 60, 130);

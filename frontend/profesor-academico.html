@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal Profesor - MFC</title>
+  <link rel="icon" type="image/jpeg" href="./LOGO.jpeg">
+  <link rel="apple-touch-icon" href="./LOGO.jpeg">
+  <meta name="theme-color" content="#2563eb">
   <link rel="stylesheet" href="./assets/app.css">
   <style>
     .prof-content { max-width: 1280px; }
@@ -84,14 +87,34 @@
     .prof-chip.bad { color: #991b1b; background: rgba(239, 68, 68, .12); }
     @media (max-width: 900px) {
       .prof-grid { grid-template-columns: 1fr; }
+      .prof-content { padding: 12px; }
+      .prof-tools { align-items: stretch; }
+      .prof-tools > div { width: 100%; }
+      .prof-tools select {
+        width: 100%;
+        min-width: 0;
+      }
       .topbar-right .pill { display: none; }
+    }
+    @media (max-width: 560px) {
+      .prof-list { padding: 10px; }
+      .prof-assignment { padding: 10px; }
+      .prof-tools { padding: 12px; }
+      .prof-note-input {
+        width: 58px;
+        padding: 7px 6px;
+      }
+      .prof-chip {
+        min-width: 38px;
+        padding: 4px 6px;
+      }
     }
   </style>
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-title">
-      <span class="brand-mini">MFC</span>
+      <span class="brand-mini"><img src="./LOGO.jpeg" alt="MFC"></span>
       <span>Portal Profesor</span>
     </div>
     <div class="topbar-right">

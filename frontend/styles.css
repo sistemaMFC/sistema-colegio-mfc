@@ -244,17 +244,69 @@ input::placeholder{color: rgba(234,247,240,.42)}
 @media (max-width: 860px){
   body{ overflow:auto; }
   #bg{ position:fixed; }
+  .wrap{
+    min-height:100%;
+    height:auto;
+    place-items:start center;
+    padding:14px;
+  }
   .card{
     grid-template-columns: 1fr;
+    border-radius:20px;
   }
   .brand{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    gap:12px;
+    align-items:center;
+    padding:22px;
     border-right:0;
     border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .logo{
+    width:64px;
+    height:64px;
+    border-radius:16px;
+    grid-row:span 3;
+  }
+  .brand h2,
+  .brand h1,
+  .subtitle{
+    margin-top:0;
+  }
+  .brand h1{
+    font-size:28px;
+  }
+  .badges{
+    grid-column:1 / -1;
+    margin-top:6px;
+  }
+  .panel{
+    padding:24px;
   }
 }
 
 @media (max-width: 420px){
-  .brand h1{ font-size:28px; }
-  .panel{ padding:22px; }
-  .brand{ padding:22px; }
+  .wrap{ padding:10px; }
+  .card{ border-radius:18px; }
+  .brand{
+    grid-template-columns:1fr;
+    text-align:center;
+    justify-items:center;
+    padding:20px;
+  }
+  .logo{
+    grid-row:auto;
+    width:70px;
+    height:70px;
+  }
+  .brand h1{ font-size:24px; }
+  .brand h2{ font-size:12px; }
+  .badges{
+    justify-content:center;
+  }
+  .panel{ padding:20px; }
+  .panel__header h3{ font-size:20px; }
+  .field__control{ padding:10px; border-radius:12px; }
+  .btn{ width:100%; }
 }
