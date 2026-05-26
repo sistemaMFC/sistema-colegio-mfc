@@ -47,6 +47,7 @@ Modulos actuales:
 
 - Dashboard
 - Estudiantes
+- Cursos
 - Matriculas
 - Academico
 - Materias
@@ -217,6 +218,35 @@ Nota:
 
 - `trimestres` ya tiene campos de bloqueo. Mas adelante se puede usar `bloqueado` para cerrar ingreso de notas.
 
+### Habilitacion de cursos
+
+Pantalla administrativa:
+
+- Menu `Cursos` en `frontend/app.html`.
+- Logica en `frontend/assets/app.js`.
+- Rutas backend en `backend/src/routes/admin.routes.js`.
+
+Uso:
+
+- El administrador habilita o deshabilita cursos desde la tabla `cursos`.
+- Solo los cursos con `estado = 'ACTIVO'` aparecen para asignar materias, matriculas y academico.
+- Si un curso se deshabilita, sus asignaciones en `asignaciones_docente` quedan `INACTIVO`.
+- El administrador asigna materia, paralelo y profesor para el periodo lectivo activo.
+- Los profesores se toman desde la lista de `usuarios` con rol `PROFESOR` o `ADMIN`.
+- Si el usuario seleccionado no existe todavia en `docentes`, el backend crea o reactiva ese registro automaticamente.
+
+Regla:
+
+- El portal profesor no necesita una tabla aparte.
+- Todo lo que el admin habilite en `asignaciones_docente` con estado `ACTIVO` aparece en el portal del profesor.
+- Para que una materia aparezca al profesor debe cumplirse:
+  - curso activo,
+  - materia activa,
+  - paralelo activo,
+  - periodo activo,
+  - docente activo,
+  - asignacion docente activa.
+
 Catalogo oficial de materias por ahora:
 
 - COMPRENSIÓN Y EXPRESIÓN DEL LENGUAJE
@@ -281,6 +311,7 @@ Uso:
 - Define que docente da que materia, en que curso, paralelo y periodo.
 - Es la base del portal profesor.
 - Es la base de las notas en `calificaciones`.
+- Se administra desde la seccion `Cursos`.
 
 Estructura esperada por el backend:
 
@@ -405,6 +436,7 @@ Motivo:
 11. Se mejoro la responsividad movil de login, panel administrativo, portal profesor y modulo de pagos.
 12. Se definio el catalogo oficial inicial de materias en MAYUSCULAS y se creo `database/seed-materias-oficiales.sql` para cargarlo en MySQL.
 13. Se creo la seccion administrativa `Materias` para crear, editar, cargar el listado oficial y quitar/inactivar materias.
+14. Se creo la seccion administrativa `Cursos` para habilitar cursos y asignar materias con profesor por curso/paralelo/periodo.
 
 ## Procedimiento para continuar
 

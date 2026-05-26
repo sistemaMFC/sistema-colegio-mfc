@@ -204,6 +204,7 @@ function setActiveView(view) {
     const titles = {
         dashboard: ["Dashboard", "Resumen general del sistema"],
         materias: ["Materias", "Catalogo oficial en mayusculas"],
+        "cursos-admin": ["Cursos", "Habilitacion de cursos, materias y profesores"],
         estudiantes: ["Estudiantes", "Base de datos global"],
         matriculas: ["Matrículas", "Gestión por Cursos"],
         pagos: ["Pagos", "Control de pensiones y Colecturía"],
@@ -218,6 +219,7 @@ function setActiveView(view) {
     if (view === 'dashboard') actualizarDashboard();
     if (view === 'usuarios') cargarUsuarios();
     if (view === 'materias') cargarMaterias();
+    if (view === 'cursos-admin') cargarCursosAdmin();
     if (view === 'matriculas' && typeof renderizarCursos === 'function') renderizarCursos();
     if (view === 'estudiantes' && typeof mostrarModuloEstudiantes === 'function') mostrarModuloEstudiantes();
     if (view === 'academico' && typeof mostrarModuloAcademico === 'function') {
@@ -675,6 +677,173 @@ async function quitarMateria(id) {
     CONFIGURACIÓN INICIAL
 ========================= */
 
+/* =========================
+    LOGICA DE CURSOS Y ASIGNACIONES
+========================= */
+
+let cursosAdminCache = [];
+let paralelosAdminCache = [];
+let materiasAdminCache = [];
+let docentesAdminCache = [];
+let asignacionesAdminCache = [];
+let periodoAdminActivo = null;
+
+function llenarSelect(select, rows, getValue, getLabel, emptyLabel = "Seleccione") {
+    if (!select) return;
+    select.innerHTML = `<option value="">${emptyLabel}</option>`;
+    rows.forEach(row => {
+        const opt = document.createElement("option");
+        opt.value = getValue(row);
+        opt.textContent = getLabel(row);
+        select.appendChild(opt);
+    });
+}
+
+async function cargarCursosAdmin() {
+    const tbodyCursos = $("#tblCursosAdmin tbody");
+    const tbodyAsignaciones = $("#tblAsignacionesCurso tbody");
+    if (tbodyCursos) tbodyCursos.innerHTML = `<tr><td colspan="5" class="text-center">Cargando cursos...</td></tr>`;
+    if (tbodyAsignaciones) tbodyAsignaciones.innerHTML = `<tr><td colspan="5" class="text-center">Cargando asignaciones...</td></tr>`;
+
+    try {
+        const [cursos, cp, materias, docentes, periodo, asignaciones] = await Promise.all([
+            api("/api/admin/cursos"),
+            api("/api/academico/cursos-paralelos"),
+            api("/api/academico/materias"),
+            api("/api/admin/docentes-candidatos"),
+            api("/api/academico/periodo-activo"),
+            api("/api/admin/asignaciones-docente"),
+        ]);
+
+        cursosAdminCache = cursos || [];
+        paralelosAdminCache = cp.paralelos || [];
+        materiasAdminCache = materias || [];
+        docentesAdminCache = docentes || [];
+        periodoAdminActivo = periodo;
+        asignacionesAdminCache = asignaciones || [];
+
+        renderCursosAdmin();
+        llenarFormularioAsignacionCurso();
+        renderAsignacionesCurso();
+    } catch (err) {
+        console.error("Error al cargar administracion de cursos:", err);
+        if (tbodyCursos) tbodyCursos.innerHTML = `<tr><td colspan="5" class="text-center text-danger">No se pudo cargar cursos</td></tr>`;
+        if (tbodyAsignaciones) tbodyAsignaciones.innerHTML = `<tr><td colspan="5" class="text-center text-danger">No se pudo cargar asignaciones</td></tr>`;
+        showAlert("bad", err.message);
+    }
+}
+
+function renderCursosAdmin() {
+    const tbody = $("#tblCursosAdmin tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    if (!cursosAdminCache.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="muted text-center">No hay cursos registrados</td></tr>`;
+        return;
+    }
+
+    cursosAdminCache.forEach(curso => {
+        const activo = curso.estado === "ACTIVO";
+        tbody.innerHTML += `
+            <tr>
+                <td>${escapeHTML(curso.id)}</td>
+                <td style="font-weight:800;">${escapeHTML(curso.nombre)}</td>
+                <td>${escapeHTML(curso.nivel || "-")}</td>
+                <td><span class="badge ${activo ? "ok" : "warn"}">${escapeHTML(curso.estado || "INACTIVO")}</span></td>
+                <td>
+                    <button class="btn-soft" style="padding:6px 9px;font-size:12px"
+                            onclick="cambiarEstadoCurso(${curso.id}, '${activo ? "INACTIVO" : "ACTIVO"}')">
+                        ${activo ? "Deshabilitar" : "Habilitar"}
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+function llenarFormularioAsignacionCurso() {
+    const form = $("#formAsignacionCurso");
+    if (!form) return;
+
+    llenarSelect(form.curso_id, cursosAdminCache.filter(c => c.estado === "ACTIVO"), c => c.id, c => c.nombre, "Seleccione curso");
+    llenarSelect(form.paralelo_id, paralelosAdminCache, p => p.id, p => `Paralelo ${p.nombre}`, "Seleccione paralelo");
+    llenarSelect(form.materia_id, materiasAdminCache, m => m.id, m => `${m.codigo} - ${m.nombre}`, "Seleccione materia");
+    llenarSelect(form.usuario_id, docentesAdminCache, d => d.usuario_id, d => `${d.apellidos} ${d.nombres} (${d.rol})`, "Seleccione profesor");
+}
+
+function renderAsignacionesCurso() {
+    const tbody = $("#tblAsignacionesCurso tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    if (!asignacionesAdminCache.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="muted text-center">No hay materias habilitadas por curso</td></tr>`;
+        return;
+    }
+
+    asignacionesAdminCache.forEach(asig => {
+        const activo = asig.estado === "ACTIVO";
+        const docente = `${asig.docente_apellidos || ""} ${asig.docente_nombres || ""}`.trim();
+        tbody.innerHTML += `
+            <tr>
+                <td>${escapeHTML(asig.curso)} / ${escapeHTML(asig.paralelo)}</td>
+                <td><strong>${escapeHTML(asig.materia_codigo)}</strong><br>${escapeHTML(asig.materia)}</td>
+                <td>${escapeHTML(docente || "-")}</td>
+                <td><span class="badge ${activo ? "ok" : "warn"}">${escapeHTML(asig.estado)}</span></td>
+                <td>
+                    ${activo
+                        ? `<button class="btn-soft" style="padding:6px 9px;font-size:12px" onclick="quitarAsignacionCurso(${asig.id})">Quitar</button>`
+                        : `<span class="muted">Inactiva</span>`}
+                </td>
+            </tr>
+        `;
+    });
+}
+
+async function cambiarEstadoCurso(id, estado) {
+    if (estado === "INACTIVO" && !confirm("Deshabilitar este curso tambien inactiva sus asignaciones docentes. Continuar?")) return;
+
+    try {
+        await api(`/api/admin/cursos/${id}/estado`, { method: "PUT", body: { estado } });
+        showAlert("ok", `Curso ${estado}`);
+        await cargarCursosAdmin();
+    } catch (err) {
+        showAlert("bad", err.message);
+    }
+}
+
+async function guardarAsignacionCurso(form) {
+    const payload = {
+        curso_id: form.curso_id.value,
+        paralelo_id: form.paralelo_id.value,
+        materia_id: form.materia_id.value,
+        usuario_id: form.usuario_id.value,
+        periodo_id: periodoAdminActivo?.id,
+    };
+
+    try {
+        await api("/api/admin/asignaciones-docente", { method: "POST", body: payload });
+        showAlert("ok", "Materia habilitada para el curso y profesor");
+        form.reset();
+        await cargarCursosAdmin();
+    } catch (err) {
+        showAlert("bad", err.message);
+    }
+}
+
+async function quitarAsignacionCurso(id) {
+    if (!confirm("Quitar esta materia del curso para el periodo activo?")) return;
+
+    try {
+        await api(`/api/admin/asignaciones-docente/${id}`, { method: "DELETE" });
+        showAlert("ok", "Materia quitada del curso");
+        await cargarCursosAdmin();
+    } catch (err) {
+        showAlert("bad", err.message);
+    }
+}
+
 function setupInteractions() {
     if($("#year")) $("#year").textContent = new Date().getFullYear();
 
@@ -719,9 +888,18 @@ function setupInteractions() {
         });
     }
 
+    const formAsignacionCurso = $("#formAsignacionCurso");
+    if (formAsignacionCurso) {
+        formAsignacionCurso.addEventListener("submit", (e) => {
+            e.preventDefault();
+            guardarAsignacionCurso(e.target);
+        });
+    }
+
     $("#btnCargarUsuarios")?.addEventListener("click", cargarUsuarios);
     $("#btnCargarMaterias")?.addEventListener("click", cargarMaterias);
     $("#btnSeedMateriasOficiales")?.addEventListener("click", cargarMateriasOficiales);
+    $("#btnCargarCursosAdmin")?.addEventListener("click", cargarCursosAdmin);
 }
 
 window.actualizarDashboard = actualizarDashboard;
@@ -737,6 +915,9 @@ window.cargarMaterias = cargarMaterias;
 window.abrirModalEditarMateria = abrirModalEditarMateria;
 window.guardarMateriaAdmin = guardarMateriaAdmin;
 window.quitarMateria = quitarMateria;
+window.cargarCursosAdmin = cargarCursosAdmin;
+window.cambiarEstadoCurso = cambiarEstadoCurso;
+window.quitarAsignacionCurso = quitarAsignacionCurso;
 
 (function init() {
     fillUserUI();

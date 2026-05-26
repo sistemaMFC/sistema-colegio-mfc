@@ -50,6 +50,9 @@
         <button class="menu-item" data-view="estudiantes" onclick="mostrarModuloEstudiantes()">
           <span class="mi-ico">🎓</span><span>Estudiantes</span>
         </button>
+        <button class="menu-item" data-view="cursos-admin">
+          <span class="mi-ico">C</span><span>Cursos</span>
+        </button>
         <button class="menu-item" data-view="matriculas">
           <span class="mi-ico">🧾</span><span>Matrículas</span>
         </button>
@@ -145,6 +148,80 @@
 
       <section class="view" id="view-estudiantes" hidden>
         <div id="contenedor-estudiantes-global"></div>
+      </section>
+
+      <section class="view" id="view-cursos-admin" hidden>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <h3>Cursos habilitados</h3>
+              <button class="btn-soft" id="btnCargarCursosAdmin">Refrescar</button>
+            </div>
+            <p class="muted">Activa los cursos que se van a usar. Al desactivar un curso, sus asignaciones docentes quedan inactivas.</p>
+            <div class="table-wrap">
+              <table class="table" id="tblCursosAdmin">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Curso</th>
+                    <th>Nivel</th>
+                    <th>Estado</th>
+                    <th>Accion</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="5" class="muted text-center">Cargando cursos...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>Materias por curso</h3>
+            </div>
+            <form id="formAsignacionCurso" class="form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Curso activo</label>
+                  <select name="curso_id" required></select>
+                </div>
+                <div class="form-group">
+                  <label>Paralelo</label>
+                  <select name="paralelo_id" required></select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Materia activa</label>
+                  <select name="materia_id" required></select>
+                </div>
+                <div class="form-group">
+                  <label>Profesor desde usuarios</label>
+                  <select name="usuario_id" required></select>
+                </div>
+              </div>
+              <button type="submit" class="btn" style="width:100%;">Habilitar materia en curso</button>
+            </form>
+
+            <div class="table-wrap">
+              <table class="table" id="tblAsignacionesCurso">
+                <thead>
+                  <tr>
+                    <th>Curso</th>
+                    <th>Materia</th>
+                    <th>Profesor</th>
+                    <th>Estado</th>
+                    <th>Accion</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="5" class="muted text-center">Cargando asignaciones...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="view" id="view-matriculas" hidden>

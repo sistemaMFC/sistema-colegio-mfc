@@ -159,6 +159,52 @@ async function upsertMateriaOficial(item) {
   return { id: result.insertId, codigo: codigoFinal, nombre: nombreFinal, status: "creada" };
 }
 
+async function obtenerPeriodoActivoId() {
+  const [rows] = await db.query(
+    `SELECT id FROM periodos_lectivos WHERE estado = 'ACTIVO' LIMIT 1`
+  );
+  return rows[0]?.id || null;
+}
+
+async function asegurarDocenteDesdeUsuario(usuarioId) {
+  const [usuarios] = await db.query(
+    `SELECT id, cedula, rol, estado FROM usuarios WHERE id = ? LIMIT 1`,
+    [usuarioId]
+  );
+
+  if (!usuarios.length) {
+    const error = new Error("Usuario no encontrado");
+    error.status = 404;
+    throw error;
+  }
+
+  const usuario = usuarios[0];
+  if (!["PROFESOR", "ADMIN"].includes(usuario.rol)) {
+    const error = new Error("Solo usuarios PROFESOR o ADMIN pueden asignarse como docentes");
+    error.status = 400;
+    throw error;
+  }
+
+  const [docentes] = await db.query(
+    `SELECT id FROM docentes WHERE usuario_id = ? LIMIT 1`,
+    [usuario.id]
+  );
+
+  if (docentes.length) {
+    await db.query(
+      `UPDATE docentes SET cedula = ?, estado = 'ACTIVO' WHERE id = ?`,
+      [usuario.cedula, docentes[0].id]
+    );
+    return docentes[0].id;
+  }
+
+  const [result] = await db.query(
+    `INSERT INTO docentes (usuario_id, cedula, estado) VALUES (?, ?, 'ACTIVO')`,
+    [usuario.id, usuario.cedula]
+  );
+  return result.insertId;
+}
+
 /**
  * 1. GET /api/admin/cursos/estadisticas
  * Obtiene la lista de cursos con el conteo REAL de matriculados para el Dashboard.
@@ -527,6 +573,244 @@ router.delete("/materias/:id", authRequired, onlyAdmin, async (req, res) => {
   } catch (err) {
     console.error("Error al quitar materia:", err);
     return res.status(500).json({ error: "Error al quitar materia" });
+  }
+});
+
+/**
+ * 12. GET /api/admin/cursos
+ * (SOLO ADMIN) Lista todos los cursos para habilitar o deshabilitar.
+ */
+router.get("/cursos", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT id, codigo, nombre, nivel, orden, estado
+       FROM cursos
+       ORDER BY orden ASC, nombre ASC`
+    );
+    return res.json(rows || []);
+  } catch (err) {
+    console.error("Error al listar cursos:", err);
+    return res.status(500).json({ error: "Error al obtener cursos" });
+  }
+});
+
+/**
+ * 13. PUT /api/admin/cursos/:id/estado
+ * (SOLO ADMIN) Habilita o deshabilita un curso.
+ */
+router.put("/cursos/:id/estado", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const estado = normalizarTextoMayuscula(req.body.estado);
+
+    if (!["ACTIVO", "INACTIVO"].includes(estado)) {
+      return res.status(400).json({ error: "Estado invalido" });
+    }
+
+    const [result] = await db.query(
+      `UPDATE cursos SET estado = ? WHERE id = ?`,
+      [estado, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Curso no encontrado" });
+    }
+
+    if (estado === "INACTIVO") {
+      await db.query(
+        `UPDATE asignaciones_docente SET estado = 'INACTIVO' WHERE curso_id = ?`,
+        [id]
+      );
+    }
+
+    return res.json({ success: true, message: `Curso ${estado}`, id: Number(id), estado });
+  } catch (err) {
+    console.error("Error al cambiar estado del curso:", err);
+    return res.status(500).json({ error: "Error al actualizar curso" });
+  }
+});
+
+/**
+ * 14. GET /api/admin/docentes-candidatos
+ * (SOLO ADMIN) Usuarios que pueden asignarse como docentes.
+ */
+router.get("/docentes-candidatos", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT u.id AS usuario_id, u.nombres, u.apellidos, u.cedula, u.rol, u.estado,
+              d.id AS docente_id
+       FROM usuarios u
+       LEFT JOIN docentes d ON d.usuario_id = u.id
+       WHERE u.estado = 'ACTIVO' AND u.rol IN ('PROFESOR', 'ADMIN')
+       ORDER BY u.apellidos ASC, u.nombres ASC`
+    );
+    return res.json(rows || []);
+  } catch (err) {
+    console.error("Error al listar docentes candidatos:", err);
+    return res.status(500).json({ error: "Error al obtener docentes" });
+  }
+});
+
+/**
+ * 15. GET /api/admin/asignaciones-docente
+ * (SOLO ADMIN) Lista las materias habilitadas por curso, paralelo y docente.
+ */
+router.get("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const { curso_id, paralelo_id, periodo_id } = req.query;
+    const params = [];
+    let where = "WHERE 1=1";
+
+    if (curso_id) { where += " AND ad.curso_id = ?"; params.push(curso_id); }
+    if (paralelo_id) { where += " AND ad.paralelo_id = ?"; params.push(paralelo_id); }
+    if (periodo_id) { where += " AND ad.periodo_id = ?"; params.push(periodo_id); }
+
+    const [rows] = await db.query(
+      `SELECT ad.id, ad.docente_id, ad.materia_id, ad.curso_id, ad.paralelo_id,
+              ad.periodo_id, ad.estado,
+              m.codigo AS materia_codigo, m.nombre AS materia,
+              c.nombre AS curso, p.nombre AS paralelo,
+              u.id AS usuario_id, u.nombres AS docente_nombres, u.apellidos AS docente_apellidos
+       FROM asignaciones_docente ad
+       JOIN materias m ON m.id = ad.materia_id
+       JOIN cursos c ON c.id = ad.curso_id
+       JOIN paralelos p ON p.id = ad.paralelo_id
+       JOIN docentes d ON d.id = ad.docente_id
+       JOIN usuarios u ON u.id = d.usuario_id
+       ${where}
+       ORDER BY c.orden ASC, p.nombre ASC, m.nombre ASC`,
+      params
+    );
+
+    return res.json(rows || []);
+  } catch (err) {
+    console.error("Error al listar asignaciones docentes:", err);
+    return res.status(500).json({ error: "Error al obtener asignaciones docentes" });
+  }
+});
+
+/**
+ * 16. POST /api/admin/asignaciones-docente
+ * (SOLO ADMIN) Habilita una materia para un curso/paralelo y profesor.
+ */
+router.post("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const {
+      usuario_id,
+      materia_id,
+      curso_id,
+      paralelo_id,
+      periodo_id,
+    } = req.body;
+
+    const periodoFinal = periodo_id || await obtenerPeriodoActivoId();
+    if (!usuario_id || !materia_id || !curso_id || !paralelo_id || !periodoFinal) {
+      return res.status(400).json({
+        error: "Faltan datos: usuario, materia, curso, paralelo o periodo activo"
+      });
+    }
+
+    const [[curso], [materia], [paralelo]] = await Promise.all([
+      db.query(`SELECT id FROM cursos WHERE id = ? AND estado = 'ACTIVO' LIMIT 1`, [curso_id]),
+      db.query(`SELECT id FROM materias WHERE id = ? AND estado = 'ACTIVO' LIMIT 1`, [materia_id]),
+      db.query(`SELECT id FROM paralelos WHERE id = ? AND estado = 'ACTIVO' LIMIT 1`, [paralelo_id]),
+    ]);
+
+    if (!curso.length) return res.status(400).json({ error: "El curso no esta activo" });
+    if (!materia.length) return res.status(400).json({ error: "La materia no esta activa" });
+    if (!paralelo.length) return res.status(400).json({ error: "El paralelo no esta activo" });
+
+    const docenteId = await asegurarDocenteDesdeUsuario(usuario_id);
+
+    const [duplicadaActiva] = await db.query(
+      `SELECT ad.id
+       FROM asignaciones_docente ad
+       WHERE ad.materia_id = ? AND ad.curso_id = ? AND ad.paralelo_id = ?
+         AND ad.periodo_id = ? AND ad.estado = 'ACTIVO'
+       LIMIT 1`,
+      [materia_id, curso_id, paralelo_id, periodoFinal]
+    );
+
+    if (duplicadaActiva.length) {
+      const [result] = await db.query(
+        `UPDATE asignaciones_docente
+         SET docente_id = ?, estado = 'ACTIVO'
+         WHERE id = ?`,
+        [docenteId, duplicadaActiva[0].id]
+      );
+      return res.json({
+        success: true,
+        message: "Asignacion actualizada con el profesor seleccionado",
+        id: duplicadaActiva[0].id,
+        changed: result.affectedRows,
+      });
+    }
+
+    const [inactiva] = await db.query(
+      `SELECT id
+       FROM asignaciones_docente
+       WHERE materia_id = ? AND curso_id = ? AND paralelo_id = ? AND periodo_id = ?
+       LIMIT 1`,
+      [materia_id, curso_id, paralelo_id, periodoFinal]
+    );
+
+    if (inactiva.length) {
+      await db.query(
+        `UPDATE asignaciones_docente
+         SET docente_id = ?, estado = 'ACTIVO'
+         WHERE id = ?`,
+        [docenteId, inactiva[0].id]
+      );
+      return res.json({
+        success: true,
+        message: "Asignacion reactivada correctamente",
+        id: inactiva[0].id,
+      });
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO asignaciones_docente
+       (docente_id, materia_id, curso_id, paralelo_id, periodo_id, estado)
+       VALUES (?, ?, ?, ?, ?, 'ACTIVO')`,
+      [docenteId, materia_id, curso_id, paralelo_id, periodoFinal]
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Materia asignada al curso y profesor",
+      id: result.insertId,
+    });
+  } catch (err) {
+    console.error("Error al crear asignacion docente:", err);
+    return res.status(err.status || 500).json({
+      error: err.message || "Error al crear asignacion docente"
+    });
+  }
+});
+
+/**
+ * 17. DELETE /api/admin/asignaciones-docente/:id
+ * (SOLO ADMIN) Quita la materia del curso para el periodo activo.
+ */
+router.delete("/asignaciones-docente/:id", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [result] = await db.query(
+      `UPDATE asignaciones_docente SET estado = 'INACTIVO' WHERE id = ?`,
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Asignacion no encontrada" });
+    }
+
+    return res.json({
+      success: true,
+      message: "Materia quitada del curso para el periodo activo"
+    });
+  } catch (err) {
+    console.error("Error al quitar asignacion docente:", err);
+    return res.status(500).json({ error: "Error al quitar asignacion" });
   }
 });
 
