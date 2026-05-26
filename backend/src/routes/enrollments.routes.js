@@ -85,7 +85,9 @@ router.get("/", authRequired, async (req, res) => {
   try {
     const { periodo_id, curso_id, paralelo_id, estado } = req.query;
     let sql = `
-      SELECT m.id, CONCAT(e.apellidos, ' ', e.nombres) AS estudiante, e.cedula,
+      SELECT m.id,
+             CONCAT(e.apellidos_est, ' ', e.nombres_est) AS estudiante,
+             e.cedula_est AS cedula,
              p.nombre AS periodo, c.nombre AS curso, pr.nombre AS paralelo, 
              m.fecha_matricula, m.estado
       FROM matriculas m
@@ -101,7 +103,7 @@ router.get("/", authRequired, async (req, res) => {
     if (paralelo_id) { sql += " AND m.paralelo_id=?"; params.push(paralelo_id); }
     if (estado) { sql += " AND m.estado=?"; params.push(estado); }
 
-    sql += " ORDER BY e.apellidos ASC";
+    sql += " ORDER BY e.apellidos_est ASC";
     const [rows] = await pool.query(sql, params);
     return res.json(rows);
   } catch (err) {

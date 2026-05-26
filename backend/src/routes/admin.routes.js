@@ -4,6 +4,7 @@ const db = require("../db");
 const { authRequired, onlyAdmin } = require("../middlewares/auth");
 
 const router = express.Router();
+const ROLES_PERMITIDOS = ["ADMIN", "SECRETARIA", "COLECTOR", "PROFESOR"];
 
 /**
  * 1. GET /api/admin/cursos/estadisticas
@@ -52,8 +53,12 @@ router.post("/usuarios", authRequired, onlyAdmin, async (req, res) => {
       return res.status(409).json({ error: "Ya existe un usuario registrado con esa cédula" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
     const rolFinal = rol ? rol.toUpperCase() : "SECRETARIA";
+    if (!ROLES_PERMITIDOS.includes(rolFinal)) {
+      return res.status(400).json({ error: "Rol invalido" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const [result] = await db.query(
       `INSERT INTO usuarios (nombres, apellidos, cedula, password_hash, rol, estado)
@@ -118,6 +123,118 @@ router.put("/usuarios/:id/estado", authRequired, onlyAdmin, async (req, res) => 
   } catch (err) {
     console.error("❌ Error al actualizar estado del usuario:", err);
     return res.status(500).json({ error: "Error interno al actualizar estado" });
+  }
+});
+
+/**
+ * 5. PUT /api/admin/usuarios/:id
+ * (SOLO ADMIN) Edita datos, rol, estado y opcionalmente la contrasena.
+ */
+router.put("/usuarios/:id", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nombres, apellidos, cedula, rol, estado, password } = req.body;
+
+    if (!nombres || !apellidos || !cedula || !rol || !estado) {
+      return res.status(400).json({ error: "Faltan datos obligatorios" });
+    }
+
+    const cedulaLimpia = String(cedula).trim();
+    if (!/^\d{10}$/.test(cedulaLimpia)) {
+      return res.status(400).json({ error: "La cedula debe tener exactamente 10 digitos" });
+    }
+
+    const rolFinal = String(rol).toUpperCase();
+    if (!ROLES_PERMITIDOS.includes(rolFinal)) {
+      return res.status(400).json({ error: "Rol invalido" });
+    }
+
+    if (!["ACTIVO", "INACTIVO"].includes(estado)) {
+      return res.status(400).json({ error: "Estado invalido" });
+    }
+
+    const [exist] = await db.query(
+      "SELECT id FROM usuarios WHERE cedula = ? AND id <> ? LIMIT 1",
+      [cedulaLimpia, id]
+    );
+    if (exist.length > 0) {
+      return res.status(409).json({ error: "Ya existe otro usuario con esa cedula" });
+    }
+
+    const params = [
+      String(nombres).trim(),
+      String(apellidos).trim(),
+      cedulaLimpia,
+      rolFinal,
+      estado,
+    ];
+
+    let sql = `UPDATE usuarios
+               SET nombres = ?, apellidos = ?, cedula = ?, rol = ?, estado = ?`;
+
+    if (password) {
+      if (String(password).length < 6) {
+        return res.status(400).json({ error: "La contrasena debe tener al menos 6 caracteres" });
+      }
+      const hash = await bcrypt.hash(String(password), 10);
+      sql += ", password_hash = ?";
+      params.push(hash);
+    }
+
+    sql += " WHERE id = ?";
+    params.push(id);
+
+    const [result] = await db.query(sql, params);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    return res.json({
+      success: true,
+      message: "Usuario actualizado correctamente",
+      user: { id: Number(id), nombres, apellidos, cedula: cedulaLimpia, rol: rolFinal, estado }
+    });
+  } catch (err) {
+    console.error("Error al editar usuario:", err);
+    return res.status(500).json({ error: "Error interno al actualizar usuario" });
+  }
+});
+
+/**
+ * 6. DELETE /api/admin/usuarios/:id
+ * (SOLO ADMIN) Elimina si no hay dependencias; si las hay, lo deja inactivo.
+ */
+router.delete("/usuarios/:id", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (Number(id) === Number(req.user.id)) {
+      return res.status(400).json({ error: "No puedes eliminar tu propio usuario" });
+    }
+
+    try {
+      const [result] = await db.query("DELETE FROM usuarios WHERE id = ?", [id]);
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+      return res.json({ success: true, message: "Usuario eliminado correctamente" });
+    } catch (deleteErr) {
+      if (!["ER_ROW_IS_REFERENCED_2", "ER_ROW_IS_REFERENCED"].includes(deleteErr.code)) {
+        throw deleteErr;
+      }
+
+      const [result] = await db.query("UPDATE usuarios SET estado = 'INACTIVO' WHERE id = ?", [id]);
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+      return res.json({
+        success: true,
+        message: "El usuario tiene historial vinculado; se marco como INACTIVO"
+      });
+    }
+  } catch (err) {
+    console.error("Error al eliminar usuario:", err);
+    return res.status(500).json({ error: "Error interno al eliminar usuario" });
   }
 });
 

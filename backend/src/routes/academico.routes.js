@@ -245,7 +245,7 @@ router.get('/notas', authRequired, adminOProfesor, async (req, res) => {
              FROM matriculas m
              JOIN estudiantes e ON e.id = m.estudiante_id
              WHERE m.curso_id = ? AND m.paralelo_id = ?
-               AND m.periodo_id = ? AND m.estado = 'ACTIVO'
+               AND m.periodo_id = ? AND m.estado IN ('ACTIVO', 'MATRICULADO')
              ORDER BY e.apellidos_est, e.nombres_est`,
             [a.curso_id, a.paralelo_id, a.periodo_id]
         );
@@ -487,7 +487,7 @@ router.get('/resumen-curso', authRequired, adminOProfesor, async (req, res) => {
              FROM matriculas m
              JOIN estudiantes e ON e.id = m.estudiante_id
              WHERE m.curso_id = ? AND m.paralelo_id = ?
-               AND m.periodo_id = ? AND m.estado = 'ACTIVO'
+               AND m.periodo_id = ? AND m.estado IN ('ACTIVO', 'MATRICULADO')
              ORDER BY e.apellidos_est, e.nombres_est`,
             [curso_id, paralelo_id, periodo_id]
         );
