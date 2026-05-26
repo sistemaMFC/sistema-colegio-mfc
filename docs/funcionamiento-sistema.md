@@ -239,6 +239,8 @@ Regla:
 
 - El portal profesor no necesita una tabla aparte.
 - Todo lo que el admin habilite en `asignaciones_docente` con estado `ACTIVO` aparece en el portal del profesor.
+- La pantalla de `Cursos` debe cargar cursos, materias, paralelos y profesores aunque la lista de asignaciones tenga un problema temporal.
+- La ruta `GET /api/admin/asignaciones-docente` inspecciona columnas reales de Railway para evitar errores por diferencias menores de estructura.
 - Para que una materia aparezca al profesor debe cumplirse:
   - curso activo,
   - materia activa,
@@ -437,6 +439,7 @@ Motivo:
 12. Se definio el catalogo oficial inicial de materias en MAYUSCULAS y se creo `database/seed-materias-oficiales.sql` para cargarlo en MySQL.
 13. Se creo la seccion administrativa `Materias` para crear, editar, cargar el listado oficial y quitar/inactivar materias.
 14. Se creo la seccion administrativa `Cursos` para habilitar cursos y asignar materias con profesor por curso/paralelo/periodo.
+15. Se hizo mas resistente la carga de `Cursos`: si falla el listado de asignaciones, no bloquea la carga de cursos, materias, paralelos y profesores.
 
 ## Procedimiento para continuar
 

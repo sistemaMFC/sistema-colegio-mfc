@@ -166,6 +166,21 @@ async function obtenerPeriodoActivoId() {
   return rows[0]?.id || null;
 }
 
+async function obtenerColumnasTabla(nombreTabla) {
+  const tablasPermitidas = new Set([
+    "asignaciones_docente",
+    "cursos",
+    "paralelos",
+    "materias",
+    "docentes",
+  ]);
+  if (!tablasPermitidas.has(nombreTabla)) {
+    throw new Error("Tabla no permitida para inspeccion");
+  }
+  const [cols] = await db.query(`SHOW COLUMNS FROM ${nombreTabla}`);
+  return new Set(cols.map(col => col.Field));
+}
+
 async function asegurarDocenteDesdeUsuario(usuarioId) {
   const [usuarios] = await db.query(
     `SELECT id, cedula, rol, estado FROM usuarios WHERE id = ? LIMIT 1`,
@@ -669,16 +684,27 @@ router.get("/docentes-candidatos", authRequired, onlyAdmin, async (req, res) => 
 router.get("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) => {
   try {
     const { curso_id, paralelo_id, periodo_id } = req.query;
+    const [adCols, cursosCols] = await Promise.all([
+      obtenerColumnasTabla("asignaciones_docente"),
+      obtenerColumnasTabla("cursos"),
+    ]);
+
     const params = [];
     let where = "WHERE 1=1";
+    const tienePeriodo = adCols.has("periodo_id");
+    const tieneEstado = adCols.has("estado");
+    const selectPeriodo = tienePeriodo ? "ad.periodo_id" : "NULL";
+    const selectEstado = tieneEstado ? "ad.estado" : "'ACTIVO'";
+    const orderCurso = cursosCols.has("orden") ? "c.orden ASC, c.nombre ASC" : "c.nombre ASC";
 
     if (curso_id) { where += " AND ad.curso_id = ?"; params.push(curso_id); }
     if (paralelo_id) { where += " AND ad.paralelo_id = ?"; params.push(paralelo_id); }
-    if (periodo_id) { where += " AND ad.periodo_id = ?"; params.push(periodo_id); }
+    if (periodo_id && tienePeriodo) { where += " AND ad.periodo_id = ?"; params.push(periodo_id); }
+    if (tieneEstado) { where += " AND ad.estado = 'ACTIVO'"; }
 
     const [rows] = await db.query(
       `SELECT ad.id, ad.docente_id, ad.materia_id, ad.curso_id, ad.paralelo_id,
-              ad.periodo_id, ad.estado,
+              ${selectPeriodo} AS periodo_id, ${selectEstado} AS estado,
               m.codigo AS materia_codigo, m.nombre AS materia,
               c.nombre AS curso, p.nombre AS paralelo,
               u.id AS usuario_id, u.nombres AS docente_nombres, u.apellidos AS docente_apellidos
@@ -689,14 +715,17 @@ router.get("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) =>
        JOIN docentes d ON d.id = ad.docente_id
        JOIN usuarios u ON u.id = d.usuario_id
        ${where}
-       ORDER BY c.orden ASC, p.nombre ASC, m.nombre ASC`,
+       ORDER BY ${orderCurso}, p.nombre ASC, m.nombre ASC`,
       params
     );
 
     return res.json(rows || []);
   } catch (err) {
     console.error("Error al listar asignaciones docentes:", err);
-    return res.status(500).json({ error: "Error al obtener asignaciones docentes" });
+    return res.status(500).json({
+      error: "Error al obtener asignaciones docentes",
+      detail: process.env.NODE_ENV === "production" ? undefined : err.message
+    });
   }
 });
 

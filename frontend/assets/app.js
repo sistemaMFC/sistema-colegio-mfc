@@ -706,7 +706,7 @@ async function cargarCursosAdmin() {
     if (tbodyAsignaciones) tbodyAsignaciones.innerHTML = `<tr><td colspan="5" class="text-center">Cargando asignaciones...</td></tr>`;
 
     try {
-        const [cursos, cp, materias, docentes, periodo, asignaciones] = await Promise.all([
+        const results = await Promise.allSettled([
             api("/api/admin/cursos"),
             api("/api/academico/cursos-paralelos"),
             api("/api/academico/materias"),
@@ -714,6 +714,25 @@ async function cargarCursosAdmin() {
             api("/api/academico/periodo-activo"),
             api("/api/admin/asignaciones-docente"),
         ]);
+
+        const [cursosRes, cpRes, materiasRes, docentesRes, periodoRes, asignacionesRes] = results;
+        const erroresCriticos = [cursosRes, cpRes, materiasRes, docentesRes, periodoRes]
+            .filter(item => item.status === "rejected");
+        if (erroresCriticos.length) {
+            throw erroresCriticos[0].reason;
+        }
+
+        if (asignacionesRes.status === "rejected") {
+            console.warn("No se pudieron cargar asignaciones docentes:", asignacionesRes.reason);
+            showAlert("bad", "Cursos cargados, pero no se pudo listar asignaciones docentes.");
+        }
+
+        const cursos = cursosRes.value;
+        const cp = cpRes.value;
+        const materias = materiasRes.value;
+        const docentes = docentesRes.value;
+        const periodo = periodoRes.value;
+        const asignaciones = asignacionesRes.status === "fulfilled" ? asignacionesRes.value : [];
 
         cursosAdminCache = cursos || [];
         paralelosAdminCache = cp.paralelos || [];
