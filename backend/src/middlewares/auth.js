@@ -1,7 +1,7 @@
 /* ============================================================
    MIDDLEWARE DE AUTENTICACIÓN — COLEGIO MFC
    ✅ CORREGIDO:
-      - JWT_SECRET sin fallback 'mfc_secreto_2026'
+      - JWT_SECRET sin fallback inseguro
       - Si no hay variable de entorno el servidor no arranca
    ============================================================ */
 const jwt = require('jsonwebtoken');

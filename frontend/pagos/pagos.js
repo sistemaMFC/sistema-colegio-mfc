@@ -292,7 +292,7 @@ async function generarCicloNuevo(estudianteId) {
     try {
         await api('/api/pagos/generar-ciclo', {
             method: 'POST',
-            body: { estudiante_id: estudianteId }
+            body: JSON.stringify({ estudiante_id: estudianteId })
         });
         cargarEstadoCuenta(estudianteId);
     } catch (err) { alert("Error al generar ciclo."); }
@@ -305,15 +305,66 @@ async function abrirPromptExtra(estudianteId) {
         try {
             await api('/api/pagos/agregar-extra', {
                 method: 'POST',
-                body: { estudiante_id: estudianteId, nombre_concepto: concepto, monto: monto }
+                body: JSON.stringify({ estudiante_id: estudianteId, nombre_concepto: concepto, monto: monto })
             });
             cargarEstadoCuenta(estudianteId);
         } catch (err) { alert("Error."); }
     }
 }
 
-function confirmarTransaccion(id) {
-    alert("Procesando registro de pago...");
+async function confirmarTransaccion(id) {
+    const conceptoSelect = document.getElementById('conceptoSeleccionado');
+    const concepto = conceptoSelect?.value || 'pension';
+    const metodo_pago = 'EFECTIVO';
+
+    try {
+        if (concepto === 'pension') {
+            const seleccionados = [...document.querySelectorAll('.mes-pago-card.seleccionado')];
+            if (seleccionados.length === 0) {
+                alert('Seleccione al menos un cargo pendiente para cobrar.');
+                return;
+            }
+
+            if (!confirm(`¿Procesar ${seleccionados.length} cargo(s) seleccionado(s)?`)) return;
+
+            for (const item of seleccionados) {
+                await api('/api/pagos/cobrar', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        estudiante_id: id,
+                        mes_id: item.dataset.id,
+                        metodo_pago
+                    })
+                });
+            }
+
+            alert('Pago registrado correctamente.');
+            await cargarEstadoCuenta(id);
+            return;
+        }
+
+        const inputMonto = document.getElementById('montoConceptoFijo');
+        const monto = parseFloat(inputMonto?.value || '0');
+        if (!monto || monto <= 0) {
+            alert('Ingrese un monto válido.');
+            return;
+        }
+
+        await api('/api/pagos/cobrar', {
+            method: 'POST',
+            body: JSON.stringify({
+                estudiante_id: id,
+                concepto: concepto.toUpperCase(),
+                monto,
+                metodo_pago
+            })
+        });
+
+        alert('Cobro manual registrado correctamente.');
+        await cargarEstadoCuenta(id);
+    } catch (err) {
+        alert(err.message || 'No se pudo procesar el pago.');
+    }
 }
 
 // Globales

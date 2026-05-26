@@ -4,9 +4,19 @@ const bcrypt = require('bcrypt'); // <--- NUEVO: Librería para comparar contras
 const pool = require('../db');
 const router = express.Router();
 
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET no está definido en el entorno');
+    process.exit(1);
+}
+
 router.post('/login', async (req, res) => {
     try {
         const { cedula, password } = req.body;
+
+        if (!cedula || !password) {
+            return res.status(400).json({ error: 'Cédula y contraseña son obligatorias' });
+        }
         
         // Limpiamos los datos de entrada
         const cedulaLimpia = String(cedula).trim();
@@ -39,14 +49,13 @@ router.post('/login', async (req, res) => {
         }
 
         // 5. Generar Token JWT (Usando secreto de Render o local)
-        const secreto = process.env.JWT_SECRET || 'mfc_secreto_2026';
         const token = jwt.sign(
             { 
                 id: user.id, 
                 rol: user.rol, 
                 cedula: user.cedula.trim() 
             },
-            secreto,
+            JWT_SECRET,
             { expiresIn: '8h' }
         );
 

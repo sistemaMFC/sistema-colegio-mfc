@@ -60,13 +60,21 @@ function initTheme() {
 async function api(path, options = {}) {
     const token = getToken();
     const headers = options.headers || {};
-    headers["Content-Type"] = "application/json";
+    const requestOptions = { ...options, headers };
+
+    if (requestOptions.body && typeof requestOptions.body === "object" && !(requestOptions.body instanceof FormData)) {
+        requestOptions.body = JSON.stringify(requestOptions.body);
+    }
+
+    if (!(requestOptions.body instanceof FormData)) {
+        headers["Content-Type"] = "application/json";
+    }
     
     if (token) {
         headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    const res = await fetch(`${API_BASE}${path}`, requestOptions);
     
     if (res.status === 401 || res.status === 403) {
         console.warn("Sesión inválida o permisos insuficientes");

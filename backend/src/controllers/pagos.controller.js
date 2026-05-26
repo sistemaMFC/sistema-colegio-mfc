@@ -1,130 +1,272 @@
-/* ========================================================
-    CONTROLADOR DE PAGOS - COLEGIO MFC
-    Lógica de Separación: Matrícula vs Pensiones
-   ======================================================== */
 const db = require("../db");
 
+const MESES_CICLO = [
+    "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE",
+    "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO"
+];
+
+function toPositiveNumber(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+async function getCargoLegacy(conn, estudianteId, cargoId) {
+    const [rows] = await conn.query(
+        `SELECT
+            id,
+            estudiante_id,
+            COALESCE(mes_nombre, 'PENSION') AS mes_nombre,
+            COALESCE(monto_pendiente, 0) AS monto_pendiente,
+            COALESCE(estado, 'PENDIENTE') AS estado,
+            COALESCE(tipo_cargo, 'OTROS') AS tipo_cargo
+         FROM cargos_estudiante
+         WHERE id = ? AND estudiante_id = ?
+         FOR UPDATE`,
+        [cargoId, estudianteId]
+    );
+    return rows[0] || null;
+}
+
+async function getCargoMatricula(conn, estudianteId, cargoId) {
+    const [rows] = await conn.query(
+        `SELECT
+            ce.id,
+            m.estudiante_id,
+            COALESCE(cc.nombre, cc.codigo, CONCAT('CARGO ', ce.id)) AS mes_nombre,
+            ce.valor_total AS monto_pendiente,
+            ce.estado,
+            COALESCE(cc.codigo, 'OTROS') AS tipo_cargo
+         FROM cargos_estudiante ce
+         JOIN matriculas m ON m.id = ce.matricula_id
+         LEFT JOIN conceptos_cobro cc ON cc.id = ce.concepto_id
+         WHERE ce.id = ? AND m.estudiante_id = ?
+         FOR UPDATE`,
+        [cargoId, estudianteId]
+    );
+    return rows[0] || null;
+}
+
+async function getCargo(conn, estudianteId, cargoId) {
+    try {
+        return await getCargoLegacy(conn, estudianteId, cargoId);
+    } catch (err) {
+        if (err.code !== "ER_BAD_FIELD_ERROR") throw err;
+        return getCargoMatricula(conn, estudianteId, cargoId);
+    }
+}
+
+async function updateCargoPagado(conn, cargoId, estudianteId, pagoId) {
+    try {
+        const [result] = await conn.query(
+            `UPDATE cargos_estudiante
+             SET estado = 'PAGADO', pago_id = ?
+             WHERE id = ? AND estudiante_id = ? AND estado = 'PENDIENTE'`,
+            [pagoId, cargoId, estudianteId]
+        );
+        return result.affectedRows;
+    } catch (err) {
+        if (err.code !== "ER_BAD_FIELD_ERROR") throw err;
+        const [result] = await conn.query(
+            `UPDATE cargos_estudiante
+             SET estado = 'PAGADO'
+             WHERE id = ? AND estado = 'PENDIENTE'`,
+            [cargoId]
+        );
+        return result.affectedRows;
+    }
+}
+
 const pagosController = {
-    /**
-     * 1. Obtener deudas (El Semáforo)
-     * Ordena para que la MATRÍCULA aparezca siempre primero.
-     */
     getDeudas: async (req, res) => {
-        const { id } = req.params;
+        const estudianteId = Number(req.params.id);
+        if (!Number.isInteger(estudianteId) || estudianteId <= 0) {
+            return res.status(400).json({ error: "ID de estudiante invalido" });
+        }
+
         try {
-            // Ordenamos por tipo_cargo para que MATRICULA salga antes que PENSION
             const [rows] = await db.query(
-                `SELECT 
-                    id, 
-                    estudiante_id, 
-                    COALESCE(mes_nombre, 'Pensión') as mes_nombre, 
-                    COALESCE(monto_pendiente, 40.00) as monto_pendiente, 
-                    COALESCE(estado, 'PENDIENTE') as estado,
-                    tipo_cargo
-                 FROM cargos_estudiante 
-                 WHERE estudiante_id = ? 
+                `SELECT
+                    id,
+                    estudiante_id,
+                    COALESCE(mes_nombre, 'PENSION') AS mes_nombre,
+                    COALESCE(monto_pendiente, 0) AS monto_pendiente,
+                    COALESCE(estado, 'PENDIENTE') AS estado,
+                    COALESCE(tipo_cargo, 'OTROS') AS tipo_cargo
+                 FROM cargos_estudiante
+                 WHERE estudiante_id = ?
                  ORDER BY (CASE WHEN tipo_cargo = 'MATRICULA' THEN 0 ELSE 1 END), id ASC`,
-                [id]
+                [estudianteId]
             );
-            res.json(rows || []);
+            return res.json(rows || []);
         } catch (err) {
-            console.error("❌ ERROR EN GET_DEUDAS:", err.message);
-            res.json([]); 
+            if (err.code !== "ER_BAD_FIELD_ERROR") {
+                console.error("ERROR EN GET_DEUDAS:", err.message);
+                return res.status(500).json({ error: "Error al consultar deudas" });
+            }
+
+            try {
+                const [rows] = await db.query(
+                    `SELECT
+                        ce.id,
+                        m.estudiante_id,
+                        COALESCE(cc.nombre, cc.codigo, CONCAT('CARGO ', ce.id)) AS mes_nombre,
+                        ce.valor_total AS monto_pendiente,
+                        ce.estado,
+                        COALESCE(cc.codigo, 'OTROS') AS tipo_cargo
+                     FROM cargos_estudiante ce
+                     JOIN matriculas m ON m.id = ce.matricula_id
+                     LEFT JOIN conceptos_cobro cc ON cc.id = ce.concepto_id
+                     WHERE m.estudiante_id = ?
+                     ORDER BY ce.id ASC`,
+                    [estudianteId]
+                );
+                return res.json(rows || []);
+            } catch (fallbackErr) {
+                console.error("ERROR EN GET_DEUDAS FALLBACK:", fallbackErr.message);
+                return res.status(500).json({ error: "Error al consultar deudas" });
+            }
         }
     },
 
-    /**
-     * 2. Registrar un Pago
-     */
     registrarPago: async (req, res) => {
-        const { estudiante_id, concepto, monto, mes_id, metodo_pago } = req.body;
-        
-        if (!estudiante_id || !concepto || !monto) {
-            return res.status(400).json({ error: "Faltan datos obligatorios" });
+        const estudianteId = Number(req.body.estudiante_id);
+        const cargoId = req.body.mes_id ? Number(req.body.mes_id) : null;
+        const metodoPago = req.body.metodo_pago || "EFECTIVO";
+
+        if (!Number.isInteger(estudianteId) || estudianteId <= 0) {
+            return res.status(400).json({ error: "Estudiante invalido" });
         }
 
+        const conn = await db.getConnection();
         try {
-            await db.query("START TRANSACTION");
+            await conn.beginTransaction();
 
-            // Insertamos el registro del pago histórico
-            const [resultado] = await db.query(
-                `INSERT INTO pagos (estudiante_id, concepto, monto, metodo_pago, fecha_pago) 
+            let concepto = String(req.body.concepto || "").trim().toUpperCase();
+            let monto = toPositiveNumber(req.body.monto);
+
+            if (cargoId) {
+                const cargo = await getCargo(conn, estudianteId, cargoId);
+                if (!cargo) {
+                    await conn.rollback();
+                    return res.status(404).json({ error: "Cargo no encontrado para este estudiante" });
+                }
+
+                if (cargo.estado !== "PENDIENTE") {
+                    await conn.rollback();
+                    return res.status(409).json({ error: "Este cargo ya fue procesado" });
+                }
+
+                concepto = String(cargo.mes_nombre || cargo.tipo_cargo || "CARGO").toUpperCase();
+                monto = toPositiveNumber(cargo.monto_pendiente);
+            }
+
+            if (!concepto || !monto) {
+                await conn.rollback();
+                return res.status(400).json({ error: "Concepto y monto validos son obligatorios" });
+            }
+
+            const [resultado] = await conn.query(
+                `INSERT INTO pagos (estudiante_id, concepto, monto, metodo_pago, fecha_pago)
                  VALUES (?, ?, ?, ?, NOW())`,
-                [estudiante_id, concepto, monto, metodo_pago || 'EFECTIVO']
+                [estudianteId, concepto, monto, metodoPago]
             );
 
-            const nuevoPagoId = resultado.insertId;
-
-            // Si el pago está vinculado a un cargo (Matrícula o Mes específico)
-            if (mes_id) {
-                await db.query(
-                    `UPDATE cargos_estudiante 
-                     SET estado = 'PAGADO', pago_id = ? 
-                     WHERE id = ?`,
-                    [nuevoPagoId, mes_id]
-                );
+            if (cargoId) {
+                const updated = await updateCargoPagado(conn, cargoId, estudianteId, resultado.insertId);
+                if (!updated) {
+                    await conn.rollback();
+                    return res.status(409).json({ error: "No se pudo actualizar el cargo" });
+                }
             }
 
-            await db.query("COMMIT");
-            res.json({ success: true, message: "Pago procesado correctamente ✅" });
-
+            await conn.commit();
+            return res.json({
+                success: true,
+                message: "Pago procesado correctamente",
+                pago_id: resultado.insertId,
+                concepto,
+                monto
+            });
         } catch (err) {
-            await db.query("ROLLBACK");
-            console.error("❌ ERROR EN REGISTRAR_PAGO:", err.message);
-            res.status(500).json({ error: "Error en el servidor al procesar cobro" });
+            await conn.rollback();
+            console.error("ERROR EN REGISTRAR_PAGO:", err.message);
+            return res.status(500).json({ error: "Error en el servidor al procesar cobro" });
+        } finally {
+            conn.release();
         }
     },
 
-    /**
-     * 3. Generar Ciclo Escolar Automático (Separado)
-     * Crea Matrícula ($27.33) y Pensiones ($40.00) con etiquetas distintas.
-     */
     generarCicloEscolar: async (req, res) => {
-        const { estudiante_id } = req.body;
-        const meses = [
-            'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 
-            'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE', 'ENERO', 'FEBRERO'
-        ];
+        const estudianteId = Number(req.body.estudiante_id);
+        if (!Number.isInteger(estudianteId) || estudianteId <= 0) {
+            return res.status(400).json({ error: "Estudiante invalido" });
+        }
 
+        const conn = await db.getConnection();
         try {
-            await db.query("START TRANSACTION");
+            await conn.beginTransaction();
 
-            // A. Insertar MATRÍCULA como un cargo único y separado
-            await db.query(
-                "INSERT INTO cargos_estudiante (estudiante_id, mes_nombre, monto_pendiente, estado, tipo_cargo) VALUES (?, ?, ?, ?, ?)",
-                [estudiante_id, 'MATRÍCULA', 27.33, 'PENDIENTE', 'MATRICULA']
+            const [existentes] = await conn.query(
+                `SELECT COUNT(*) AS total
+                 FROM cargos_estudiante
+                 WHERE estudiante_id = ?
+                   AND tipo_cargo IN ('MATRICULA', 'PENSION')
+                   AND estado <> 'ANULADO'`,
+                [estudianteId]
             );
 
-            // B. Insertar PENSIONES mensuales
-            for (let mes of meses) {
-                await db.query(
-                    "INSERT INTO cargos_estudiante (estudiante_id, mes_nombre, monto_pendiente, estado, tipo_cargo) VALUES (?, ?, ?, ?, ?)",
-                    [estudiante_id, mes, 40.00, 'PENDIENTE', 'PENSION']
+            if (Number(existentes[0]?.total || 0) > 0) {
+                await conn.rollback();
+                return res.status(409).json({ error: "El ciclo ya fue generado para este estudiante" });
+            }
+
+            await conn.query(
+                `INSERT INTO cargos_estudiante
+                 (estudiante_id, mes_nombre, monto_pendiente, estado, tipo_cargo)
+                 VALUES (?, ?, ?, 'PENDIENTE', 'MATRICULA')`,
+                [estudianteId, "MATRICULA", 27.33]
+            );
+
+            for (const mes of MESES_CICLO) {
+                await conn.query(
+                    `INSERT INTO cargos_estudiante
+                     (estudiante_id, mes_nombre, monto_pendiente, estado, tipo_cargo)
+                     VALUES (?, ?, ?, 'PENDIENTE', 'PENSION')`,
+                    [estudianteId, mes, 40.00]
                 );
             }
 
-            await db.query("COMMIT");
-            res.json({ success: true, message: "Ciclo generado: Matrícula y Pensiones separadas ✅" });
+            await conn.commit();
+            return res.json({ success: true, message: "Ciclo generado correctamente" });
         } catch (err) {
-            await db.query("ROLLBACK");
-            console.error("❌ ERROR GENERAR_CICLO:", err.message);
-            res.status(500).json({ error: "No se pudo generar el año lectivo" });
+            await conn.rollback();
+            console.error("ERROR GENERAR_CICLO:", err.message);
+            return res.status(500).json({ error: "No se pudo generar el anio lectivo" });
+        } finally {
+            conn.release();
         }
     },
 
-    /**
-     * 4. Agregar Extra (Otros cobros)
-     */
     agregarExtra: async (req, res) => {
-        const { estudiante_id, nombre_concepto, monto } = req.body;
+        const estudianteId = Number(req.body.estudiante_id);
+        const concepto = String(req.body.nombre_concepto || "").trim().toUpperCase();
+        const monto = toPositiveNumber(req.body.monto);
+
+        if (!Number.isInteger(estudianteId) || estudianteId <= 0 || !concepto || !monto) {
+            return res.status(400).json({ error: "Datos de cargo extra invalidos" });
+        }
+
         try {
             await db.query(
-                "INSERT INTO cargos_estudiante (estudiante_id, mes_nombre, monto_pendiente, estado, tipo_cargo) VALUES (?, ?, ?, ?, ?)",
-                [estudiante_id, nombre_concepto.toUpperCase(), monto, 'PENDIENTE', 'OTROS']
+                `INSERT INTO cargos_estudiante
+                 (estudiante_id, mes_nombre, monto_pendiente, estado, tipo_cargo)
+                 VALUES (?, ?, ?, 'PENDIENTE', 'OTROS')`,
+                [estudianteId, concepto, monto]
             );
-            res.json({ success: true, message: "Cargo extra registrado ✅" });
+            return res.json({ success: true, message: "Cargo extra registrado" });
         } catch (err) {
-            res.status(500).json({ error: "Error al agregar el concepto extra" });
+            console.error("ERROR AGREGAR_EXTRA:", err.message);
+            return res.status(500).json({ error: "Error al agregar el concepto extra" });
         }
     }
 };
