@@ -531,6 +531,13 @@ router.put("/materias/:id", authRequired, onlyAdmin, async (req, res) => {
       return res.status(404).json({ error: "Materia no encontrada" });
     }
 
+    if (estado === "INACTIVO") {
+      await db.query(
+        `UPDATE asignaciones_docente SET estado = 'INACTIVO' WHERE materia_id = ?`,
+        [id]
+      );
+    }
+
     return res.json({
       success: true,
       message: "Materia actualizada correctamente",
@@ -565,6 +572,10 @@ router.delete("/materias/:id", authRequired, onlyAdmin, async (req, res) => {
       if (result.affectedRows === 0) {
         return res.status(404).json({ error: "Materia no encontrada" });
       }
+      await db.query(
+        `UPDATE asignaciones_docente SET estado = 'INACTIVO' WHERE materia_id = ?`,
+        [id]
+      );
       return res.json({
         success: true,
         message: "La materia tiene historial vinculado; se marco como INACTIVA",

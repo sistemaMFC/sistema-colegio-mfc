@@ -173,11 +173,7 @@ router.get('/asignaciones', authRequired, adminOProfesor, async (req, res) => {
     try {
         const { curso_id, paralelo_id, periodo_id } = req.query;
         const params = [];
-        let where = `WHERE ad.estado = "ACTIVO"
-                       AND m.estado = "ACTIVO"
-                       AND c.estado = "ACTIVO"
-                       AND p.estado = "ACTIVO"
-                       AND d.estado = "ACTIVO"`;
+        let where = `WHERE ad.estado = 'ACTIVO'`;
         if (periodo_id) { where += ' AND ad.periodo_id = ?';  params.push(periodo_id); }
         if (curso_id)   { where += ' AND ad.curso_id = ?';    params.push(curso_id); }
         if (paralelo_id){ where += ' AND ad.paralelo_id = ?'; params.push(paralelo_id); }

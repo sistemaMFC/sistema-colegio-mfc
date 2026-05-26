@@ -52,7 +52,6 @@ router.get('/mi-docente', authRequired, soloDocente, async (req, res) => {
                      JOIN cursos    c ON c.id = ad.curso_id
                      JOIN paralelos p ON p.id = ad.paralelo_id
                      WHERE ad.docente_id = ? AND ad.periodo_id = ? AND ad.estado = 'ACTIVO'
-                       AND m.estado = 'ACTIVO' AND c.estado = 'ACTIVO' AND p.estado = 'ACTIVO'
                      ORDER BY c.nombre, m.nombre`,
                     [docente.id, periodoId]
                 );
