@@ -99,6 +99,76 @@ router.get('/mi-docente', authRequired, soloDocente, async (req, res) => {
 });
 
 /* ── GET /api/profesor/perfil ── */
+router.get('/tutor-estudiantes', authRequired, soloDocente, async (req, res) => {
+    try {
+        const usuarioId = req.user.id;
+        const [periodo] = await pool.query(
+            `SELECT id FROM periodos_lectivos WHERE estado = 'ACTIVO' LIMIT 1`
+        );
+        const periodoId = periodo[0]?.id;
+        if (!periodoId) return res.json({ cursos: [] });
+
+        const [rows] = await pool.query(
+            `SELECT t.id AS tutoria_id, t.curso_id, t.paralelo_id,
+                    c.nombre AS curso, p.nombre AS paralelo,
+                    m.id AS matricula_id, m.estado AS matricula_estado,
+                    e.id AS estudiante_id, e.cedula_est, e.nombres_est, e.apellidos_est,
+                    e.genero, e.fecha_nac, e.nombre_rep, e.cedula_rep, e.telefono_rep
+             FROM tutorias t
+             JOIN cursos c ON c.id = t.curso_id
+             JOIN paralelos p ON p.id = t.paralelo_id
+             LEFT JOIN matriculas m
+                    ON m.curso_id = t.curso_id
+                   AND m.paralelo_id = t.paralelo_id
+                   AND m.periodo_id = t.periodo_id
+                   AND m.estado IN ('ACTIVO','MATRICULADO')
+             LEFT JOIN estudiantes e ON e.id = m.estudiante_id
+             WHERE t.docente_usuario_id = ?
+               AND t.periodo_id = ?
+               AND t.estado = 'ACTIVO'
+             ORDER BY c.nombre ASC, p.nombre ASC, e.apellidos_est ASC, e.nombres_est ASC`,
+            [usuarioId, periodoId]
+        );
+
+        const cursos = [];
+        const porTutoria = new Map();
+        rows.forEach(row => {
+            if (!porTutoria.has(row.tutoria_id)) {
+                const curso = {
+                    tutoria_id: row.tutoria_id,
+                    curso_id: row.curso_id,
+                    paralelo_id: row.paralelo_id,
+                    curso: row.curso,
+                    paralelo: row.paralelo,
+                    estudiantes: [],
+                };
+                porTutoria.set(row.tutoria_id, curso);
+                cursos.push(curso);
+            }
+
+            if (row.estudiante_id) {
+                porTutoria.get(row.tutoria_id).estudiantes.push({
+                    matricula_id: row.matricula_id,
+                    estudiante_id: row.estudiante_id,
+                    cedula_est: row.cedula_est,
+                    nombres_est: row.nombres_est,
+                    apellidos_est: row.apellidos_est,
+                    genero: row.genero,
+                    fecha_nac: row.fecha_nac,
+                    nombre_rep: row.nombre_rep,
+                    cedula_rep: row.cedula_rep,
+                    telefono_rep: row.telefono_rep,
+                });
+            }
+        });
+
+        res.json({ cursos });
+    } catch (err) {
+        console.error('Error tutor-estudiantes:', err);
+        res.status(500).json({ error: 'Error al cargar estudiantes de tutoria' });
+    }
+});
+
 router.get('/perfil', authRequired, async (req, res) => {
     try {
         const [rows] = await pool.query(

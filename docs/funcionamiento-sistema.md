@@ -79,11 +79,14 @@ Funcionamiento:
 - Carga alumnos y notas con `GET /api/academico/notas`.
 - Guarda notas con `POST /api/academico/notas`.
 - Permite editar perfil propio y cambiar contrasena.
+- Permite cargar foto de perfil local para mostrarla en la barra superior y modal de perfil.
+- Si el profesor es tutor, carga sus cursos con `GET /api/profesor/tutor-estudiantes`.
 
 Regla importante:
 
 - Un profesor solo debe ver y editar sus propias asignaciones.
 - El backend ya valida esta regla en `backend/src/routes/academico.routes.js`.
+- Un profesor solo ve estudiantes completos de los cursos donde esta registrado como tutor activo.
 
 ## Imagen de marca y responsividad
 
@@ -113,6 +116,8 @@ Regla:
 - Las tablas pueden usar desplazamiento horizontal en pantallas pequenas.
 - Los formularios deben pasar a una sola columna en celular.
 - El menu lateral administrativo debe comportarse como panel deslizable en celular.
+- El panel administrativo y el portal profesor soportan modo claro y modo oscuro usando `mfc_theme` en `localStorage`.
+- Los modales del sistema deben mostrar acciones visibles de `Retroceder` y `Cerrar`.
 
 ## Tablas oficiales
 
@@ -249,6 +254,26 @@ Regla:
   - periodo activo,
   - docente activo,
   - asignacion docente activa.
+
+### Tutorias
+
+Usar:
+
+- `tutorias`
+
+Uso:
+
+- Asignar opcionalmente un profesor tutor a un curso/paralelo/periodo.
+- Permitir que el profesor tutor vea la lista completa de estudiantes de sus cursos.
+
+Reglas:
+
+- La tutoria no es obligatoria.
+- Un curso puede no tener tutor.
+- Un profesor puede ser tutor de un curso, varios cursos o ninguno.
+- El administrador asigna o quita tutores desde la seccion `Cursos`.
+- El tutor se selecciona desde usuarios activos con rol `PROFESOR` o `ADMIN`.
+- Para el periodo activo solo debe haber una tutoria activa por curso/paralelo.
 
 Catalogo oficial de materias por ahora:
 
@@ -442,6 +467,12 @@ Motivo:
 14. Se creo la seccion administrativa `Cursos` para habilitar cursos y asignar materias con profesor por curso/paralelo/periodo.
 15. Se hizo mas resistente la carga de `Cursos`: si falla el listado de asignaciones, no bloquea la carga de cursos, materias, paralelos y profesores.
 16. Se adapto `asignaciones_docente` para soportar bases que usan `profesor_id` en lugar de `docente_id`.
+17. Se agrego asignacion opcional de profesor tutor por curso/paralelo/periodo.
+18. Se agrego `GET /api/profesor/tutor-estudiantes` para que el tutor vea sus estudiantes.
+19. Se agrego acceso directo `Profesor` para administradores sin quitar permisos administrativos.
+20. Se agrego modo claro/oscuro real para panel administrativo y portal profesor.
+21. Se redisenaron estilos de matriculas para una interfaz mas clara, limpia y responsive.
+22. Se agrego foto de perfil local para usuarios y profesores.
 
 ## Procedimiento para continuar
 
@@ -505,6 +536,7 @@ El sistema nuevo debe usar:
 - `trimestres`
 - `tipos_evaluacion`
 - `asignaciones_docente`
+- `tutorias`
 - `calificaciones`
 
 El sistema no debe usar para desarrollo nuevo:

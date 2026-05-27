@@ -25,6 +25,7 @@
     <div class="topbar-right">
       <button class="icon-btn" id="btnThemeToggle" title="Cambiar Tema">🌑</button>
       <span class="pill" id="pillRole">ROL</span>
+      <button class="btn-outline" id="btnProfesorTop" hidden>Profesor</button>
       <button class="btn-outline" id="btnPerfilTop">Mi perfil</button>
       <button class="btn-outline" id="btnLogoutTop">Salir</button>
     </div>
@@ -217,6 +218,46 @@
                 </thead>
                 <tbody>
                   <tr><td colspan="5" class="muted text-center">Cargando asignaciones...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>Profesor tutor</h3>
+            </div>
+            <p class="muted">El tutor es opcional. Un profesor puede ser tutor de uno, varios cursos o ninguno.</p>
+            <form id="formTutoriaCurso" class="form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Curso activo</label>
+                  <select name="curso_id" required></select>
+                </div>
+                <div class="form-group">
+                  <label>Paralelo</label>
+                  <select name="paralelo_id" required></select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Profesor tutor</label>
+                <select name="usuario_id" required></select>
+              </div>
+              <button type="submit" class="btn" style="width:100%;">Asignar tutor</button>
+            </form>
+
+            <div class="table-wrap">
+              <table class="table" id="tblTutoriasCurso">
+                <thead>
+                  <tr>
+                    <th>Curso</th>
+                    <th>Tutor</th>
+                    <th>Estado</th>
+                    <th>Accion</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="4" class="muted text-center">Cargando tutorias...</td></tr>
                 </tbody>
               </table>
             </div>

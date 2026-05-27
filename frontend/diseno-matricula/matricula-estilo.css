@@ -209,3 +209,156 @@ body:not(.light-mode) .badge {
     border-width: 2px !important;
     font-weight: 700 !important;
 }
+
+/* ========================================================
+   REDISENO LIMPIO 2026 - MATRÍCULAS RESPONSIVE
+   ======================================================== */
+
+.grid-cursos-mfc {
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 14px;
+    padding: 14px 0;
+    perspective: none;
+}
+
+.curso-card-mfc {
+    background: var(--panel);
+    border: 1px solid var(--stroke);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: var(--shadow);
+    backdrop-filter: none;
+}
+
+.curso-card-mfc:hover {
+    transform: translateY(-3px);
+    border-color: var(--blue);
+    box-shadow: var(--shadow);
+}
+
+.curso-numero-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: rgba(37, 99, 235, 0.10);
+    color: var(--blue);
+    box-shadow: none;
+    margin-bottom: 14px;
+}
+
+.curso-nombre-mfc {
+    color: var(--txt);
+    font-size: 16px;
+    letter-spacing: 0;
+}
+
+.curso-detalle-mfc {
+    color: var(--muted);
+}
+
+#contenedor-pre-matriculados,
+#contenedor-matriculados-actuales {
+    background: var(--panel) !important;
+    border: 1px solid var(--stroke) !important;
+    border-radius: 16px;
+    padding: 18px !important;
+    margin: 18px 0 !important;
+    box-shadow: var(--shadow);
+    backdrop-filter: none;
+}
+
+.modal-content {
+    background: var(--panel) !important;
+    border-color: var(--stroke) !important;
+    color: var(--txt) !important;
+}
+
+.modal-content .modal-title,
+.modal-content strong {
+    color: var(--txt) !important;
+}
+
+.modal-content small,
+.modal-content .opacity-50 {
+    color: var(--muted) !important;
+    opacity: 1 !important;
+}
+
+.modal-mfc {
+    background: rgba(15, 23, 42, 0.46);
+    backdrop-filter: blur(10px);
+}
+
+body.dark-mode .modal-mfc {
+    background: rgba(2, 6, 23, 0.76);
+}
+
+.modal-content-mfc {
+    background: var(--panel);
+    color: var(--txt);
+    border: 1px solid var(--stroke);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+}
+
+.form-section {
+    background: var(--panel2);
+    border: 1px solid var(--stroke);
+    border-radius: 14px;
+}
+
+.form-section legend {
+    color: var(--blue);
+    letter-spacing: 0;
+}
+
+.form-group label {
+    color: var(--muted);
+}
+
+.form-group input,
+.form-group select {
+    background: var(--panel);
+    color: var(--txt);
+    border: 1px solid var(--stroke);
+    border-radius: 10px;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+body.dark-mode .form-group input,
+body.dark-mode .form-group select {
+    background: var(--panel2) !important;
+    color: var(--txt) !important;
+    border-color: var(--stroke) !important;
+}
+
+@media (max-width: 640px) {
+    .grid-cursos-mfc {
+        grid-template-columns: 1fr;
+        padding: 10px 0;
+    }
+
+    .curso-card-mfc,
+    #contenedor-pre-matriculados,
+    #contenedor-matriculados-actuales {
+        border-radius: 14px;
+        padding: 14px !important;
+    }
+
+    .modal-mfc {
+        padding: 8px;
+        align-items: stretch;
+    }
+
+    .modal-content-mfc {
+        width: 100%;
+        max-height: calc(100vh - 16px);
+        border-radius: 14px;
+        padding: 16px;
+    }
+}

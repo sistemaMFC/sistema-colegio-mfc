@@ -8,6 +8,7 @@ const state = {
     selectedAsignacionId: null,
     selectedTrimestreId: null,
     notasData: null,
+    tutorCursos: [],
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -49,6 +50,33 @@ function escapeHTML(value) {
         .replace(/'/g, "&#039;");
 }
 
+function applyThemeProfesor() {
+    const theme = localStorage.getItem("mfc_theme") || "light";
+    document.body.classList.toggle("dark-mode", theme === "dark");
+    document.body.classList.toggle("light-mode", theme !== "dark");
+}
+
+function getProfilePhotoKey(userId = getStoredUser()?.id || parseJWT(getToken())?.id) {
+    return userId ? `mfc_profile_photo_${userId}` : "mfc_profile_photo";
+}
+
+function getProfilePhoto(userId) {
+    return localStorage.getItem(getProfilePhotoKey(userId));
+}
+
+function setAvatarElement(el, name, photo) {
+    if (!el) return;
+    if (photo) {
+        el.textContent = "";
+        el.style.backgroundImage = `url("${photo}")`;
+        el.style.backgroundSize = "cover";
+        el.style.backgroundPosition = "center";
+    } else {
+        el.style.backgroundImage = "";
+        el.textContent = (name?.[0] || "P").toUpperCase();
+    }
+}
+
 function showAlert(type, message) {
     const el = $("#profAlert");
     if (!el) return;
@@ -74,7 +102,10 @@ function crearModalProfesor(id, titulo, bodyHTML) {
         <div class="card" style="width:min(720px,100%);max-height:92vh;overflow:auto;">
             <div class="card-head">
                 <h3>${escapeHTML(titulo)}</h3>
-                <button class="btn-soft" onclick="cerrarModalProfesor('${id}')">Cerrar</button>
+                <div class="actions-inline">
+                    <button class="btn-soft" onclick="cerrarModalProfesor('${id}')">Retroceder</button>
+                    <button class="btn-soft" onclick="cerrarModalProfesor('${id}')">Cerrar</button>
+                </div>
             </div>
             <div style="padding:14px">${bodyHTML}</div>
         </div>
@@ -144,13 +175,13 @@ function fillUserUI(decoded, profile) {
     $("#profName").textContent = `${nombres} ${apellidos}`.trim();
     $("#profCedula").textContent = `Cedula: ${cedula}`;
     $("#profRole").textContent = rol;
-    $("#profAvatar").textContent = (nombres[0] || "P").toUpperCase();
+    setAvatarElement($("#profAvatar"), nombres, getProfilePhoto(profile?.id || stored.id || decoded?.id));
 }
 
 function renderAssignments() {
     const panel = $("#profAssignments");
 
-    if (!state.docente?.id) {
+    if (!state.docente?.id && !state.asignaciones.length) {
         panel.innerHTML = `<div class="prof-empty">No hay docente activo vinculado a este usuario.</div>`;
         $("#profNotesPanel").innerHTML = `<div class="prof-empty">Contacte al administrador para vincular el usuario con un docente.</div>`;
         return;
@@ -285,6 +316,50 @@ function renderNotas(data) {
     });
 }
 
+function renderTutorCursos() {
+    const panel = $("#profTutorPanel");
+    if (!panel) return;
+
+    if (!state.tutorCursos.length) {
+        panel.innerHTML = `<div class="prof-empty">No tiene cursos asignados como tutor.</div>`;
+        return;
+    }
+
+    panel.innerHTML = state.tutorCursos.map((curso) => `
+        <div class="table-wrap" style="margin-bottom:14px;">
+            <div class="prof-tools" style="border-bottom:0;">
+                <div>
+                    <h3>${escapeHTML(curso.curso)} - Paralelo ${escapeHTML(curso.paralelo)}</h3>
+                    <p class="muted">${curso.estudiantes.length} estudiantes matriculados</p>
+                </div>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Estudiante</th>
+                        <th>Cedula</th>
+                        <th>Representante</th>
+                        <th>Telefono</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${curso.estudiantes.length ? curso.estudiantes.map((est) => `
+                        <tr>
+                            <td>
+                                <strong>${escapeHTML(est.apellidos_est)}, ${escapeHTML(est.nombres_est)}</strong>
+                                <br><small class="muted">Matricula #${escapeHTML(est.matricula_id)}</small>
+                            </td>
+                            <td>${escapeHTML(est.cedula_est || "-")}</td>
+                            <td>${escapeHTML(est.nombre_rep || "-")}<br><small class="muted">${escapeHTML(est.cedula_rep || "")}</small></td>
+                            <td>${escapeHTML(est.telefono_rep || "-")}</td>
+                        </tr>
+                    `).join("") : `<tr><td colspan="4" class="prof-empty">No hay estudiantes matriculados.</td></tr>`}
+                </tbody>
+            </table>
+        </div>
+    `).join("");
+}
+
 async function loadNotas() {
     if (!state.selectedAsignacionId || !state.selectedTrimestreId) return;
 
@@ -339,7 +414,19 @@ async function handleNotaChange(event) {
 async function abrirPerfilProfesor() {
     try {
         const perfil = await api("/auth/me");
+        const fotoActual = getProfilePhoto(perfil.id);
         crearModalProfesor("modalPerfilProfesor", "Mi perfil", `
+            <div class="profile-photo-panel">
+                <div class="avatar avatar-lg" id="perfilFotoProfesorPreview">${fotoActual ? "" : escapeHTML((perfil.nombres?.[0] || "P").toUpperCase())}</div>
+                <div>
+                    <strong>Foto de perfil</strong>
+                    <p class="muted">Se muestra en el portal y en tu perfil de este dispositivo.</p>
+                    <label class="btn-soft" style="display:inline-flex;cursor:pointer;">
+                        Cambiar foto
+                        <input type="file" accept="image/*" style="display:none" onchange="guardarFotoPerfilProfesor(this)">
+                    </label>
+                </div>
+            </div>
             <div class="prof-grid" style="grid-template-columns:1fr 1fr">
                 <form class="form" onsubmit="guardarPerfilProfesor(event)">
                     <div class="form-row">
@@ -375,9 +462,28 @@ async function abrirPerfilProfesor() {
                 </form>
             </div>
         `);
+        setAvatarElement($("#perfilFotoProfesorPreview"), perfil.nombres, fotoActual);
     } catch (err) {
         showAlert("bad", err.message || "No se pudo cargar el perfil.");
     }
+}
+
+function guardarFotoPerfilProfesor(input) {
+    const file = input.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/") || file.size > 2 * 1024 * 1024) {
+        showAlert("bad", "Seleccione una imagen valida menor a 2 MB.");
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+        localStorage.setItem(getProfilePhotoKey(), reader.result);
+        const stored = getStoredUser();
+        setAvatarElement($("#profAvatar"), stored?.nombres, reader.result);
+        setAvatarElement($("#perfilFotoProfesorPreview"), stored?.nombres, reader.result);
+        showAlert("ok", "Foto actualizada.");
+    };
+    reader.readAsDataURL(file);
 }
 
 async function guardarPerfilProfesor(event) {
@@ -420,6 +526,7 @@ async function guardarPasswordProfesor(event) {
 }
 
 async function init() {
+    applyThemeProfesor();
     const decoded = requireSession();
     if (!decoded) return;
 
@@ -446,6 +553,13 @@ async function init() {
         fillUserUI(decoded, profile);
         renderAssignments();
         renderTrimSelect();
+        try {
+            const tutorData = await api("/api/profesor/tutor-estudiantes");
+            state.tutorCursos = tutorData.cursos || [];
+            renderTutorCursos();
+        } catch (err) {
+            $("#profTutorPanel").innerHTML = `<div class="prof-empty">${escapeHTML(err.message)}</div>`;
+        }
 
         if (state.asignaciones.length) {
             await selectAsignacion(Number(state.asignaciones[0].id));
@@ -460,3 +574,4 @@ document.addEventListener("DOMContentLoaded", init);
 window.cerrarModalProfesor = cerrarModalProfesor;
 window.guardarPerfilProfesor = guardarPerfilProfesor;
 window.guardarPasswordProfesor = guardarPasswordProfesor;
+window.guardarFotoPerfilProfesor = guardarFotoPerfilProfesor;

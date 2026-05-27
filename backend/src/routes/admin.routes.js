@@ -658,6 +658,10 @@ router.put("/cursos/:id/estado", authRequired, onlyAdmin, async (req, res) => {
         `UPDATE asignaciones_docente SET estado = 'INACTIVO' WHERE curso_id = ?`,
         [id]
       );
+      await db.query(
+        `UPDATE tutorias SET estado = 'INACTIVO' WHERE curso_id = ?`,
+        [id]
+      ).catch(() => null);
     }
 
     return res.json({ success: true, message: `Curso ${estado}`, id: Number(id), estado });
@@ -888,6 +892,126 @@ router.delete("/asignaciones-docente/:id", authRequired, onlyAdmin, async (req, 
   } catch (err) {
     console.error("Error al quitar asignacion docente:", err);
     return res.status(500).json({ error: "Error al quitar asignacion" });
+  }
+});
+
+/**
+ * 18. GET /api/admin/tutorias
+ * (SOLO ADMIN) Lista los profesores tutores por curso/paralelo/periodo.
+ */
+router.get("/tutorias", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const { curso_id, paralelo_id, periodo_id } = req.query;
+    const periodoFinal = periodo_id || await obtenerPeriodoActivoId();
+    const cursosCols = await obtenerColumnasTabla("cursos");
+    const orderCurso = cursosCols.has("orden") ? "c.orden ASC, c.nombre ASC" : "c.nombre ASC";
+    const params = [];
+    let where = "WHERE t.estado = 'ACTIVO'";
+
+    if (curso_id) { where += " AND t.curso_id = ?"; params.push(curso_id); }
+    if (paralelo_id) { where += " AND t.paralelo_id = ?"; params.push(paralelo_id); }
+    if (periodoFinal) { where += " AND t.periodo_id = ?"; params.push(periodoFinal); }
+
+    const [rows] = await db.query(
+      `SELECT t.id, t.docente_usuario_id AS usuario_id, t.curso_id, t.paralelo_id,
+              t.periodo_id, t.estado,
+              c.nombre AS curso, p.nombre AS paralelo,
+              u.nombres AS tutor_nombres, u.apellidos AS tutor_apellidos, u.rol AS tutor_rol
+       FROM tutorias t
+       JOIN cursos c ON c.id = t.curso_id
+       JOIN paralelos p ON p.id = t.paralelo_id
+       JOIN usuarios u ON u.id = t.docente_usuario_id
+       ${where}
+       ORDER BY ${orderCurso}, p.nombre ASC, u.apellidos ASC`,
+      params
+    );
+
+    return res.json(rows || []);
+  } catch (err) {
+    console.error("Error al listar tutorias:", err);
+    return res.status(500).json({ error: "Error al obtener tutorias" });
+  }
+});
+
+/**
+ * 19. POST /api/admin/tutorias
+ * (SOLO ADMIN) Asigna o cambia el tutor opcional de un curso/paralelo.
+ */
+router.post("/tutorias", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const { usuario_id, curso_id, paralelo_id, periodo_id } = req.body;
+    const periodoFinal = periodo_id || await obtenerPeriodoActivoId();
+
+    if (!usuario_id || !curso_id || !paralelo_id || !periodoFinal) {
+      return res.status(400).json({ error: "Faltan datos para asignar tutor" });
+    }
+
+    const [[usuario], [curso], [paralelo]] = await Promise.all([
+      db.query(`SELECT id, rol FROM usuarios WHERE id = ? AND estado = 'ACTIVO' AND rol IN ('PROFESOR','ADMIN') LIMIT 1`, [usuario_id]),
+      db.query(`SELECT id FROM cursos WHERE id = ? AND estado = 'ACTIVO' LIMIT 1`, [curso_id]),
+      db.query(`SELECT id FROM paralelos WHERE id = ? AND estado = 'ACTIVO' LIMIT 1`, [paralelo_id]),
+    ]);
+
+    if (!usuario.length) return res.status(400).json({ error: "Seleccione un profesor activo" });
+    if (!curso.length) return res.status(400).json({ error: "El curso no esta activo" });
+    if (!paralelo.length) return res.status(400).json({ error: "El paralelo no esta activo" });
+
+    await asegurarDocenteDesdeUsuario(usuario_id);
+
+    await db.query(
+      `UPDATE tutorias
+       SET estado = 'INACTIVO'
+       WHERE curso_id = ? AND paralelo_id = ? AND periodo_id = ? AND estado = 'ACTIVO'`,
+      [curso_id, paralelo_id, periodoFinal]
+    );
+
+    const [previa] = await db.query(
+      `SELECT id FROM tutorias
+       WHERE curso_id = ? AND paralelo_id = ? AND periodo_id = ? AND docente_usuario_id = ?
+       LIMIT 1`,
+      [curso_id, paralelo_id, periodoFinal, usuario_id]
+    );
+
+    if (previa.length) {
+      await db.query(
+        `UPDATE tutorias SET estado = 'ACTIVO' WHERE id = ?`,
+        [previa[0].id]
+      );
+      return res.json({ success: true, id: previa[0].id, message: "Tutor actualizado" });
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO tutorias (docente_usuario_id, curso_id, paralelo_id, periodo_id, estado)
+       VALUES (?, ?, ?, ?, 'ACTIVO')`,
+      [usuario_id, curso_id, paralelo_id, periodoFinal]
+    );
+
+    return res.status(201).json({ success: true, id: result.insertId, message: "Tutor asignado" });
+  } catch (err) {
+    console.error("Error al asignar tutoria:", err);
+    return res.status(500).json({ error: err.message || "Error al asignar tutor" });
+  }
+});
+
+/**
+ * 20. DELETE /api/admin/tutorias/:id
+ * (SOLO ADMIN) Quita el tutor de un curso/paralelo.
+ */
+router.delete("/tutorias/:id", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const [result] = await db.query(
+      `UPDATE tutorias SET estado = 'INACTIVO' WHERE id = ?`,
+      [req.params.id]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ error: "Tutoria no encontrada" });
+    }
+
+    return res.json({ success: true, message: "Tutor quitado del curso" });
+  } catch (err) {
+    console.error("Error al quitar tutoria:", err);
+    return res.status(500).json({ error: "Error al quitar tutor" });
   }
 });
 

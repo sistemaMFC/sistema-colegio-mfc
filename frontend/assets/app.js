@@ -53,6 +53,27 @@ function currentUserIsAdmin() {
     return getCurrentRole() === "ADMIN";
 }
 
+function getProfilePhotoKey(userId = getUser()?.id || parseJWT(getToken())?.id) {
+    return userId ? `mfc_profile_photo_${userId}` : "mfc_profile_photo";
+}
+
+function getProfilePhoto(userId) {
+    return localStorage.getItem(getProfilePhotoKey(userId));
+}
+
+function setAvatarElement(el, name, photo) {
+    if (!el) return;
+    if (photo) {
+        el.textContent = "";
+        el.style.backgroundImage = `url("${photo}")`;
+        el.style.backgroundSize = "cover";
+        el.style.backgroundPosition = "center";
+    } else {
+        el.style.backgroundImage = "";
+        el.textContent = (name?.[0] || "A").toUpperCase();
+    }
+}
+
 /* =========================
     LÓGICA DE TEMAS (FIJO LIGHT)
 ========================= */
@@ -73,6 +94,25 @@ function initTheme() {
 /* =========================
     COMUNICACIÓN CON API
 ========================= */
+
+function initThemeV2() {
+    const btnTheme = $("#btnThemeToggle");
+    const stored = localStorage.getItem("mfc_theme") || "light";
+
+    function apply(theme) {
+        document.body.classList.toggle("dark-mode", theme === "dark");
+        document.body.classList.toggle("light-mode", theme !== "dark");
+        localStorage.setItem("mfc_theme", theme);
+        if (btnTheme) btnTheme.textContent = theme === "dark" ? "☀" : "☾";
+    }
+
+    apply(stored);
+    btnTheme?.addEventListener("click", () => {
+        const next = document.body.classList.contains("dark-mode") ? "light" : "dark";
+        apply(next);
+        showAlert("ok", next === "dark" ? "Modo oscuro activado" : "Modo claro activado");
+    });
+}
 
 async function api(path, options = {}) {
     const token = getToken();
@@ -189,7 +229,9 @@ function fillUserUI() {
 
     if($("#userName")) $("#userName").textContent = `${nombres} ${apellidos}`.trim();
     if($("#userCedula")) $("#userCedula").textContent = `Cédula: ${cedula}`;
-    if($("#avatar")) $("#avatar").textContent = (nombres?.[0] || "A").toUpperCase();
+    setAvatarElement($("#avatar"), nombres, getProfilePhoto(user?.id || decoded.id));
+    const btnProfesor = $("#btnProfesorTop");
+    if (btnProfesor) btnProfesor.hidden = decoded.rol !== "ADMIN";
 }
 
 function setActiveView(view) {
@@ -349,7 +391,10 @@ function crearOverlaySistema(id, titulo, bodyHTML) {
         <div class="card" style="width:min(720px,100%);max-height:92vh;overflow:auto;">
             <div class="card-head">
                 <h3>${escapeHTML(titulo)}</h3>
-                <button class="btn-soft" onclick="cerrarModalSistema('${id}')">Cerrar</button>
+                <div class="actions-inline">
+                    <button class="btn-soft" onclick="cerrarModalSistema('${id}')">Retroceder</button>
+                    <button class="btn-soft" onclick="cerrarModalSistema('${id}')">Cerrar</button>
+                </div>
             </div>
             <div style="padding:14px">${bodyHTML}</div>
         </div>
@@ -360,7 +405,19 @@ function crearOverlaySistema(id, titulo, bodyHTML) {
 async function abrirModalPerfil() {
     try {
         const perfil = await api("/auth/me");
+        const fotoActual = getProfilePhoto(perfil.id);
         crearOverlaySistema("modalPerfilUsuario", "Mi perfil", `
+            <div class="profile-photo-panel">
+                <div class="avatar avatar-lg" id="perfilFotoPreview">${fotoActual ? "" : escapeHTML((perfil.nombres?.[0] || "U").toUpperCase())}</div>
+                <div>
+                    <strong>Foto de perfil</strong>
+                    <p class="muted">Se usa en la barra superior y en tu perfil de este dispositivo.</p>
+                    <label class="btn-soft" style="display:inline-flex;cursor:pointer;">
+                        Cambiar foto
+                        <input type="file" accept="image/*" style="display:none" onchange="guardarFotoPerfil(this)">
+                    </label>
+                </div>
+            </div>
             <div class="grid-2">
                 <form class="form" onsubmit="guardarMiPerfil(event)">
                     <div class="form-row">
@@ -396,9 +453,33 @@ async function abrirModalPerfil() {
                 </form>
             </div>
         `);
+        setAvatarElement($("#perfilFotoPreview"), perfil.nombres, fotoActual);
     } catch (err) {
         showAlert("bad", err.message);
     }
+}
+
+function guardarFotoPerfil(input) {
+    const file = input.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+        showAlert("bad", "Seleccione una imagen valida");
+        return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+        showAlert("bad", "La foto no debe superar 2 MB");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        localStorage.setItem(getProfilePhotoKey(), reader.result);
+        const user = getUser();
+        setAvatarElement($("#avatar"), user?.nombres, reader.result);
+        setAvatarElement($("#perfilFotoPreview"), user?.nombres, reader.result);
+        showAlert("ok", "Foto actualizada");
+    };
+    reader.readAsDataURL(file);
 }
 
 async function guardarMiPerfil(event) {
@@ -686,6 +767,7 @@ let paralelosAdminCache = [];
 let materiasAdminCache = [];
 let docentesAdminCache = [];
 let asignacionesAdminCache = [];
+let tutoriasAdminCache = [];
 let periodoAdminActivo = null;
 
 function llenarSelect(select, rows, getValue, getLabel, emptyLabel = "Seleccione") {
@@ -702,8 +784,10 @@ function llenarSelect(select, rows, getValue, getLabel, emptyLabel = "Seleccione
 async function cargarCursosAdmin() {
     const tbodyCursos = $("#tblCursosAdmin tbody");
     const tbodyAsignaciones = $("#tblAsignacionesCurso tbody");
+    const tbodyTutorias = $("#tblTutoriasCurso tbody");
     if (tbodyCursos) tbodyCursos.innerHTML = `<tr><td colspan="5" class="text-center">Cargando cursos...</td></tr>`;
     if (tbodyAsignaciones) tbodyAsignaciones.innerHTML = `<tr><td colspan="5" class="text-center">Cargando asignaciones...</td></tr>`;
+    if (tbodyTutorias) tbodyTutorias.innerHTML = `<tr><td colspan="4" class="text-center">Cargando tutorias...</td></tr>`;
 
     try {
         const results = await Promise.allSettled([
@@ -713,9 +797,10 @@ async function cargarCursosAdmin() {
             api("/api/admin/docentes-candidatos"),
             api("/api/academico/periodo-activo"),
             api("/api/admin/asignaciones-docente"),
+            api("/api/admin/tutorias"),
         ]);
 
-        const [cursosRes, cpRes, materiasRes, docentesRes, periodoRes, asignacionesRes] = results;
+        const [cursosRes, cpRes, materiasRes, docentesRes, periodoRes, asignacionesRes, tutoriasRes] = results;
         const erroresCriticos = [cursosRes, cpRes, materiasRes, docentesRes, periodoRes]
             .filter(item => item.status === "rejected");
         if (erroresCriticos.length) {
@@ -726,6 +811,9 @@ async function cargarCursosAdmin() {
             console.warn("No se pudieron cargar asignaciones docentes:", asignacionesRes.reason);
             showAlert("bad", "Cursos cargados, pero no se pudo listar asignaciones docentes.");
         }
+        if (tutoriasRes.status === "rejected") {
+            console.warn("No se pudieron cargar tutorias:", tutoriasRes.reason);
+        }
 
         const cursos = cursosRes.value;
         const cp = cpRes.value;
@@ -733,6 +821,7 @@ async function cargarCursosAdmin() {
         const docentes = docentesRes.value;
         const periodo = periodoRes.value;
         const asignaciones = asignacionesRes.status === "fulfilled" ? asignacionesRes.value : [];
+        const tutorias = tutoriasRes.status === "fulfilled" ? tutoriasRes.value : [];
 
         cursosAdminCache = cursos || [];
         paralelosAdminCache = cp.paralelos || [];
@@ -740,14 +829,17 @@ async function cargarCursosAdmin() {
         docentesAdminCache = docentes || [];
         periodoAdminActivo = periodo;
         asignacionesAdminCache = asignaciones || [];
+        tutoriasAdminCache = tutorias || [];
 
         renderCursosAdmin();
         llenarFormularioAsignacionCurso();
         renderAsignacionesCurso();
+        renderTutoriasCurso();
     } catch (err) {
         console.error("Error al cargar administracion de cursos:", err);
         if (tbodyCursos) tbodyCursos.innerHTML = `<tr><td colspan="5" class="text-center text-danger">No se pudo cargar cursos</td></tr>`;
         if (tbodyAsignaciones) tbodyAsignaciones.innerHTML = `<tr><td colspan="5" class="text-center text-danger">No se pudo cargar asignaciones</td></tr>`;
+        if (tbodyTutorias) tbodyTutorias.innerHTML = `<tr><td colspan="4" class="text-center text-danger">No se pudo cargar tutorias</td></tr>`;
         showAlert("bad", err.message);
     }
 }
@@ -783,12 +875,21 @@ function renderCursosAdmin() {
 
 function llenarFormularioAsignacionCurso() {
     const form = $("#formAsignacionCurso");
-    if (!form) return;
+    const formTutoria = $("#formTutoriaCurso");
+    const cursosActivos = cursosAdminCache.filter(c => c.estado === "ACTIVO");
 
-    llenarSelect(form.curso_id, cursosAdminCache.filter(c => c.estado === "ACTIVO"), c => c.id, c => c.nombre, "Seleccione curso");
-    llenarSelect(form.paralelo_id, paralelosAdminCache, p => p.id, p => `Paralelo ${p.nombre}`, "Seleccione paralelo");
-    llenarSelect(form.materia_id, materiasAdminCache, m => m.id, m => `${m.codigo} - ${m.nombre}`, "Seleccione materia");
-    llenarSelect(form.usuario_id, docentesAdminCache, d => d.usuario_id, d => `${d.apellidos} ${d.nombres} (${d.rol})`, "Seleccione profesor");
+    if (form) {
+        llenarSelect(form.curso_id, cursosActivos, c => c.id, c => c.nombre, "Seleccione curso");
+        llenarSelect(form.paralelo_id, paralelosAdminCache, p => p.id, p => `Paralelo ${p.nombre}`, "Seleccione paralelo");
+        llenarSelect(form.materia_id, materiasAdminCache, m => m.id, m => `${m.codigo} - ${m.nombre}`, "Seleccione materia");
+        llenarSelect(form.usuario_id, docentesAdminCache, d => d.usuario_id, d => `${d.apellidos} ${d.nombres} (${d.rol})`, "Seleccione profesor");
+    }
+
+    if (formTutoria) {
+        llenarSelect(formTutoria.curso_id, cursosActivos, c => c.id, c => c.nombre, "Seleccione curso");
+        llenarSelect(formTutoria.paralelo_id, paralelosAdminCache, p => p.id, p => `Paralelo ${p.nombre}`, "Seleccione paralelo");
+        llenarSelect(formTutoria.usuario_id, docentesAdminCache, d => d.usuario_id, d => `${d.apellidos} ${d.nombres} (${d.rol})`, "Seleccione tutor");
+    }
 }
 
 function renderAsignacionesCurso() {
@@ -815,6 +916,29 @@ function renderAsignacionesCurso() {
                         ? `<button class="btn-soft" style="padding:6px 9px;font-size:12px" onclick="quitarAsignacionCurso(${asig.id})">Quitar</button>`
                         : `<span class="muted">Inactiva</span>`}
                 </td>
+            </tr>
+        `;
+    });
+}
+
+function renderTutoriasCurso() {
+    const tbody = $("#tblTutoriasCurso tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    if (!tutoriasAdminCache.length) {
+        tbody.innerHTML = `<tr><td colspan="4" class="muted text-center">No hay tutores asignados</td></tr>`;
+        return;
+    }
+
+    tutoriasAdminCache.forEach(tutoria => {
+        const tutor = `${tutoria.tutor_apellidos || ""} ${tutoria.tutor_nombres || ""}`.trim();
+        tbody.innerHTML += `
+            <tr>
+                <td>${escapeHTML(tutoria.curso)} / ${escapeHTML(tutoria.paralelo)}</td>
+                <td>${escapeHTML(tutor || "-")}<br><small class="muted">${escapeHTML(tutoria.tutor_rol || "")}</small></td>
+                <td><span class="badge ok">${escapeHTML(tutoria.estado || "ACTIVO")}</span></td>
+                <td><button class="btn-soft" style="padding:6px 9px;font-size:12px" onclick="quitarTutoriaCurso(${tutoria.id})">Quitar</button></td>
             </tr>
         `;
     });
@@ -863,6 +987,36 @@ async function quitarAsignacionCurso(id) {
     }
 }
 
+async function guardarTutoriaCurso(form) {
+    const payload = {
+        curso_id: form.curso_id.value,
+        paralelo_id: form.paralelo_id.value,
+        usuario_id: form.usuario_id.value,
+        periodo_id: periodoAdminActivo?.id,
+    };
+
+    try {
+        await api("/api/admin/tutorias", { method: "POST", body: payload });
+        showAlert("ok", "Tutor asignado al curso");
+        form.reset();
+        await cargarCursosAdmin();
+    } catch (err) {
+        showAlert("bad", err.message);
+    }
+}
+
+async function quitarTutoriaCurso(id) {
+    if (!confirm("Quitar el tutor de este curso?")) return;
+
+    try {
+        await api(`/api/admin/tutorias/${id}`, { method: "DELETE" });
+        showAlert("ok", "Tutor quitado");
+        await cargarCursosAdmin();
+    } catch (err) {
+        showAlert("bad", err.message);
+    }
+}
+
 function setupInteractions() {
     if($("#year")) $("#year").textContent = new Date().getFullYear();
 
@@ -880,6 +1034,9 @@ function setupInteractions() {
     $("#btnLogoutSide")?.addEventListener("click", logout);
     $("#btnLogoutTop")?.addEventListener("click", logout);
     $("#btnPerfilTop")?.addEventListener("click", abrirModalPerfil);
+    $("#btnProfesorTop")?.addEventListener("click", () => {
+        window.location.href = "./profesor-academico.html";
+    });
 
     $$("[data-toggle-pass]").forEach(btn => {
         btn.addEventListener("click", () => {
@@ -915,6 +1072,14 @@ function setupInteractions() {
         });
     }
 
+    const formTutoriaCurso = $("#formTutoriaCurso");
+    if (formTutoriaCurso) {
+        formTutoriaCurso.addEventListener("submit", (e) => {
+            e.preventDefault();
+            guardarTutoriaCurso(e.target);
+        });
+    }
+
     $("#btnCargarUsuarios")?.addEventListener("click", cargarUsuarios);
     $("#btnCargarMaterias")?.addEventListener("click", cargarMaterias);
     $("#btnSeedMateriasOficiales")?.addEventListener("click", cargarMateriasOficiales);
@@ -926,6 +1091,7 @@ window.cargarUsuarios = cargarUsuarios;
 window.abrirModalPerfil = abrirModalPerfil;
 window.guardarMiPerfil = guardarMiPerfil;
 window.guardarMiPassword = guardarMiPassword;
+window.guardarFotoPerfil = guardarFotoPerfil;
 window.cerrarModalSistema = cerrarModalSistema;
 window.abrirModalEditarUsuario = abrirModalEditarUsuario;
 window.guardarUsuarioAdmin = guardarUsuarioAdmin;
@@ -937,10 +1103,11 @@ window.quitarMateria = quitarMateria;
 window.cargarCursosAdmin = cargarCursosAdmin;
 window.cambiarEstadoCurso = cambiarEstadoCurso;
 window.quitarAsignacionCurso = quitarAsignacionCurso;
+window.quitarTutoriaCurso = quitarTutoriaCurso;
 
 (function init() {
     fillUserUI();
-    initTheme();
+    initThemeV2();
     setupInteractions();
     setActiveView("dashboard");
 })();
