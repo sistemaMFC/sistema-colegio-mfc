@@ -274,6 +274,131 @@ Reglas:
 - El administrador asigna o quita tutores desde la seccion `Cursos`.
 - El tutor se selecciona desde usuarios activos con rol `PROFESOR` o `ADMIN`.
 - Para el periodo activo solo debe haber una tutoria activa por curso/paralelo.
+- Las tutorias se conectan con lista por curso, asistencia y notas.
+
+### Asistencia por tutor
+
+Pendiente de implementar:
+
+- Crear lista diaria de asistencia por curso/paralelo.
+- Solo el profesor tutor del curso puede tomar asistencia de sus estudiantes.
+- El administrador conserva acceso total para consultar, corregir o auditar.
+
+Tablas propuestas:
+
+- `asistencias`
+- `asistencia_detalle`
+
+Flujo:
+
+1. Administrador asigna tutor al curso/paralelo.
+2. Tutor entra a su portal.
+3. El sistema muestra los cursos donde es tutor.
+4. Tutor abre la lista de asistencia del dia.
+5. Marca presente, ausente, atraso o justificado por estudiante.
+
+### Matriculas y asignacion manual
+
+Decision:
+
+- Los alumnos no deben enviarse automaticamente a un curso/paralelo.
+- La matricula oficial debe permitir escoger manualmente curso y paralelo.
+- Ejemplo: `Inicial 2 A` e `Inicial 2 B` deben recibir estudiantes de forma manual.
+
+Regla:
+
+- La relacion oficial estudiante-curso-paralelo-periodo vive en `matriculas`.
+- `estudiantes.curso_id` queda como dato auxiliar o legado, no como fuente principal del curso oficial.
+
+### Nuevo modelo de notas
+
+El modelo actual con `calificaciones` queda como base temporal.
+
+Modelo academico requerido:
+
+- Trimestre.
+- Parciales dinamicos creados por el profesor o administrador.
+- Insumos por parcial:
+  - Tareas.
+  - Lecciones.
+  - Individual.
+  - Talleres.
+  - Aportes.
+- Examen separado del parcial.
+- Comportamiento separado de notas academicas.
+
+Reglas:
+
+- Los parciales no son fijos.
+- El profesor puede crear la cantidad de parciales que necesite.
+- Cada parcial tiene sus propios insumos.
+- Los insumos del parcial se promedian y generan una nota unica del parcial.
+- El promedio de parciales representa el 70%.
+- El examen representa el porcentaje restante definido por la institucion.
+- El examen no se mezcla con tareas, lecciones, talleres, aportes ni individual.
+
+Tablas propuestas:
+
+- `parciales`
+- `insumos`
+- `calificaciones_insumos`
+- `calificaciones_examenes`
+- `calificaciones_comportamiento`
+
+Colores oficiales de insumos:
+
+- Tareas: azul.
+- Lecciones: naranja.
+- Talleres: verde.
+- Aportes: morado.
+- Individual: celeste.
+
+Nota unica:
+
+- Debe existir nota unica por parcial.
+- Debe existir nota unica por examen.
+- Debe existir nota unica por insumo.
+- Si el docente coloca nota unica `10` en un parcial, el sistema replica ese valor en tareas, lecciones, aportes, talleres e individual.
+- El docente puede editar despues cualquier casillero individual.
+
+Comportamiento:
+
+- 9 y 10: `A`.
+- 7 y 8: `B`.
+- 5 y 6: `C`.
+- Menor a 5: `D`.
+
+Alumnos no matriculados y oyentes:
+
+- Queda planificada una seccion para alumnos no matriculados y alumnos oyentes.
+- Sus notas deben guardarse relacionadas a curso/paralelo aunque aun no exista matricula oficial.
+- Esta funcion no debe mezclarse todavia con `matriculas` hasta crear el modelo correcto.
+
+### Cursos oficiales
+
+Los nombres deben mostrarse de forma profesional:
+
+- Primero de Basica.
+- Segundo de Basica.
+- Tercero de Basica.
+- Cuarto de Basica.
+- Quinto de Basica.
+- Sexto de Basica.
+- Septimo de Basica.
+
+Correccion:
+
+- No usar nombres como `4RO`.
+- Se creo `database/fix-cursos-oficiales.sql` para normalizar nombres de cursos en MySQL.
+
+### Certificados
+
+Correccion visual:
+
+- El logotipo no debe montarse encima del nombre de la institucion.
+- El logotipo se ubica en la zona superior derecha.
+- La foto carnet baja un poco para no superponerse.
+- El certificado debe mantener una composicion limpia, profesional y sin elementos cruzados.
 
 Catalogo oficial de materias por ahora:
 
@@ -473,6 +598,9 @@ Motivo:
 20. Se agrego modo claro/oscuro real para panel administrativo y portal profesor.
 21. Se redisenaron estilos de matriculas para una interfaz mas clara, limpia y responsive.
 22. Se agrego foto de perfil local para usuarios y profesores.
+23. Se documento el nuevo modelo requerido de notas por parciales dinamicos, insumos, examen separado, nota unica y comportamiento.
+24. Se creo `database/fix-cursos-oficiales.sql` para corregir nombres profesionales de cursos.
+25. Se ajusto el certificado para separar el logotipo de la cabecera institucional y bajar la foto carnet.
 
 ## Procedimiento para continuar
 
