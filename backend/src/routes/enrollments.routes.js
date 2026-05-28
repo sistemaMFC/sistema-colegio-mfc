@@ -4,6 +4,13 @@ const { authRequired, onlyAdmin } = require("../middlewares/auth");
 
 const router = express.Router();
 
+async function obtenerPeriodoActivoId() {
+  const [rows] = await pool.query(
+    "SELECT id FROM periodos_lectivos WHERE estado = 'ACTIVO' LIMIT 1"
+  );
+  return rows[0]?.id || null;
+}
+
 /**
  * POST /enrollments
  * (ADMIN) Matricular estudiante + Generación Automática de Cargos (Deudas)
@@ -79,13 +86,102 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
 });
 
 /**
+ * POST /enrollments/asignar-manual
+ * (ADMIN) Ubica manualmente un estudiante en curso/paralelo para el periodo activo.
+ * Si ya tiene matricula en el periodo, la mueve al nuevo paralelo.
+ */
+router.post("/asignar-manual", authRequired, onlyAdmin, async (req, res) => {
+  const connection = await pool.getConnection();
+
+  try {
+    const {
+      estudiante_id,
+      periodo_id,
+      curso_id,
+      paralelo_id,
+      fecha_matricula,
+    } = req.body;
+
+    const periodoFinal = periodo_id || await obtenerPeriodoActivoId();
+    const fechaFinal = fecha_matricula || new Date().toISOString().slice(0, 10);
+
+    if (!estudiante_id || !periodoFinal || !curso_id || !paralelo_id) {
+      return res.status(400).json({ error: "Faltan estudiante, periodo, curso o paralelo" });
+    }
+
+    await connection.beginTransaction();
+
+    const [[estudiante], [curso], [paralelo]] = await Promise.all([
+      connection.query("SELECT id FROM estudiantes WHERE id = ? LIMIT 1", [estudiante_id]),
+      connection.query("SELECT id FROM cursos WHERE id = ? AND estado = 'ACTIVO' LIMIT 1", [curso_id]),
+      connection.query("SELECT id FROM paralelos WHERE id = ? AND estado = 'ACTIVO' LIMIT 1", [paralelo_id]),
+    ]);
+
+    if (!estudiante.length) {
+      await connection.rollback();
+      return res.status(404).json({ error: "Estudiante no encontrado" });
+    }
+    if (!curso.length) {
+      await connection.rollback();
+      return res.status(400).json({ error: "El curso no esta activo" });
+    }
+    if (!paralelo.length) {
+      await connection.rollback();
+      return res.status(400).json({ error: "El paralelo no esta activo" });
+    }
+
+    const [exist] = await connection.query(
+      "SELECT id FROM matriculas WHERE estudiante_id = ? AND periodo_id = ? LIMIT 1",
+      [estudiante_id, periodoFinal]
+    );
+
+    let matriculaId;
+    if (exist.length) {
+      matriculaId = exist[0].id;
+      await connection.query(
+        `UPDATE matriculas
+         SET curso_id = ?, paralelo_id = ?, estado = 'MATRICULADO'
+         WHERE id = ?`,
+        [curso_id, paralelo_id, matriculaId]
+      );
+    } else {
+      const [result] = await connection.query(
+        `INSERT INTO matriculas
+         (estudiante_id, periodo_id, curso_id, paralelo_id, fecha_matricula, estado)
+         VALUES (?, ?, ?, ?, ?, 'MATRICULADO')`,
+        [estudiante_id, periodoFinal, curso_id, paralelo_id, fechaFinal]
+      );
+      matriculaId = result.insertId;
+    }
+
+    await connection.query(
+      "UPDATE estudiantes SET curso_id = ?, estado = 'ACTIVO', fecha_matricula = COALESCE(fecha_matricula, NOW()) WHERE id = ?",
+      [curso_id, estudiante_id]
+    );
+
+    await connection.commit();
+    return res.json({
+      success: true,
+      id: matriculaId,
+      message: "Estudiante asignado al curso y paralelo",
+    });
+  } catch (err) {
+    await connection.rollback();
+    console.error("Error en asignacion manual:", err);
+    return res.status(500).json({ error: "Error al asignar estudiante al paralelo" });
+  } finally {
+    connection.release();
+  }
+});
+
+/**
  * GET /enrollments - Listar matrículas con filtros
  */
 router.get("/", authRequired, async (req, res) => {
   try {
     const { periodo_id, curso_id, paralelo_id, estado } = req.query;
     let sql = `
-      SELECT m.id,
+      SELECT m.id, m.estudiante_id, m.periodo_id, m.curso_id, m.paralelo_id,
              CONCAT(e.apellidos_est, ' ', e.nombres_est) AS estudiante,
              e.cedula_est AS cedula,
              p.nombre AS periodo, c.nombre AS curso, pr.nombre AS paralelo, 

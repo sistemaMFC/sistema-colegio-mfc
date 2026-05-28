@@ -7,6 +7,9 @@
 let cursoActualId = null;
 let cursoActualNombre = "";
 let bsSelectorModal = null; // Instancia del modal de Bootstrap
+let paralelosMatriculaCache = [];
+let periodoMatriculaActivo = null;
+let paraleloAsignacionActual = "";
 let alumnosCursoCache = [];  // Caché para búsqueda rápida y filtrado local
 
 // --- ORDEN LÓGICO PARA VALIDACIÓN ---
@@ -403,3 +406,227 @@ window.cerrarListaActual = cerrarListaActual;
 window.prepararEdicion = prepararEdicion;
 window.anularMatricula = anularMatricula;
 window.confirmarMatriculaPre = confirmarMatriculaPre; 
+
+/* ========================================================
+   ASIGNACION MANUAL OFICIAL POR CURSO Y PARALELO
+   Fuente real: matriculas, no estudiantes.curso_id
+   ======================================================== */
+
+async function prepararAsignacionManualParalelo() {
+    const contenedor = document.getElementById('contenedor-pre-matriculados');
+    if (!contenedor) return;
+
+    if (!paralelosMatriculaCache.length || !periodoMatriculaActivo) {
+        const [cp, periodo] = await Promise.all([
+            api('/api/academico/cursos-paralelos'),
+            api('/api/academico/periodo-activo')
+        ]);
+        paralelosMatriculaCache = cp.paralelos || [];
+        periodoMatriculaActivo = periodo;
+    }
+
+    let panel = document.getElementById('panelAsignacionParalelo');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'panelAsignacionParalelo';
+        panel.className = 'form-row';
+        panel.style.margin = '12px 0';
+        const tableWrap = contenedor.querySelector('.table-wrap');
+        contenedor.insertBefore(panel, tableWrap);
+    }
+
+    if (!paraleloAsignacionActual && paralelosMatriculaCache.length) {
+        paraleloAsignacionActual = paralelosMatriculaCache[0].id;
+    }
+
+    panel.innerHTML = `
+        <div class="form-group">
+            <label>Paralelo destino</label>
+            <select id="selectParaleloAsignacion">
+                ${paralelosMatriculaCache.map(p => `
+                    <option value="${p.id}" ${String(p.id) === String(paraleloAsignacionActual) ? 'selected' : ''}>
+                        Paralelo ${p.nombre}
+                    </option>
+                `).join('')}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Periodo activo</label>
+            <input value="${periodoMatriculaActivo?.nombre || periodoMatriculaActivo?.id || '-'}" disabled>
+        </div>
+    `;
+
+    document.getElementById('selectParaleloAsignacion')?.addEventListener('change', async (event) => {
+        paraleloAsignacionActual = event.target.value;
+        await listarMatriculadosActuales();
+    });
+}
+
+listarPreMatriculados = async function listarPreMatriculadosManual() {
+    if (bsSelectorModal) bsSelectorModal.hide();
+    cerrarListaActual();
+
+    const contenedor = document.getElementById('contenedor-pre-matriculados');
+    const tbody = document.getElementById('listaAlumnosFiltrados');
+    const txtTitulo = document.getElementById('txtCursoLista');
+    if (!contenedor || !tbody) return;
+
+    contenedor.style.display = 'block';
+    txtTitulo.textContent = `Asignar estudiantes: ${cursoActualNombre}`;
+    tbody.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Cargando estudiantes...</td></tr>";
+
+    try {
+        await prepararAsignacionManualParalelo();
+        const periodo = periodoMatriculaActivo || await api('/api/academico/periodo-activo');
+        periodoMatriculaActivo = periodo;
+        const [alumnos, matriculas] = await Promise.all([
+            api('/api/students'),
+            api(`/api/enrollments?periodo_id=${periodo.id}`)
+        ]);
+        const idsMatriculados = new Set((matriculas || []).map(m => Number(m.estudiante_id)));
+        alumnosCursoCache = (alumnos || []).filter(a => !idsMatriculados.has(Number(a.id)));
+        renderizarTablaFiltrada(alumnosCursoCache);
+        contenedor.scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-danger">No se pudo cargar estudiantes.</td></tr>`;
+    }
+};
+
+renderizarTablaFiltrada = function renderizarTablaFiltradaManual(lista) {
+    const tbody = document.getElementById('listaAlumnosFiltrados');
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    if (!lista.length) {
+        tbody.innerHTML = "<tr><td colspan='4' class='muted' style='text-align:center;'>No hay estudiantes pendientes de asignar en este periodo.</td></tr>";
+        return;
+    }
+
+    lista.forEach(est => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${est.cedula_est}</td>
+                <td style="font-weight:bold;text-transform:uppercase;">
+                    ${est.apellidos_est}, ${est.nombres_est}
+                </td>
+                <td><span class="badge warn">${est.estado || 'SIN MATRICULA'}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-success" onclick="asignarAlumnoAParalelo('${est.id}', '${String(est.apellidos_est).replace(/'/g, "\\'")}', '${String(est.nombres_est).replace(/'/g, "\\'")}')">
+                        Asignar al paralelo
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+};
+
+async function asignarAlumnoAParalelo(id, apellidos, nombres) {
+    const paraleloId = document.getElementById('selectParaleloAsignacion')?.value || paraleloAsignacionActual;
+    if (!paraleloId) {
+        alert("Seleccione un paralelo destino.");
+        return;
+    }
+
+    const paraleloNombre = paralelosMatriculaCache.find(p => String(p.id) === String(paraleloId))?.nombre || "";
+    if (!confirm(`Asignar a ${apellidos} ${nombres} en ${cursoActualNombre} paralelo ${paraleloNombre}?`)) return;
+
+    try {
+        const periodo = periodoMatriculaActivo || await api('/api/academico/periodo-activo');
+        periodoMatriculaActivo = periodo;
+        await api('/api/enrollments/asignar-manual', {
+            method: 'POST',
+            body: {
+                estudiante_id: id,
+                periodo_id: periodo.id,
+                curso_id: cursoActualId,
+                paralelo_id: paraleloId,
+                fecha_matricula: new Date().toISOString().slice(0, 10)
+            }
+        });
+
+        alert("Estudiante asignado correctamente.");
+        await listarPreMatriculados();
+        await listarMatriculadosActuales();
+        await renderizarCursos();
+        if (window.actualizarDashboard) window.actualizarDashboard();
+    } catch (err) {
+        alert("Error: " + (err.message || "No se pudo asignar."));
+    }
+}
+
+listarMatriculadosActuales = async function listarMatriculadosActualesManual() {
+    if (bsSelectorModal) bsSelectorModal.hide();
+    cerrarListaPre();
+
+    const contenedor = document.getElementById('contenedor-matriculados-actuales');
+    const tbody = document.getElementById('listaMatriculadosActuales');
+    const txtTitulo = document.getElementById('txtCursoMatriculados');
+    if (!contenedor || !tbody) return;
+
+    contenedor.style.display = 'block';
+    tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Cargando...</td></tr>";
+
+    try {
+        await prepararAsignacionManualParalelo();
+        const paraleloId = document.getElementById('selectParaleloAsignacion')?.value || paraleloAsignacionActual;
+        const paraleloNombre = paralelosMatriculaCache.find(p => String(p.id) === String(paraleloId))?.nombre || "-";
+        const periodo = periodoMatriculaActivo || await api('/api/academico/periodo-activo');
+        periodoMatriculaActivo = periodo;
+        txtTitulo.textContent = `Matriculados: ${cursoActualNombre} - Paralelo ${paraleloNombre}`;
+
+        const inscritos = await api(`/api/enrollments?periodo_id=${periodo.id}&curso_id=${cursoActualId}&paralelo_id=${paraleloId}&estado=MATRICULADO`);
+        tbody.innerHTML = "";
+
+        if (!inscritos.length) {
+            tbody.innerHTML = "<tr><td colspan='5' class='muted' style='text-align:center;'>Sin alumnos en este paralelo.</td></tr>";
+            return;
+        }
+
+        inscritos.forEach(est => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${est.cedula}</td>
+                    <td style="font-weight:bold;text-transform:uppercase;">${est.estudiante}</td>
+                    <td>${est.curso}<br><small class="muted">Paralelo ${est.paralelo}</small></td>
+                    <td><span class="badge ok">${est.estado}</span></td>
+                    <td>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Opciones
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="generarCertificadoMatricula('${est.estudiante_id}', '${cursoActualNombre}')">Certificado</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="prepararEdicion('${est.estudiante_id}')">Editar datos</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="retirarMatricula('${est.id}', '${String(est.estudiante).replace(/'/g, "\\'")}')">Retirar de este paralelo</a></li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        contenedor.scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-danger">Error al cargar matriculados.</td></tr>`;
+    }
+};
+
+async function retirarMatricula(id, nombreCompleto) {
+    if (!confirm(`Retirar a ${nombreCompleto} de este paralelo?`)) return;
+    try {
+        await api(`/api/enrollments/${id}/estado`, {
+            method: 'PUT',
+            body: { estado: 'RETIRADO' }
+        });
+        alert("Estudiante retirado del paralelo.");
+        await listarMatriculadosActuales();
+        await listarPreMatriculados();
+    } catch (err) {
+        alert("Error: " + (err.message || "No se pudo retirar."));
+    }
+}
+
+window.listarPreMatriculados = listarPreMatriculados;
+window.listarMatriculadosActuales = listarMatriculadosActuales;
+window.asignarAlumnoAParalelo = asignarAlumnoAParalelo;
+window.retirarMatricula = retirarMatricula;
