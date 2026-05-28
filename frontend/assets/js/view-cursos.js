@@ -630,3 +630,232 @@ window.listarPreMatriculados = listarPreMatriculados;
 window.listarMatriculadosActuales = listarMatriculadosActuales;
 window.asignarAlumnoAParalelo = asignarAlumnoAParalelo;
 window.retirarMatricula = retirarMatricula;
+
+/* ========================================================
+   CORRECCION FINAL: PREMATRICULA NO ES DISTRIBUCION
+   Distribucion vive en su propio boton y trabaja con matriculas.
+   ======================================================== */
+
+listarPreMatriculados = async function listarPreMatriculadosOriginal() {
+    if (bsSelectorModal) bsSelectorModal.hide();
+    cerrarListaActual();
+    cerrarDistribucion();
+
+    const contenedor = document.getElementById('contenedor-pre-matriculados');
+    const tbody = document.getElementById('listaAlumnosFiltrados');
+    const txtTitulo = document.getElementById('txtCursoLista');
+    const panel = document.getElementById('panelAsignacionParalelo');
+    if (panel) panel.remove();
+
+    if (!contenedor || !tbody) return;
+    contenedor.style.display = 'block';
+    txtTitulo.textContent = `Listado Oficial: ${cursoActualNombre}`;
+    tbody.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Sincronizando...</td></tr>";
+
+    try {
+        const alumnos = await api('/api/students');
+        alumnosCursoCache = alumnos.filter(a => a.curso_id == cursoActualId && a.estado !== 'ACTIVO');
+        renderizarTablaFiltrada(alumnosCursoCache);
+        contenedor.scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+        alert("No se pudo cargar el listado oficial.");
+    }
+};
+
+renderizarTablaFiltrada = function renderizarTablaFiltradaPrematricula(lista) {
+    const tbody = document.getElementById('listaAlumnosFiltrados');
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    if (!lista.length) {
+        tbody.innerHTML = "<tr><td colspan='4' class='muted' style='text-align:center;'>No hay estudiantes pendientes.</td></tr>";
+        return;
+    }
+
+    lista.forEach(est => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${est.cedula_est}</td>
+                <td style="font-weight:bold;text-transform:uppercase;color:var(--green);">
+                    ${est.apellidos_est}, ${est.nombres_est}
+                </td>
+                <td><span class="badge warn">${est.estado}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-success" onclick="confirmarMatriculaPre('${est.id}', '${String(est.apellidos_est).replace(/'/g, "\\'")}', '${String(est.nombres_est).replace(/'/g, "\\'")}')">
+                        Matricular
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+};
+
+function cerrarDistribucion() {
+    const el = document.getElementById('contenedor-distribucion');
+    if (el) el.style.display = 'none';
+}
+
+async function abrirDistribucion() {
+    if (bsSelectorModal) bsSelectorModal.hide();
+    cerrarListaPre();
+    cerrarListaActual();
+
+    const contenedor = document.getElementById('contenedor-distribucion');
+    const tbody = document.getElementById('listaDistribucionEstudiantes');
+    const titulo = document.getElementById('txtCursoDistribucion');
+    const select = document.getElementById('selectParaleloDistribucion');
+    const checkTodos = document.getElementById('checkDistribucionTodos');
+    if (!contenedor || !tbody || !select) return;
+
+    contenedor.style.display = 'block';
+    if (checkTodos) checkTodos.checked = false;
+    titulo.textContent = `Distribucion: ${cursoActualNombre}`;
+    tbody.innerHTML = `<tr><td colspan="5" class="muted text-center">Cargando distribucion...</td></tr>`;
+
+    try {
+        const [cp, periodo] = await Promise.all([
+            api('/api/academico/cursos-paralelos'),
+            api('/api/academico/periodo-activo')
+        ]);
+        paralelosMatriculaCache = cp.paralelos || [];
+        periodoMatriculaActivo = periodo;
+
+        select.innerHTML = paralelosMatriculaCache.map(p => `
+            <option value="${p.id}">Paralelo ${p.nombre}</option>
+        `).join('');
+
+        const estudiantes = await api(`/api/enrollments?periodo_id=${periodo.id}&curso_id=${cursoActualId}`);
+        renderDistribucion(estudiantes || []);
+        contenedor.scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-danger">No se pudo cargar distribucion.</td></tr>`;
+    }
+}
+
+function renderDistribucion(rows) {
+    const tbody = document.getElementById('listaDistribucionEstudiantes');
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="muted text-center">No hay estudiantes matriculados en este curso.</td></tr>`;
+        return;
+    }
+
+    rows.forEach(row => {
+        tbody.innerHTML += `
+            <tr>
+                <td><input type="checkbox" class="check-distribucion" value="${row.id}"></td>
+                <td style="font-weight:800;text-transform:uppercase;">${row.estudiante}</td>
+                <td>${row.cedula}</td>
+                <td>Paralelo ${row.paralelo}</td>
+                <td><span class="badge ok">${row.estado}</span></td>
+            </tr>
+        `;
+    });
+}
+
+listarMatriculadosActuales = async function listarMatriculadosActualesPorCurso() {
+    if (bsSelectorModal) bsSelectorModal.hide();
+    cerrarListaPre();
+    cerrarDistribucion();
+
+    const contenedor = document.getElementById('contenedor-matriculados-actuales');
+    const tbody = document.getElementById('listaMatriculadosActuales');
+    const txtTitulo = document.getElementById('txtCursoMatriculados');
+    if (!contenedor || !tbody) return;
+
+    contenedor.style.display = 'block';
+    txtTitulo.textContent = `Matriculados: ${cursoActualNombre}`;
+    tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Cargando...</td></tr>";
+
+    try {
+        const periodo = periodoMatriculaActivo || await api('/api/academico/periodo-activo');
+        periodoMatriculaActivo = periodo;
+        const inscritos = await api(`/api/enrollments?periodo_id=${periodo.id}&curso_id=${cursoActualId}`);
+        tbody.innerHTML = "";
+
+        if (!inscritos.length) {
+            tbody.innerHTML = "<tr><td colspan='5' class='muted' style='text-align:center;'>Sin alumnos matriculados en este curso.</td></tr>";
+            return;
+        }
+
+        inscritos.forEach(est => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${est.cedula}</td>
+                    <td style="font-weight:bold;text-transform:uppercase;">${est.estudiante}</td>
+                    <td>${est.curso}<br><small class="muted">Paralelo ${est.paralelo}</small></td>
+                    <td><span class="badge ok">${est.estado}</span></td>
+                    <td>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Opciones
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="generarCertificadoMatricula('${est.estudiante_id}', '${cursoActualNombre}')">Certificado</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="prepararEdicion('${est.estudiante_id}')">Editar datos</a></li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        contenedor.scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-danger">Error al cargar matriculados.</td></tr>`;
+    }
+};
+
+function toggleDistribucionTodos(input) {
+    document.querySelectorAll('.check-distribucion').forEach(check => {
+        check.checked = input.checked;
+    });
+}
+
+async function distribuirSeleccionados() {
+    const ids = Array.from(document.querySelectorAll('.check-distribucion:checked')).map(input => Number(input.value));
+    const paraleloId = document.getElementById('selectParaleloDistribucion')?.value;
+    if (!ids.length) {
+        alert("Seleccione al menos un estudiante.");
+        return;
+    }
+    if (!paraleloId) {
+        alert("Seleccione un paralelo destino.");
+        return;
+    }
+
+    const paraleloNombre = paralelosMatriculaCache.find(p => String(p.id) === String(paraleloId))?.nombre || "";
+    if (!confirm(`Mover ${ids.length} estudiante(s) al paralelo ${paraleloNombre}?`)) return;
+
+    try {
+        const periodo = periodoMatriculaActivo || await api('/api/academico/periodo-activo');
+        periodoMatriculaActivo = periodo;
+        await api('/api/enrollments/distribuir', {
+            method: 'POST',
+            body: {
+                matricula_ids: ids,
+                curso_id: cursoActualId,
+                paralelo_id: paraleloId,
+                periodo_id: periodo.id
+            }
+        });
+        alert("Distribucion actualizada.");
+        await abrirDistribucion();
+        await renderizarCursos();
+    } catch (err) {
+        alert("Error: " + (err.message || "No se pudo distribuir."));
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btnDistribucion')?.addEventListener('click', abrirDistribucion);
+});
+
+window.listarPreMatriculados = listarPreMatriculados;
+window.listarMatriculadosActuales = listarMatriculadosActuales;
+window.renderizarTablaFiltrada = renderizarTablaFiltrada;
+window.abrirDistribucion = abrirDistribucion;
+window.cerrarDistribucion = cerrarDistribucion;
+window.toggleDistribucionTodos = toggleDistribucionTodos;
+window.distribuirSeleccionados = distribuirSeleccionados;

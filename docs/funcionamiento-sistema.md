@@ -312,7 +312,10 @@ Regla:
 - La asignacion manual se hace con `POST /api/enrollments/asignar-manual`.
 - Si el estudiante no tiene matricula en el periodo activo, el endpoint la crea.
 - Si el estudiante ya tiene matricula en el periodo activo, el endpoint lo mueve al nuevo curso/paralelo.
-- La pantalla `Matriculas` permite seleccionar paralelo destino y asignar estudiantes pendientes.
+- `Pre-Matriculados` no se usa para distribuir estudiantes; queda reservado para promocion futura al siguiente año lectivo.
+- La pantalla `Matriculas` incluye la opcion `Distribucion` para mover estudiantes ya matriculados entre paralelos.
+- La distribucion en bloque se hace con `POST /api/enrollments/distribuir`.
+- En `Distribucion`, el administrador selecciona estudiantes con checkbox, escoge el paralelo destino y mueve solo los seleccionados.
 - El listado real del profesor se alimenta desde `matriculas`, por eso solo aparecen los alumnos del paralelo asignado.
 
 ### Nuevo modelo de notas
@@ -610,7 +613,8 @@ Motivo:
 27. Se corrigió la carga de estudiantes por tutor usando `celular_rep` como teléfono del representante.
 28. Se agregó una primera lista de asistencia local en el portal profesor para tutores; falta persistirla en tablas oficiales de asistencia.
 29. Se agrego asignacion manual oficial de estudiantes a curso/paralelo con `POST /api/enrollments/asignar-manual`.
-30. La pantalla de matriculas ahora separa estudiantes por paralelo usando `matriculas` como fuente real, para que el profesor vea su lista academica correcta.
+30. La pantalla de matriculas ahora incluye `Distribucion`, separada de `Pre-Matriculados`, para mover estudiantes entre paralelos usando `matriculas` como fuente real.
+31. Se agrego `POST /api/enrollments/distribuir` para mover en bloque matriculas seleccionadas a paralelo A, B, C o D.
 
 ## Procedimiento para continuar
 

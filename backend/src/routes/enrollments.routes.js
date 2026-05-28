@@ -175,6 +175,50 @@ router.post("/asignar-manual", authRequired, onlyAdmin, async (req, res) => {
 });
 
 /**
+ * POST /enrollments/distribuir
+ * (ADMIN) Mueve en bloque matriculas existentes a otro paralelo del mismo curso.
+ */
+router.post("/distribuir", authRequired, onlyAdmin, async (req, res) => {
+  try {
+    const { matricula_ids, curso_id, paralelo_id, periodo_id } = req.body;
+    const periodoFinal = periodo_id || await obtenerPeriodoActivoId();
+
+    if (!Array.isArray(matricula_ids) || !matricula_ids.length || !curso_id || !paralelo_id || !periodoFinal) {
+      return res.status(400).json({ error: "Seleccione estudiantes y paralelo destino" });
+    }
+
+    const ids = matricula_ids.map(Number).filter(Number.isFinite);
+    if (!ids.length) return res.status(400).json({ error: "Lista de matriculas invalida" });
+
+    const [paralelo] = await pool.query(
+      "SELECT id FROM paralelos WHERE id = ? AND estado = 'ACTIVO' LIMIT 1",
+      [paralelo_id]
+    );
+    if (!paralelo.length) return res.status(400).json({ error: "El paralelo no esta activo" });
+
+    const placeholders = ids.map(() => "?").join(",");
+    const [result] = await pool.query(
+      `UPDATE matriculas
+       SET paralelo_id = ?, estado = 'MATRICULADO'
+       WHERE id IN (${placeholders})
+         AND curso_id = ?
+         AND periodo_id = ?
+         AND estado IN ('ACTIVO','MATRICULADO')`,
+      [paralelo_id, ...ids, curso_id, periodoFinal]
+    );
+
+    return res.json({
+      success: true,
+      message: "Distribucion actualizada",
+      moved: result.affectedRows,
+    });
+  } catch (err) {
+    console.error("Error al distribuir matriculas:", err);
+    return res.status(500).json({ error: "Error al distribuir estudiantes" });
+  }
+});
+
+/**
  * GET /enrollments - Listar matrículas con filtros
  */
 router.get("/", authRequired, async (req, res) => {
