@@ -601,6 +601,9 @@ Motivo:
 23. Se documento el nuevo modelo requerido de notas por parciales dinamicos, insumos, examen separado, nota unica y comportamiento.
 24. Se creo `database/fix-cursos-oficiales.sql` para corregir nombres profesionales de cursos.
 25. Se ajusto el certificado para separar el logotipo de la cabecera institucional y bajar la foto carnet.
+26. Se redisenó el portal profesor con pestañas de `Notas` y `Tutorías`, resumen académico, colores por insumo y botones de nota única.
+27. Se corrigió la carga de estudiantes por tutor usando `celular_rep` como teléfono del representante.
+28. Se agregó una primera lista de asistencia local en el portal profesor para tutores; falta persistirla en tablas oficiales de asistencia.
 
 ## Procedimiento para continuar
 

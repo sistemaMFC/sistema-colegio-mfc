@@ -250,6 +250,36 @@ function formatNote(value) {
     return Number.isFinite(number) ? number.toFixed(2) : "-";
 }
 
+function tipoSlug(tipo) {
+    const text = `${tipo?.codigo || ""} ${tipo?.nombre || ""}`.toLowerCase();
+    if (text.includes("examen")) return "examen";
+    if (text.includes("tarea")) return "tareas";
+    if (text.includes("leccion") || text.includes("lección")) return "lecciones";
+    if (text.includes("taller") || text.includes("trabajo grupal")) return "talleres";
+    if (text.includes("aporte")) return "aportes";
+    if (text.includes("individual") || text.includes("actuacion") || text.includes("actuación")) return "individual";
+    return "tareas";
+}
+
+function promptNotaUnica(scope) {
+    const value = prompt("Ingrese nota unica de 0 a 10:");
+    if (value === null) return;
+    const nota = Number(value);
+    if (!Number.isFinite(nota) || nota < 0 || nota > 10) {
+        showAlert("bad", "La nota unica debe estar entre 0 y 10.");
+        return;
+    }
+
+    let selector = "[data-note-input]";
+    if (scope === "parcial") selector = "[data-note-input][data-scope='parcial']";
+    if (scope === "examen") selector = "[data-note-input][data-scope='examen']";
+
+    document.querySelectorAll(selector).forEach(input => {
+        input.value = nota;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+}
+
 function renderNotas(data) {
     const panel = $("#profNotesPanel");
     const alumnos = data.alumnos || [];
@@ -263,29 +293,41 @@ function renderNotas(data) {
     }
 
     panel.innerHTML = `
+        <div class="prof-summary">
+            <div class="prof-stat"><span>Estudiantes</span><strong>${alumnos.length}</strong></div>
+            <div class="prof-stat"><span>Parcial actual</span><strong>1</strong></div>
+            <div class="prof-stat"><span>Insumos</span><strong>${tiposAct.length}</strong></div>
+            <div class="prof-stat"><span>Examen</span><strong>${tipoExamen ? "SI" : "NO"}</strong></div>
+        </div>
+        <div class="prof-subbar">
+            <button class="prof-mini-btn" type="button" onclick="promptNotaUnica('parcial')">Nota unica parcial</button>
+            ${tipoExamen ? `<button class="prof-mini-btn" type="button" onclick="promptNotaUnica('examen')">Nota unica examen</button>` : ""}
+            <button class="prof-mini-btn" type="button" onclick="promptNotaUnica('todo')">Nota unica todo</button>
+        </div>
         <div class="table-wrap">
-            <table class="table">
+            <table class="table prof-grade-table">
                 <thead>
                     <tr>
                         <th>Alumno</th>
-                        ${tiposAct.map((tipo) => `<th>${escapeHTML(tipo.nombre)}</th>`).join("")}
+                        ${tiposAct.map((tipo) => `<th><span class="prof-insumo ${tipoSlug(tipo)}">${escapeHTML(tipo.nombre)}</span></th>`).join("")}
                         <th>Prom. act.</th>
-                        ${tipoExamen ? `<th>${escapeHTML(tipoExamen.nombre)}</th>` : ""}
+                        ${tipoExamen ? `<th><span class="prof-insumo examen">${escapeHTML(tipoExamen.nombre)}</span></th>` : ""}
                         <th>Trimestral</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${alumnos.map((alumno) => `
                         <tr>
-                            <td>
+                            <td class="prof-student-cell">
                                 <strong>${escapeHTML(alumno.apellidos_est)}, ${escapeHTML(alumno.nombres_est)}</strong>
                                 <br><small class="muted">${escapeHTML(alumno.cedula_est)}</small>
                             </td>
                             ${tiposAct.map((tipo) => {
                                 const nota = alumno.notas?.[tipo.id]?.nota ?? "";
+                                const slug = tipoSlug(tipo);
                                 return `
                                     <td>
-                                        <input class="prof-note-input" data-note-input
+                                        <input class="prof-note-input insumo-${slug}" data-note-input data-scope="parcial"
                                             type="number" min="0" max="10" step="0.01"
                                             value="${escapeHTML(nota)}"
                                             data-matricula-id="${escapeHTML(alumno.matricula_id)}"
@@ -296,7 +338,7 @@ function renderNotas(data) {
                             <td><span class="prof-chip ${chipClass(alumno.promedio_actividades)}">${formatNote(alumno.promedio_actividades)}</span></td>
                             ${tipoExamen ? `
                                 <td>
-                                    <input class="prof-note-input" data-note-input
+                                    <input class="prof-note-input insumo-examen" data-note-input data-scope="examen"
                                         type="number" min="0" max="10" step="0.01"
                                         value="${escapeHTML(alumno.examen_trimestral ?? "")}"
                                         data-matricula-id="${escapeHTML(alumno.matricula_id)}"
@@ -325,39 +367,52 @@ function renderTutorCursos() {
         return;
     }
 
+    const today = new Date().toISOString().slice(0, 10);
     panel.innerHTML = state.tutorCursos.map((curso) => `
-        <div class="table-wrap" style="margin-bottom:14px;">
+        <div style="padding:14px 14px 0;">
             <div class="prof-tools" style="border-bottom:0;">
                 <div>
                     <h3>${escapeHTML(curso.curso)} - Paralelo ${escapeHTML(curso.paralelo)}</h3>
-                    <p class="muted">${curso.estudiantes.length} estudiantes matriculados</p>
+                    <p class="muted">${curso.estudiantes.length} estudiantes matriculados · Asistencia ${today}</p>
                 </div>
             </div>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Estudiante</th>
-                        <th>Cedula</th>
-                        <th>Representante</th>
-                        <th>Telefono</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${curso.estudiantes.length ? curso.estudiantes.map((est) => `
-                        <tr>
-                            <td>
-                                <strong>${escapeHTML(est.apellidos_est)}, ${escapeHTML(est.nombres_est)}</strong>
-                                <br><small class="muted">Matricula #${escapeHTML(est.matricula_id)}</small>
-                            </td>
-                            <td>${escapeHTML(est.cedula_est || "-")}</td>
-                            <td>${escapeHTML(est.nombre_rep || "-")}<br><small class="muted">${escapeHTML(est.cedula_rep || "")}</small></td>
-                            <td>${escapeHTML(est.telefono_rep || "-")}</td>
-                        </tr>
-                    `).join("") : `<tr><td colspan="4" class="prof-empty">No hay estudiantes matriculados.</td></tr>`}
-                </tbody>
-            </table>
+            <div class="prof-tutor-grid">
+                ${curso.estudiantes.length ? curso.estudiantes.map((est) => `
+                    <article class="prof-student-card">
+                        <strong>${escapeHTML(est.apellidos_est)}, ${escapeHTML(est.nombres_est)}</strong>
+                        <span class="muted">Cedula: ${escapeHTML(est.cedula_est || "-")}</span>
+                        <span class="muted">Representante: ${escapeHTML(est.nombre_rep || "-")}</span>
+                        <span class="muted">Telefono: ${escapeHTML(est.telefono_rep || "-")}</span>
+                        <div class="prof-att-row" data-attendance="${escapeHTML(est.matricula_id)}">
+                            ${["Presente", "Ausente", "Atraso", "Justificado"].map(label => `
+                                <button type="button" onclick="marcarAsistenciaLocal('${escapeHTML(est.matricula_id)}','${label}', this)">${label}</button>
+                            `).join("")}
+                        </div>
+                    </article>
+                `).join("") : `<div class="prof-empty">No hay estudiantes matriculados.</div>`}
+            </div>
         </div>
     `).join("");
+}
+
+function marcarAsistenciaLocal(matriculaId, estado, btn) {
+    const key = `mfc_asistencia_${new Date().toISOString().slice(0, 10)}_${matriculaId}`;
+    localStorage.setItem(key, estado);
+    btn.parentElement.querySelectorAll("button").forEach(item => item.classList.remove("active"));
+    btn.classList.add("active");
+    showAlert("ok", `Asistencia marcada: ${estado}`);
+}
+
+function setupProfesorTabs() {
+    document.querySelectorAll("[data-prof-section]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll("[data-prof-section]").forEach(item => item.classList.remove("active"));
+            btn.classList.add("active");
+            const section = btn.dataset.profSection;
+            $("#profSectionNotas").hidden = section !== "notas";
+            $("#profSectionTutorias").hidden = section !== "tutorias";
+        });
+    });
 }
 
 async function loadNotas() {
@@ -531,6 +586,7 @@ async function init() {
     if (!decoded) return;
 
     $("#btnLogout").addEventListener("click", logout);
+    setupProfesorTabs();
     $("#btnPerfilProfesor")?.addEventListener("click", abrirPerfilProfesor);
     $("#profTrimSelect").addEventListener("change", async (event) => {
         state.selectedTrimestreId = Number(event.target.value);
@@ -575,3 +631,5 @@ window.cerrarModalProfesor = cerrarModalProfesor;
 window.guardarPerfilProfesor = guardarPerfilProfesor;
 window.guardarPasswordProfesor = guardarPasswordProfesor;
 window.guardarFotoPerfilProfesor = guardarFotoPerfilProfesor;
+window.promptNotaUnica = promptNotaUnica;
+window.marcarAsistenciaLocal = marcarAsistenciaLocal;

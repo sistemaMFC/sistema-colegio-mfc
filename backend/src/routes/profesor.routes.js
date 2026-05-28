@@ -113,7 +113,8 @@ router.get('/tutor-estudiantes', authRequired, soloDocente, async (req, res) => 
                     c.nombre AS curso, p.nombre AS paralelo,
                     m.id AS matricula_id, m.estado AS matricula_estado,
                     e.id AS estudiante_id, e.cedula_est, e.nombres_est, e.apellidos_est,
-                    e.genero, e.fecha_nac, e.nombre_rep, e.cedula_rep, e.telefono_rep
+                    e.genero, e.fecha_nac, e.nombre_rep, e.cedula_rep,
+                    e.celular_rep AS telefono_rep
              FROM tutorias t
              JOIN cursos c ON c.id = t.curso_id
              JOIN paralelos p ON p.id = t.paralelo_id

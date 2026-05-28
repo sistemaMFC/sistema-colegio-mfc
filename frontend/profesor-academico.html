@@ -9,10 +9,43 @@
   <meta name="theme-color" content="#2563eb">
   <link rel="stylesheet" href="./assets/app.css">
   <style>
-    .prof-content { max-width: 1280px; }
+    .prof-content { max-width: 1440px; }
+    .prof-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 16px;
+      padding: 18px;
+      border: 1px solid var(--stroke);
+      border-radius: 18px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .prof-hero h1 { font-size: 28px; }
+    .prof-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .prof-tab {
+      border: 1px solid var(--stroke);
+      background: var(--panel2);
+      color: var(--txt);
+      border-radius: 999px;
+      padding: 9px 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .prof-tab.active {
+      border-color: var(--blue);
+      color: var(--blue);
+      background: rgba(37, 99, 235, .08);
+    }
     .prof-grid {
       display: grid;
-      grid-template-columns: 320px minmax(0, 1fr);
+      grid-template-columns: 300px minmax(0, 1fr);
       gap: 16px;
       align-items: start;
     }
@@ -27,11 +60,13 @@
       border: 1px solid var(--stroke);
       background: var(--panel2);
       color: var(--txt);
-      border-radius: 8px;
-      padding: 11px 12px;
+      border-radius: 12px;
+      padding: 13px 14px;
       cursor: pointer;
       text-align: left;
+      transition: .18s ease;
     }
+    .prof-assignment:hover { border-color: var(--blue); transform: translateY(-1px); }
     .prof-assignment strong,
     .prof-assignment span {
       display: block;
@@ -48,6 +83,27 @@
       border-color: var(--blue);
       background: rgba(37, 99, 235, 0.06);
     }
+    .prof-workspace {
+      overflow: hidden;
+      border-radius: 18px;
+    }
+    .prof-subbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 0 14px 14px;
+      border-bottom: 1px solid var(--stroke);
+    }
+    .prof-mini-btn {
+      border: 1px solid var(--stroke);
+      background: var(--panel2);
+      color: var(--txt);
+      border-radius: 12px;
+      padding: 9px 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .prof-mini-btn:hover { border-color: var(--blue); color: var(--blue); }
     .prof-tools {
       display: flex;
       align-items: center;
@@ -57,15 +113,112 @@
       padding: 14px;
       border-bottom: 1px solid var(--stroke);
     }
+    .prof-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 14px;
+      border-bottom: 1px solid var(--stroke);
+      background: var(--panel2);
+    }
+    .prof-stat {
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      padding: 12px;
+      background: var(--panel);
+    }
+    .prof-stat span { display:block;color:var(--muted);font-size:12px; }
+    .prof-stat strong { display:block;font-size:20px;margin-top:4px;color:var(--blue); }
     .prof-tools select {
       width: auto;
       min-width: 180px;
     }
     .prof-note-input {
-      width: 68px;
+      width: 76px;
       text-align: center;
-      padding: 7px 8px;
-      border-radius: 8px;
+      padding: 9px 8px;
+      border-radius: 11px;
+      font-weight: 800;
+    }
+    .prof-note-input.insumo-tareas { border-color: rgba(37, 99, 235, .35); background: rgba(37, 99, 235, .05); }
+    .prof-note-input.insumo-lecciones { border-color: rgba(245, 158, 11, .45); background: rgba(245, 158, 11, .08); }
+    .prof-note-input.insumo-talleres { border-color: rgba(16, 185, 129, .45); background: rgba(16, 185, 129, .08); }
+    .prof-note-input.insumo-aportes { border-color: rgba(124, 58, 237, .40); background: rgba(124, 58, 237, .08); }
+    .prof-note-input.insumo-individual { border-color: rgba(6, 182, 212, .45); background: rgba(6, 182, 212, .08); }
+    .prof-note-input.insumo-examen { border-color: rgba(239, 68, 68, .40); background: rgba(239, 68, 68, .08); }
+    .prof-insumo {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      border-radius: 999px;
+      padding: 6px 9px;
+      font-size: 12px;
+      font-weight: 900;
+      border: 1px solid var(--stroke);
+    }
+    .prof-insumo::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--blue);
+    }
+    .prof-insumo.tareas::before { background:#2563eb; }
+    .prof-insumo.lecciones::before { background:#f59e0b; }
+    .prof-insumo.talleres::before { background:#10b981; }
+    .prof-insumo.aportes::before { background:#7c3aed; }
+    .prof-insumo.individual::before { background:#06b6d4; }
+    .prof-insumo.examen::before { background:#ef4444; }
+    .prof-grade-table th:first-child,
+    .prof-grade-table td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      background: var(--panel);
+      min-width: 220px;
+    }
+    .prof-student-cell strong {
+      display: block;
+      line-height: 1.25;
+    }
+    .prof-student-cell small {
+      display: block;
+      margin-top: 5px;
+    }
+    .prof-tutor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      padding: 14px;
+    }
+    .prof-student-card {
+      border: 1px solid var(--stroke);
+      background: var(--panel2);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .prof-student-card strong { display:block; }
+    .prof-student-card .muted { font-size:12px; }
+    .prof-att-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .prof-att-row button {
+      border: 1px solid var(--stroke);
+      background: var(--panel);
+      color: var(--txt);
+      border-radius: 999px;
+      padding: 6px 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .prof-att-row button.active {
+      border-color: var(--green);
+      color: #065f46;
+      background: rgba(16,185,129,.12);
     }
     .prof-empty {
       padding: 34px 18px;
@@ -87,6 +240,7 @@
     .prof-chip.bad { color: #991b1b; background: rgba(239, 68, 68, .12); }
     @media (max-width: 900px) {
       .prof-grid { grid-template-columns: 1fr; }
+      .prof-hero { grid-template-columns: 1fr; }
       .prof-content { padding: 12px; }
       .prof-tools { align-items: stretch; }
       .prof-tools > div { width: 100%; }
@@ -94,9 +248,11 @@
         width: 100%;
         min-width: 0;
       }
+      .prof-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .topbar-right .pill { display: none; }
     }
     @media (max-width: 560px) {
+      .prof-hero h1 { font-size: 24px; }
       .prof-list { padding: 10px; }
       .prof-assignment { padding: 10px; }
       .prof-tools { padding: 12px; }
@@ -108,6 +264,7 @@
         min-width: 38px;
         padding: 4px 6px;
       }
+      .prof-summary { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -125,10 +282,14 @@
   </header>
 
   <main class="content prof-content">
-    <div class="content-header">
+    <div class="prof-hero">
       <div>
         <h1>Academico</h1>
-        <p class="muted" id="profSubtitle">Calificaciones por materia</p>
+        <p class="muted" id="profSubtitle">Calificaciones, cursos de tutoría y asistencia</p>
+        <div class="prof-tabs">
+          <button class="prof-tab active" data-prof-section="notas">Notas</button>
+          <button class="prof-tab" data-prof-section="tutorias">Tutorías</button>
+        </div>
       </div>
       <div class="userbox">
         <div class="avatar" id="profAvatar">P</div>
@@ -141,7 +302,7 @@
 
     <div class="alert" id="profAlert" hidden></div>
 
-    <div class="prof-grid">
+    <div class="prof-grid" id="profSectionNotas">
       <aside class="card">
         <div class="card-head">
           <h3>Materias</h3>
@@ -151,7 +312,7 @@
         </div>
       </aside>
 
-      <section class="card">
+      <section class="card prof-workspace">
         <div class="prof-tools">
           <div>
             <h3 id="profCurrentTitle">Seleccione una materia</h3>
@@ -165,7 +326,7 @@
       </section>
     </div>
 
-    <section class="card" style="margin-top:16px;">
+    <section class="card" style="margin-top:16px;" id="profSectionTutorias" hidden>
       <div class="card-head">
         <h3>Mis cursos como tutor</h3>
       </div>
