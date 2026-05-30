@@ -616,6 +616,8 @@ Motivo:
 30. La pantalla de matriculas ahora incluye `Distribucion`, separada de `Pre-Matriculados`, para mover estudiantes entre paralelos usando `matriculas` como fuente real.
 31. Se agrego `POST /api/enrollments/distribuir` para mover en bloque matriculas seleccionadas a paralelo A, B, C o D.
 32. Fecha 2026-05-30: Se corrigio error en `POST /api/academico/notas` (archivo `backend/src/routes/academico.routes.js`) eliminando la actualizacion de `updated_at` en el UPSERT de `calificaciones`, porque en la base actual existe `created_at` pero no `updated_at`. Con esto se evita el fallo SQL `Unknown column 'updated_at'`.
+33. Fecha 2026-05-30: Se agrego base operativa de asistencia para tutores en `backend/src/routes/profesor.routes.js` con `GET /api/profesor/asistencia` y `POST /api/profesor/asistencia` (persistencia por curso/paralelo/fecha). El frontend `frontend/assets/js/profesor-academico.js` dejo de usar solo `localStorage` y ahora intenta guardar asistencia al backend por estudiante.
+34. Fecha 2026-05-30: Se reforzo `POST /api/enrollments/distribuir` en `backend/src/routes/enrollments.routes.js` para validar curso/paralelo activos, deduplicar IDs, reportar matriculas movidas y omitidas, y devolver detalle `moved_ids`.
 
 ## Procedimiento para continuar
 

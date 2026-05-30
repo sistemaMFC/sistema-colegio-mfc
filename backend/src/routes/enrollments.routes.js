@@ -187,30 +187,52 @@ router.post("/distribuir", authRequired, onlyAdmin, async (req, res) => {
       return res.status(400).json({ error: "Seleccione estudiantes y paralelo destino" });
     }
 
-    const ids = matricula_ids.map(Number).filter(Number.isFinite);
+    const ids = [...new Set(matricula_ids.map(Number).filter(Number.isFinite))];
     if (!ids.length) return res.status(400).json({ error: "Lista de matriculas invalida" });
 
-    const [paralelo] = await pool.query(
-      "SELECT id FROM paralelos WHERE id = ? AND estado = 'ACTIVO' LIMIT 1",
-      [paralelo_id]
-    );
+    const [[curso], [paralelo]] = await Promise.all([
+      pool.query("SELECT id FROM cursos WHERE id = ? AND estado = 'ACTIVO' LIMIT 1", [curso_id]),
+      pool.query("SELECT id FROM paralelos WHERE id = ? AND estado = 'ACTIVO' LIMIT 1", [paralelo_id]),
+    ]);
+
+    if (!curso.length) return res.status(400).json({ error: "El curso no esta activo" });
     if (!paralelo.length) return res.status(400).json({ error: "El paralelo no esta activo" });
 
     const placeholders = ids.map(() => "?").join(",");
-    const [result] = await pool.query(
-      `UPDATE matriculas
-       SET paralelo_id = ?, estado = 'MATRICULADO'
+    const [elegibles] = await pool.query(
+      `SELECT id
+       FROM matriculas
        WHERE id IN (${placeholders})
          AND curso_id = ?
          AND periodo_id = ?
          AND estado IN ('ACTIVO','MATRICULADO')`,
-      [paralelo_id, ...ids, curso_id, periodoFinal]
+      [...ids, curso_id, periodoFinal]
+    );
+
+    const elegiblesIds = elegibles.map(row => Number(row.id));
+    if (!elegiblesIds.length) {
+      return res.status(400).json({
+        error: "Ninguna matricula coincide con el curso/periodo indicado o esta inactiva",
+        moved: 0,
+        requested: ids.length,
+      });
+    }
+
+    const placeholdersElegibles = elegiblesIds.map(() => "?").join(",");
+    const [result] = await pool.query(
+      `UPDATE matriculas
+       SET paralelo_id = ?, estado = 'MATRICULADO'
+       WHERE id IN (${placeholdersElegibles})`,
+      [paralelo_id, ...elegiblesIds]
     );
 
     return res.json({
       success: true,
       message: "Distribucion actualizada",
       moved: result.affectedRows,
+      requested: ids.length,
+      skipped: ids.length - result.affectedRows,
+      moved_ids: elegiblesIds,
     });
   } catch (err) {
     console.error("Error al distribuir matriculas:", err);

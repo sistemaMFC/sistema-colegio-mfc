@@ -369,7 +369,7 @@ function renderTutorCursos() {
 
     const today = new Date().toISOString().slice(0, 10);
     panel.innerHTML = state.tutorCursos.map((curso) => `
-        <div style="padding:14px 14px 0;">
+        <div style="padding:14px 14px 0;" data-curso-id="${escapeHTML(curso.curso_id)}" data-paralelo-id="${escapeHTML(curso.paralelo_id)}">
             <div class="prof-tools" style="border-bottom:0;">
                 <div>
                     <h3>${escapeHTML(curso.curso)} - Paralelo ${escapeHTML(curso.paralelo)}</h3>
@@ -395,12 +395,46 @@ function renderTutorCursos() {
     `).join("");
 }
 
-function marcarAsistenciaLocal(matriculaId, estado, btn) {
-    const key = `mfc_asistencia_${new Date().toISOString().slice(0, 10)}_${matriculaId}`;
-    localStorage.setItem(key, estado);
-    btn.parentElement.querySelectorAll("button").forEach(item => item.classList.remove("active"));
-    btn.classList.add("active");
-    showAlert("ok", `Asistencia marcada: ${estado}`);
+async function marcarAsistenciaLocal(matriculaId, estado, btn) {
+    const card = btn.closest(".prof-student-card");
+    const container = btn.closest("[data-curso-id]");
+    const cursoId = container?.dataset?.cursoId;
+    const paraleloId = container?.dataset?.paraleloId;
+    const fecha = new Date().toISOString().slice(0, 10);
+
+    if (!cursoId || !paraleloId) {
+        showAlert("bad", "No se pudo identificar curso/paralelo para asistencia.");
+        return;
+    }
+
+    btn.disabled = true;
+    try {
+        await api("/api/profesor/asistencia", {
+            method: "POST",
+            body: {
+                curso_id: Number(cursoId),
+                paralelo_id: Number(paraleloId),
+                fecha,
+                registros: [
+                    {
+                        matricula_id: Number(matriculaId),
+                        estado: String(estado || "").toUpperCase(),
+                    }
+                ],
+            },
+        });
+
+        btn.parentElement.querySelectorAll("button").forEach(item => item.classList.remove("active"));
+        btn.classList.add("active");
+        if (card) {
+            card.dataset.asistenciaEstado = estado;
+        }
+        showAlert("ok", `Asistencia guardada: ${estado}`);
+    } catch (err) {
+        showAlert("bad", err.message || "No se pudo guardar asistencia.");
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 function setupProfesorTabs() {

@@ -170,6 +170,152 @@ router.get('/tutor-estudiantes', authRequired, soloDocente, async (req, res) => 
     }
 });
 
+/* ── ASISTENCIA TUTOR (MVP) ─────────────────────────────────────
+   Requiere tablas:
+     asistencias (id, curso_id, paralelo_id, periodo_id, fecha, tutor_usuario_id, estado)
+     asistencia_detalle (id, asistencia_id, matricula_id, estado, observacion)
+   Si no existen, responde 501 con instruccion de setup.
+   ──────────────────────────────────────────────────────────── */
+router.get('/asistencia', authRequired, soloDocente, async (req, res) => {
+    try {
+        const { curso_id, paralelo_id, fecha } = req.query;
+        const fechaFinal = fecha || new Date().toISOString().slice(0, 10);
+
+        if (!curso_id || !paralelo_id) {
+            return res.status(400).json({ error: 'Faltan curso_id o paralelo_id' });
+        }
+
+        const [periodoRows] = await pool.query(
+            `SELECT id FROM periodos_lectivos WHERE estado = 'ACTIVO' LIMIT 1`
+        );
+        const periodoId = periodoRows[0]?.id;
+        if (!periodoId) return res.json({ asistencia_id: null, fecha: fechaFinal, detalles: [] });
+
+        const [asistenciaRows] = await pool.query(
+            `SELECT id
+             FROM asistencias
+             WHERE curso_id = ? AND paralelo_id = ? AND periodo_id = ? AND fecha = ?
+             LIMIT 1`,
+            [curso_id, paralelo_id, periodoId, fechaFinal]
+        );
+
+        if (!asistenciaRows.length) {
+            return res.json({ asistencia_id: null, fecha: fechaFinal, detalles: [] });
+        }
+
+        const asistenciaId = asistenciaRows[0].id;
+        const [detalles] = await pool.query(
+            `SELECT matricula_id, estado, observacion
+             FROM asistencia_detalle
+             WHERE asistencia_id = ?`,
+            [asistenciaId]
+        );
+
+        return res.json({ asistencia_id: asistenciaId, fecha: fechaFinal, detalles: detalles || [] });
+    } catch (err) {
+        if (String(err.code || '').includes('ER_NO_SUCH_TABLE')) {
+            return res.status(501).json({
+                error: 'Falta estructura de asistencia. Crear tablas asistencias y asistencia_detalle.'
+            });
+        }
+        console.error('Error listar asistencia tutor:', err);
+        return res.status(500).json({ error: 'Error al listar asistencia' });
+    }
+});
+
+router.post('/asistencia', authRequired, soloDocente, async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        const {
+            curso_id,
+            paralelo_id,
+            fecha,
+            registros,
+        } = req.body;
+
+        const fechaFinal = fecha || new Date().toISOString().slice(0, 10);
+
+        if (!curso_id || !paralelo_id || !Array.isArray(registros) || !registros.length) {
+            return res.status(400).json({ error: 'Faltan datos de asistencia' });
+        }
+
+        const [periodoRows] = await connection.query(
+            `SELECT id FROM periodos_lectivos WHERE estado = 'ACTIVO' LIMIT 1`
+        );
+        const periodoId = periodoRows[0]?.id;
+        if (!periodoId) {
+            return res.status(400).json({ error: 'No hay periodo lectivo activo' });
+        }
+
+        const [tutoria] = await connection.query(
+            `SELECT id
+             FROM tutorias
+             WHERE docente_usuario_id = ? AND curso_id = ? AND paralelo_id = ?
+               AND periodo_id = ? AND estado = 'ACTIVO'
+             LIMIT 1`,
+            [req.user.id, curso_id, paralelo_id, periodoId]
+        );
+        if (!tutoria.length && req.user.rol === 'PROFESOR') {
+            return res.status(403).json({ error: 'No tienes tutoria activa para este curso/paralelo' });
+        }
+
+        await connection.beginTransaction();
+
+        const [asistenciaRows] = await connection.query(
+            `SELECT id
+             FROM asistencias
+             WHERE curso_id = ? AND paralelo_id = ? AND periodo_id = ? AND fecha = ?
+             LIMIT 1`,
+            [curso_id, paralelo_id, periodoId, fechaFinal]
+        );
+
+        let asistenciaId;
+        if (asistenciaRows.length) {
+            asistenciaId = asistenciaRows[0].id;
+        } else {
+            const [insertAsistencia] = await connection.query(
+                `INSERT INTO asistencias
+                 (curso_id, paralelo_id, periodo_id, fecha, tutor_usuario_id, estado)
+                 VALUES (?, ?, ?, ?, ?, 'ABIERTA')`,
+                [curso_id, paralelo_id, periodoId, fechaFinal, req.user.id]
+            );
+            asistenciaId = insertAsistencia.insertId;
+        }
+
+        for (const item of registros) {
+            const matriculaId = Number(item.matricula_id);
+            const estado = String(item.estado || '').toUpperCase();
+
+            if (!matriculaId || !['PRESENTE', 'AUSENTE', 'ATRASO', 'JUSTIFICADO'].includes(estado)) {
+                continue;
+            }
+
+            await connection.query(
+                `INSERT INTO asistencia_detalle (asistencia_id, matricula_id, estado, observacion)
+                 VALUES (?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                   estado = VALUES(estado),
+                   observacion = VALUES(observacion)`,
+                [asistenciaId, matriculaId, estado, item.observacion || null]
+            );
+        }
+
+        await connection.commit();
+        return res.json({ success: true, asistencia_id: asistenciaId, fecha: fechaFinal });
+    } catch (err) {
+        await connection.rollback();
+        if (String(err.code || '').includes('ER_NO_SUCH_TABLE')) {
+            return res.status(501).json({
+                error: 'Falta estructura de asistencia. Crear tablas asistencias y asistencia_detalle.'
+            });
+        }
+        console.error('Error guardar asistencia tutor:', err);
+        return res.status(500).json({ error: 'Error al guardar asistencia' });
+    } finally {
+        connection.release();
+    }
+});
+
 router.get('/perfil', authRequired, async (req, res) => {
     try {
         const [rows] = await pool.query(
