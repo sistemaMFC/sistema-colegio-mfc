@@ -615,6 +615,7 @@ Motivo:
 29. Se agrego asignacion manual oficial de estudiantes a curso/paralelo con `POST /api/enrollments/asignar-manual`.
 30. La pantalla de matriculas ahora incluye `Distribucion`, separada de `Pre-Matriculados`, para mover estudiantes entre paralelos usando `matriculas` como fuente real.
 31. Se agrego `POST /api/enrollments/distribuir` para mover en bloque matriculas seleccionadas a paralelo A, B, C o D.
+32. Fecha 2026-05-30: Se corrigio error en `POST /api/academico/notas` (archivo `backend/src/routes/academico.routes.js`) eliminando la actualizacion de `updated_at` en el UPSERT de `calificaciones`, porque en la base actual existe `created_at` pero no `updated_at`. Con esto se evita el fallo SQL `Unknown column 'updated_at'`.
 
 ## Procedimiento para continuar
 

@@ -389,8 +389,7 @@ router.post('/notas', authRequired, adminOProfesor, async (req, res) => {
              VALUES (?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE
                nota        = VALUES(nota),
-               observacion = VALUES(observacion),
-               updated_at  = CURRENT_TIMESTAMP`,
+               observacion = VALUES(observacion)`,
             [matricula_id, asignacion_id, trimestre_id, tipo_evaluacion_id, v, observacion || null]
         );
 
