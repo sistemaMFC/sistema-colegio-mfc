@@ -14,10 +14,65 @@ let alumnosCursoCache = [];  // Caché para búsqueda rápida y filtrado local
 
 // --- ORDEN LÓGICO PARA VALIDACIÓN ---
 const ORDEN_CURSOS = [
-    "Inicial II", "Primero EGB", "Segundo EGB", "Tercero EGB", 
-    "Cuarto EGB", "Quinto EGB", "Sexto EGB", "Séptimo EGB",
-    "Octavo EGB", "Noveno EGB", "Décimo EGB"
+    "Inicial I", "Inicial II", "Primero de Educación General Básica", "Segundo de Educación General Básica",
+    "Tercero de Educación General Básica", "Cuarto de Educación General Básica",
+    "Quinto de Educación General Básica", "Sexto de Educación General Básica",
+    "Séptimo de Educación General Básica", "Octavo de Educación General Básica",
+    "Noveno de Educación General Básica", "Décimo de Educación General Básica"
 ];
+
+function normalizarNombreCurso(nombre) {
+    const raw = String(nombre || "").trim();
+    if (!raw) return "Curso no definido";
+
+    const canon = raw
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const mapaDirecto = {
+        "INICIAL 1": "Inicial I",
+        "INICIAL I": "Inicial I",
+        "INICIAL 2": "Inicial II",
+        "INICIAL II": "Inicial II",
+        "1RO DE BASICA": "Primero de Educación General Básica",
+        "1RO BASICA": "Primero de Educación General Básica",
+        "PRIMERO EGB": "Primero de Educación General Básica",
+        "2DO DE BASICA": "Segundo de Educación General Básica",
+        "2DO BASICA": "Segundo de Educación General Básica",
+        "SEGUNDO EGB": "Segundo de Educación General Básica",
+        "3RO DE BASICA": "Tercero de Educación General Básica",
+        "3RO BASICA": "Tercero de Educación General Básica",
+        "TERCERO EGB": "Tercero de Educación General Básica",
+        "4TO DE BASICA": "Cuarto de Educación General Básica",
+        "4TO BASICA": "Cuarto de Educación General Básica",
+        "4RO DE BASICA": "Cuarto de Educación General Básica",
+        "4RO BASICA": "Cuarto de Educación General Básica",
+        "CUARTO EGB": "Cuarto de Educación General Básica",
+        "5TO DE BASICA": "Quinto de Educación General Básica",
+        "5TO BASICA": "Quinto de Educación General Básica",
+        "QUINTO EGB": "Quinto de Educación General Básica",
+        "6TO DE BASICA": "Sexto de Educación General Básica",
+        "6TO BASICA": "Sexto de Educación General Básica",
+        "SEXTO EGB": "Sexto de Educación General Básica",
+        "7MO DE BASICA": "Séptimo de Educación General Básica",
+        "7MO BASICA": "Séptimo de Educación General Básica",
+        "SEPTIMO EGB": "Séptimo de Educación General Básica",
+        "8VO DE BASICA": "Octavo de Educación General Básica",
+        "8VO BASICA": "Octavo de Educación General Básica",
+        "OCTAVO EGB": "Octavo de Educación General Básica",
+        "9NO DE BASICA": "Noveno de Educación General Básica",
+        "9NO BASICA": "Noveno de Educación General Básica",
+        "NOVENO EGB": "Noveno de Educación General Básica",
+        "10MO DE BASICA": "Décimo de Educación General Básica",
+        "10MO BASICA": "Décimo de Educación General Básica",
+        "DECIMO EGB": "Décimo de Educación General Básica"
+    };
+
+    return mapaDirecto[canon] || raw;
+}
 
 /**
  * 1. RENDERIZAR TARJETAS DE CURSOS
@@ -39,12 +94,12 @@ async function renderizarCursos() {
 
         cursos.forEach((c) => {
             contenedor.innerHTML += `
-                <div class="curso-card-mfc" onclick="abrirSelectorMatricula('${c.id}', '${c.nombre}')">
+                <div class="curso-card-mfc" onclick="abrirSelectorMatricula('${c.id}', '${normalizarNombreCurso(c.nombre)}')">
                     <div class="curso-numero-wrapper">
                         ${c.total_matriculados || 0}
                     </div>
                     <div class="curso-info-mfc">
-                        <h3 class="curso-nombre-mfc">${c.nombre}</h3>
+                        <h3 class="curso-nombre-mfc">${normalizarNombreCurso(c.nombre)}</h3>
                         <span class="curso-detalle-mfc">Click para gestionar estudiantes</span>
                     </div>
                 </div>
@@ -121,7 +176,7 @@ async function confirmarMatriculaPre(id, apellidos, nombres) {
         
         let mensajeListado = `Seleccione el curso destino para:\n${apellidos} ${nombres}\n\n`;
         cursosBase.forEach((c, index) => {
-            mensajeListado += `${index + 1}. ${c.nombre}\n`;
+            mensajeListado += `${index + 1}. ${normalizarNombreCurso(c.nombre)}\n`;
         });
 
         const seleccion = prompt(mensajeListado + "\nEscriba el NÚMERO del curso:");
@@ -137,7 +192,7 @@ async function confirmarMatriculaPre(id, apellidos, nombres) {
         }
 
         const idxActual = ORDEN_CURSOS.indexOf(cursoActualNombre);
-        const idxDestino = ORDEN_CURSOS.indexOf(cursoDestino.nombre);
+        const idxDestino = ORDEN_CURSOS.indexOf(normalizarNombreCurso(cursoDestino.nombre));
 
         if (idxDestino > idxActual + 1) {
             const pass = prompt("⚠️ SALTO DE CURSO: Ingrese la CLAVE DE SEGURIDAD para autorizar curso superior:");
@@ -155,7 +210,7 @@ async function confirmarMatriculaPre(id, apellidos, nombres) {
             })
         });
 
-        alert(`✨ Estudiante matriculado en ${cursoDestino.nombre}`);
+        alert(`✨ Estudiante matriculado en ${normalizarNombreCurso(cursoDestino.nombre)}`);
         listarPreMatriculados(); 
         renderizarCursos();     
         if(window.actualizarDashboard) window.actualizarDashboard();
