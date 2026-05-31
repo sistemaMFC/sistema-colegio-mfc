@@ -17,17 +17,30 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
       direccion, sector, curso_id
     } = req.body;
 
-    if (!cedula_est || !nombres_est || !apellidos_est || !curso_id) {
-      return res.status(400).json({ error: "Faltan datos obligatorios (Cédula, Nombres, Curso)" });
+    if (!cedula_est || !nombres_est || !apellidos_est) {
+      return res.status(400).json({ error: "Faltan datos obligatorios (Cédula, Nombres, Apellidos)" });
     }
 
-    if (!/^\d{10}$/.test(String(cedula_est).trim())) {
+    const cedulaEst = String(cedula_est).trim();
+    if (!/^\d{10}$/.test(cedulaEst)) {
       return res.status(400).json({ error: "Cédula del estudiante inválida (debe tener 10 dígitos)" });
+    }
+
+    const cedulaRepLimpia = String(cedula_rep || "").trim();
+    if (cedulaRepLimpia && !/^\d{10}$/.test(cedulaRepLimpia)) {
+      return res.status(400).json({ error: "Cédula del representante inválida (debe tener 10 dígitos)" });
+    }
+
+    if (fecha_nac) {
+      const f = new Date(fecha_nac);
+      if (Number.isNaN(f.getTime()) || f > new Date()) {
+        return res.status(400).json({ error: "Fecha de nacimiento inválida" });
+      }
     }
 
     const [exist] = await pool.query(
       "SELECT id FROM estudiantes WHERE cedula_est = ? LIMIT 1",
-      [cedula_est]
+      [cedulaEst]
     );
 
     if (exist.length > 0) {
@@ -38,12 +51,12 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
       `INSERT INTO estudiantes
         (cedula_est, nombres_est, apellidos_est, fecha_nac, genero,
          nombre_rep, cedula_rep, parentesco_rep, celular_rep,
-         direccion, sector, curso_id, estado, periodo)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', '2026-2027')`,
+         direccion, sector, curso_id, estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO')`,
       [
-        cedula_est, nombres_est, apellidos_est, fecha_nac, genero,
-        nombre_rep, cedula_rep, parentesco_rep, celular_rep,
-        direccion, sector, curso_id
+        cedulaEst, String(nombres_est).trim(), String(apellidos_est).trim(), fecha_nac || null, genero || null,
+        String(nombre_rep || "").trim(), cedulaRepLimpia || null, String(parentesco_rep || "").trim() || null, String(celular_rep || "").trim() || null,
+        String(direccion || "").trim() || null, String(sector || "").trim() || null, curso_id || null
       ]
     );
 
@@ -117,6 +130,7 @@ router.put("/:id", authRequired, onlyAdmin, async (req, res) => {
 
       if (estado === 'ACTIVO') {
           sqlRapid = "UPDATE estudiantes SET estado = ?, curso_id = COALESCE(?, curso_id), fecha_matricula = NOW() WHERE id = ?";
+          paramsRapid = [estado, curso_id, id];
       }
 
       const [resRapid] = await pool.query(sqlRapid, paramsRapid);

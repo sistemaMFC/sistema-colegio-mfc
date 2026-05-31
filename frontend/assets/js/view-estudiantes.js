@@ -315,6 +315,15 @@
 let _fotoCarnetBase64 = null; // foto recortada lista para guardar
 let _editandoId       = null; // null = nuevo, número = editar
 
+function escapeHTML(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"')
+        .replace(/'/g, '&#39;');
+}
+
 /* ----------------------------------------------------------
    PUNTO DE ENTRADA: llamado desde el menú
    ---------------------------------------------------------- */
@@ -540,18 +549,23 @@ function _renderGrid(lista) {
         const activo = est.estado === 'ACTIVO';
         const foto   = cargarFotoEstudiante ? cargarFotoEstudiante(est.id) : null;
 
+        const nombreSeguro = escapeHTML(est.nombres_est);
+        const apellidoSeguro = escapeHTML(est.apellidos_est);
+        const cedulaSegura = escapeHTML(est.cedula_est);
+        const cursoSeguro = escapeHTML(est.nombre_curso || '—');
+
         return `
         <div class="est-card" onclick="verFichaEstudiante(${est.id})">
             <div class="est-dot ${activo ? 'activo' : 'inactivo'}"
                  title="${activo ? 'Activo' : 'Inactivo'}"></div>
             <div class="est-foto-wrap">
                 ${foto
-                    ? `<img src="${foto}" alt="Foto de ${est.nombres_est}">`
-                    : `<span class="est-iniciales">${ini}</span>`}
+                    ? `<img src="${foto}" alt="Foto de ${nombreSeguro}">`
+                    : `<span class="est-iniciales">${escapeHTML(ini)}</span>`}
             </div>
-            <div class="est-nombre">${est.apellidos_est},<br>${est.nombres_est}</div>
-            <div class="est-cedula">${est.cedula_est}</div>
-            <div class="est-curso-pill">${est.nombre_curso || '—'}</div>
+            <div class="est-nombre">${apellidoSeguro},<br>${nombreSeguro}</div>
+            <div class="est-cedula">${cedulaSegura}</div>
+            <div class="est-curso-pill">${cursoSeguro}</div>
             <div class="est-acciones">
                 <button class="est-btn-ic"
                         onclick="event.stopPropagation();verFichaEstudiante(${est.id})"
@@ -716,15 +730,27 @@ async function guardarMatricula() {
         return;
     }
 
+    const cedulaRep = document.getElementById('ef_cedula_rep').value.trim();
+    if (cedulaRep && !/^\d{10}$/.test(cedulaRep)) {
+        showAlert('bad', 'La cédula del representante debe tener 10 dígitos.');
+        return;
+    }
+
+    const fechaNac = document.getElementById('ef_fecha_nac').value;
+    if (fechaNac && new Date(fechaNac) > new Date()) {
+        showAlert('bad', 'La fecha de nacimiento no puede ser futura.');
+        return;
+    }
+
     const payload = {
         cedula_est:     cedula,
         nombres_est:    nombres,
         apellidos_est:  apellidos,
-        fecha_nac:      document.getElementById('ef_fecha_nac').value,
+        fecha_nac:      fechaNac,
         genero:         document.getElementById('ef_genero').value,
         curso_id:       curso_id || null,
         nombre_rep:     document.getElementById('ef_nombre_rep').value.trim(),
-        cedula_rep:     document.getElementById('ef_cedula_rep').value.trim(),
+        cedula_rep:     cedulaRep,
         celular_rep:    document.getElementById('ef_celular_rep').value.trim(),
         parentesco_rep: document.getElementById('ef_parentesco').value,
         sector:         document.getElementById('ef_sector').value.trim(),
