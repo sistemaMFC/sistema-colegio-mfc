@@ -106,7 +106,29 @@ async function generarCertificadoMatricula(idEstudiante, nombreCursoCorto) {
         if (imgMin)  doc.addImage(imgMin,  'PNG',  14, 14, 48, 17);
         if (imgLogo) doc.addImage(imgLogo, 'JPEG', 164, 14, 22, 22);
 
-        // ── FOTO CARNET (esquina superior derecha, sin invadir cabecera) ────
+        // ── ENCABEZADO ──────────────────────────────────────────
+        doc.setTextColor(20, 60, 130);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.text("UNIDAD EDUCATIVA", centro, 22, { align: "center" });
+        doc.setFontSize(9);
+        doc.text("EDUCACIÓN GENERAL BÁSICA", centro, 28, { align: "center" });
+        doc.setFontSize(14);
+        doc.text('"MIGUEL FEBRES CORDERO"', centro, 36, { align: "center" });
+
+        doc.setTextColor(0, 0, 0);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.text(`AÑO LECTIVO: ${anioLectivo}`, centro, 41, { align: "center" });
+        doc.text("JORNADA MATUTINA", centro, 47, { align: "center" });
+
+        doc.setDrawColor(20, 60, 130);
+        doc.setLineWidth(0.6);
+        doc.line(14, 58, 196, 58);
+        doc.setLineWidth(0.2);
+        doc.line(14, 60, 196, 60);
+
+        // ── FOTO CARNET (dibujada DESPUÉS de líneas para que quede delante) ────
         const FX = 171, FY = 46, FW = 20, FH = 27;
         if (fotoBase64) {
             doc.setDrawColor(180, 180, 180);
@@ -129,28 +151,6 @@ async function generarCertificadoMatricula(idEstudiante, nombreCursoCorto) {
             doc.text("CARNET", FX + FW / 2, FY + FH / 2 + 3, { align: "center" });
             doc.setTextColor(0, 0, 0);
         }
-
-        // ── ENCABEZADO ──────────────────────────────────────────
-        doc.setTextColor(20, 60, 130);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        doc.text("UNIDAD EDUCATIVA", centro, 22, { align: "center" });
-        doc.setFontSize(9);
-        doc.text("EDUCACIÓN GENERAL BÁSICA", centro, 28, { align: "center" });
-        doc.setFontSize(14);
-        doc.text('"MIGUEL FEBRES CORDERO"', centro, 36, { align: "center" });
-
-        doc.setTextColor(0, 0, 0);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.text(`AÑO LECTIVO: ${anioLectivo}`, centro, 41, { align: "center" });
-        doc.text("JORNADA MATUTINA", centro, 47, { align: "center" });
-
-        doc.setDrawColor(20, 60, 130);
-        doc.setLineWidth(0.6);
-        doc.line(14, 58, 196, 58);
-        doc.setLineWidth(0.2);
-        doc.line(14, 60, 196, 60);
 
         // ── TÍTULO ──────────────────────────────────────────────
         doc.setTextColor(20, 60, 130);
