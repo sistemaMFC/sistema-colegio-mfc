@@ -694,3 +694,15 @@ El sistema no debe usar para desarrollo nuevo:
 - `tutores_curso`
 
 Pagos queda pendiente de cierre final porque aun hay tablas duplicadas o modelos mezclados.
+
+## Bitacora de cambios recientes
+
+- Fecha: 2026-05-31
+- Modulo: Matriculas / Enrollments (`backend/src/routes/enrollments.routes.js`)
+- Problema: `GET /api/enrollments` devolvia 500 y en frontend no cargaba "Ver matriculados".
+- Causa raiz: el backend consultaba y escribia la columna `fecha_matricula` en `matriculas`, pero el esquema real usa `fecha_registro`.
+- Correccion aplicada:
+  - En inserciones de matricula (`POST /api/enrollments` y `POST /api/enrollments/asignar-manual`) se cambio a `fecha_registro`.
+  - En listado (`GET /api/enrollments`) se cambio a `m.fecha_registro AS fecha_matricula` para mantener compatibilidad con el frontend actual.
+  - Se agrego fallback de fecha en backend cuando no se envia `fecha_matricula` desde el cliente.
+- Resultado esperado: eliminar el 500 del endpoint y restaurar la carga de estudiantes matriculados en la vista administrativa.

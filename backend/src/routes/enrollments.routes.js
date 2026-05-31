@@ -20,8 +20,9 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
   
   try {
     const { estudiante_id, periodo_id, curso_id, paralelo_id, fecha_matricula } = req.body;
+    const fechaRegistro = fecha_matricula || new Date().toISOString().slice(0, 10);
 
-    if (!estudiante_id || !periodo_id || !curso_id || !paralelo_id || !fecha_matricula) {
+    if (!estudiante_id || !periodo_id || !curso_id || !paralelo_id) {
       return res.status(400).json({ error: "Faltan datos obligatorios" });
     }
 
@@ -41,9 +42,9 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
 
     // 2. Insertar la Matrícula 
     const [resultMat] = await connection.query(
-      `INSERT INTO matriculas (estudiante_id, periodo_id, curso_id, paralelo_id, fecha_matricula, estado)
+      `INSERT INTO matriculas (estudiante_id, periodo_id, curso_id, paralelo_id, fecha_registro, estado)
        VALUES (?, ?, ?, ?, ?, 'MATRICULADO')`,
-      [estudiante_id, periodo_id, curso_id, paralelo_id, fecha_matricula]
+      [estudiante_id, periodo_id, curso_id, paralelo_id, fechaRegistro]
     );
     const matriculaId = resultMat.insertId;
 
@@ -52,7 +53,7 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
       `INSERT INTO cargos_estudiante 
        (matricula_id, periodo_id, concepto_id, fecha_emision, valor_total, estado) 
        VALUES (?, ?, (SELECT id FROM conceptos_cobro WHERE codigo='INSCRIPCION'), ?, 25.00, 'PENDIENTE')`,
-      [matriculaId, periodo_id, fecha_matricula]
+      [matriculaId, periodo_id, fechaRegistro]
     );
 
     // 4. Generar 10 Cargos de PENSIÓN ($50.00 c/u) [cite: 9, 61]
@@ -64,7 +65,7 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
         `INSERT INTO cargos_estudiante 
          (matricula_id, periodo_id, concepto_id, mes_id, fecha_emision, valor_total, estado) 
          VALUES (?, ?, (SELECT id FROM conceptos_cobro WHERE codigo='PENSION'), ?, ?, 50.00, 'PENDIENTE')`,
-        [matriculaId, periodo_id, mesId, fecha_matricula]
+        [matriculaId, periodo_id, mesId, fechaRegistro]
       );
     }
 
@@ -147,7 +148,7 @@ router.post("/asignar-manual", authRequired, onlyAdmin, async (req, res) => {
     } else {
       const [result] = await connection.query(
         `INSERT INTO matriculas
-         (estudiante_id, periodo_id, curso_id, paralelo_id, fecha_matricula, estado)
+         (estudiante_id, periodo_id, curso_id, paralelo_id, fecha_registro, estado)
          VALUES (?, ?, ?, ?, ?, 'MATRICULADO')`,
         [estudiante_id, periodoFinal, curso_id, paralelo_id, fechaFinal]
       );
@@ -251,7 +252,7 @@ router.get("/", authRequired, async (req, res) => {
              CONCAT(e.apellidos_est, ' ', e.nombres_est) AS estudiante,
              e.cedula_est AS cedula,
              p.nombre AS periodo, c.nombre AS curso, pr.nombre AS paralelo, 
-             m.fecha_matricula, m.estado
+             m.fecha_registro AS fecha_matricula, m.estado
       FROM matriculas m
       JOIN estudiantes e ON e.id = m.estudiante_id
       JOIN periodos_lectivos p ON p.id = m.periodo_id
