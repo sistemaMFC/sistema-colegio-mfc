@@ -122,11 +122,6 @@ async function generarCertificadoMatricula(idEstudiante, nombreCursoCorto) {
         doc.text(`AÑO LECTIVO: ${anioLectivo}`, centro, 41, { align: "center" });
         doc.text("JORNADA MATUTINA", centro, 47, { align: "center" });
 
-        doc.setDrawColor(20, 60, 130);
-        doc.setLineWidth(0.6);
-        doc.line(14, 58, 196, 58);
-        doc.setLineWidth(0.2);
-        doc.line(14, 60, 196, 60);
 
         // ── FOTO CARNET (dibujada DESPUÉS de líneas para que quede delante) ────
         const FX = 171, FY = 46, FW = 20, FH = 27;
