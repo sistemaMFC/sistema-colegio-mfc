@@ -474,7 +474,7 @@ async function mostrarModuloEstudiantes() {
                     <button class="est-btn-cancel"
                             onclick="cerrarEstModal('estModalForm')">Cancelar</button>
                     <button class="est-btn-save" onclick="guardarMatricula()">
-                        ✅ Confirmar matrícula
+                        ✅ Confirmar cambio
                     </button>
                 </div>
             </div>
