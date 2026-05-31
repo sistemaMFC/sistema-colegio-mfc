@@ -156,10 +156,13 @@
           <div class="card">
             <div class="card-head">
               <h3>Cursos habilitados</h3>
-              <button class="btn-soft" id="btnCargarCursosAdmin">Refrescar</button>
+              <div style="display:flex; gap:8px;">
+                <button class="btn-soft" id="btnToggleCursosHabilitados">Desplegar lista</button>
+                <button class="btn-soft" id="btnCargarCursosAdmin">Refrescar</button>
+              </div>
             </div>
             <p class="muted">Activa los cursos que se van a usar. Al desactivar un curso, sus asignaciones docentes quedan inactivas.</p>
-            <div class="table-wrap">
+            <div class="table-wrap" id="wrapCursosHabilitados" hidden>
               <table class="table" id="tblCursosAdmin">
                 <thead>
                   <tr>
@@ -180,6 +183,7 @@
           <div class="card">
             <div class="card-head">
               <h3>Materias por curso</h3>
+              <button class="btn-soft" id="btnToggleMateriasCurso">Desplegar lista</button>
             </div>
             <form id="formAsignacionCurso" class="form">
               <div class="form-row">
@@ -205,7 +209,7 @@
               <button type="submit" class="btn" style="width:100%;">Habilitar materia en curso</button>
             </form>
 
-            <div class="table-wrap">
+            <div class="table-wrap" id="wrapMateriasCurso" hidden>
               <table class="table" id="tblAsignacionesCurso">
                 <thead>
                   <tr>
@@ -226,6 +230,7 @@
           <div class="card">
             <div class="card-head">
               <h3>Profesor tutor</h3>
+              <button class="btn-soft" id="btnToggleProfesorTutor">Desplegar lista</button>
             </div>
             <p class="muted">El tutor es opcional. Un profesor puede ser tutor de uno, varios cursos o ninguno.</p>
             <form id="formTutoriaCurso" class="form">
@@ -246,7 +251,7 @@
               <button type="submit" class="btn" style="width:100%;">Asignar tutor</button>
             </form>
 
-            <div class="table-wrap">
+            <div class="table-wrap" id="wrapProfesorTutor" hidden>
               <table class="table" id="tblTutoriasCurso">
                 <thead>
                   <tr>

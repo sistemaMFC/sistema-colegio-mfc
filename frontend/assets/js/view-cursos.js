@@ -391,6 +391,26 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnMatriculaNueva')?.addEventListener('click', abrirFormularioMatriculaNueva);
     document.getElementById('btnMatriculaAntigua')?.addEventListener('click', listarPreMatriculados);
     document.getElementById('btnVerMatriculados')?.addEventListener('click', listarMatriculadosActuales);
+
+    const bindToggleLista = (btnId, wrapId) => {
+        const btn = document.getElementById(btnId);
+        const wrap = document.getElementById(wrapId);
+        if (!btn || !wrap) return;
+        btn.addEventListener('click', () => {
+            const isHidden = wrap.hasAttribute('hidden');
+            if (isHidden) {
+                wrap.removeAttribute('hidden');
+                btn.textContent = 'Ocultar lista';
+            } else {
+                wrap.setAttribute('hidden', '');
+                btn.textContent = 'Desplegar lista';
+            }
+        });
+    };
+
+    bindToggleLista('btnToggleCursosHabilitados', 'wrapCursosHabilitados');
+    bindToggleLista('btnToggleMateriasCurso', 'wrapMateriasCurso');
+    bindToggleLista('btnToggleProfesorTutor', 'wrapProfesorTutor');
     
     window.addEventListener('click', (e) => {
         if (e.target.id === 'modalFormMatricula') cerrarFormularioMatricula();

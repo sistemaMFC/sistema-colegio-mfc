@@ -1,6 +1,8 @@
-# TODO - Correccion seccion Estudiantes
+# TODO - Vista compacta en sección Cursos
 
-- [ ] Backend `students.routes.js`: quitar obligacion de curso en alta, eliminar periodo hardcodeado y reforzar validaciones.
-- [ ] Frontend `view-estudiantes.js`: permitir guardado sin curso obligatorio, sanitizar render y mejorar mensajes.
-- [ ] Integrar flujo de matricula oficial por asignacion manual (curso/paralelo) usando enrollments.
+- [ ] Revisar `frontend/app.html` para ubicar bloques: Cursos habilitados, Materias por curso y Profesor tutor.
+- [ ] Agregar botones "Desplegar lista / Ocultar lista" en esas 3 secciones.
+- [ ] Dejar listas/tablas ocultas por defecto y mostrar al desplegar.
+- [ ] Ajustar `frontend/assets/js/view-cursos.js` para manejar toggles sin romper funcionalidades actuales.
 - [ ] Documentar cambios con fecha en `docs/funcionamiento-sistema.md`.
+- [ ] Preparar comandos de push.
