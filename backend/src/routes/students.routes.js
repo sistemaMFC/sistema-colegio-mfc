@@ -151,7 +151,7 @@ router.put("/:id", authRequired, onlyAdmin, async (req, res) => {
       WHERE id = ?
     `;
 
-    const fechaNacNormalizada = (fecha_nac === '' || fecha_nac == null) ? null : fecha_nac;
+    const fechaNacNormalizada = (fecha_nac === '' || fecha_nac == null) ? '2015-01-01' : fecha_nac;
 
     const [result] = await pool.query(sqlFull, [
       cedula_est, nombres_est, apellidos_est, fechaNacNormalizada, genero,
