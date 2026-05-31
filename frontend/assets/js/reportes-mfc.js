@@ -107,7 +107,7 @@ async function generarCertificadoMatricula(idEstudiante, nombreCursoCorto) {
         if (imgLogo) doc.addImage(imgLogo, 'JPEG', 164, 14, 22, 22);
 
         // ── FOTO CARNET (esquina superior derecha, sin invadir cabecera) ────
-        const FX = 171, FY = 34, FW = 20, FH = 27;
+        const FX = 171, FY = 46, FW = 20, FH = 27;
         if (fotoBase64) {
             doc.setDrawColor(180, 180, 180);
             doc.setLineWidth(0.4);
