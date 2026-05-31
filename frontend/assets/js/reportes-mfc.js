@@ -106,8 +106,8 @@ async function generarCertificadoMatricula(idEstudiante, nombreCursoCorto) {
         if (imgMin)  doc.addImage(imgMin,  'PNG',  14, 14, 48, 17);
         if (imgLogo) doc.addImage(imgLogo, 'JPEG', 164, 14, 22, 22);
 
-        // ── FOTO CARNET (esquina superior derecha, 28×37 mm) ────
-        const FX = 162, FY = 43, FW = 28, FH = 37;
+        // ── FOTO CARNET (esquina superior derecha, sin invadir cabecera) ────
+        const FX = 171, FY = 34, FW = 20, FH = 27;
         if (fotoBase64) {
             doc.setDrawColor(180, 180, 180);
             doc.setLineWidth(0.4);
@@ -143,71 +143,72 @@ async function generarCertificadoMatricula(idEstudiante, nombreCursoCorto) {
         doc.setTextColor(0, 0, 0);
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
-        doc.text(`AÑO LECTIVO: ${anioLectivo}`, centro, 43, { align: "center" });
-        doc.text("JORNADA MATUTINA", centro, 49, { align: "center" });
+        doc.text(`AÑO LECTIVO: ${anioLectivo}`, centro, 41, { align: "center" });
+        doc.text("JORNADA MATUTINA", centro, 47, { align: "center" });
 
         doc.setDrawColor(20, 60, 130);
         doc.setLineWidth(0.6);
-        doc.line(14, 61, 196, 61);
+        doc.line(14, 58, 196, 58);
         doc.setLineWidth(0.2);
-        doc.line(14, 63, 196, 63);
+        doc.line(14, 60, 196, 60);
 
         // ── TÍTULO ──────────────────────────────────────────────
         doc.setTextColor(20, 60, 130);
         doc.setFont("helvetica", "bold");
         doc.setFontSize(17);
-        doc.text("CERTIFICADO DE MATRÍCULA", centro, 72, { align: "center" });
+        doc.text("CERTIFICADO DE MATRÍCULA", centro, 70, { align: "center" });
         const tw = doc.getTextWidth("CERTIFICADO DE MATRÍCULA");
         doc.setLineWidth(0.5);
-        doc.line(centro - tw / 2, 84.5, centro + tw / 2, 84.5);
+        doc.line(centro - tw / 2, 80.5, centro + tw / 2, 80.5);
 
         // ── CUERPO ──────────────────────────────────────────────
         doc.setTextColor(0, 0, 0);
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(12);
+        doc.setFontSize(11);
         const textoCuerpo = `La suscrita Secretaría de la Unidad Educativa "MIGUEL FEBRES CORDERO", certifica que el/la estudiante:`;
-        doc.text(doc.splitTextToSize(textoCuerpo, 168), 20, 100);
+        doc.text(doc.splitTextToSize(textoCuerpo, 155), 20, 92);
 
         // Nombre en caja azul
         const nombreCompleto = `${est.apellidos_est} ${est.nombres_est}`.toUpperCase();
         doc.setFillColor(235, 241, 251);
         doc.setDrawColor(20, 60, 130);
         doc.setLineWidth(0.3);
-        doc.roundedRect(20, 114, 170, 14, 2, 2, 'FD');
+        doc.roundedRect(20, 108, 170, 12, 2, 2, 'FD');
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
+        doc.setFontSize(13);
         doc.setTextColor(20, 60, 130);
-        doc.text(nombreCompleto, centro, 123, { align: "center" });
+        doc.text(nombreCompleto, centro, 116, { align: "center" });
 
         // Datos legales
         doc.setTextColor(0, 0, 0);
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(12);
-        doc.text(`Portador/a de la Cédula de Identidad Nro.: ${corregirCedula(est.cedula_est)}`, 20, 130);
-        doc.text("Se encuentra legalmente matriculado/a en:", 20, 152);
+        doc.setFontSize(11);
+        doc.text(`Portador/a de la Cédula de Identidad Nro.: ${corregirCedula(est.cedula_est)}`, 20, 124);
+        doc.text("Se encuentra legalmente matriculado/a en:", 20, 145);
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(13);
         doc.setTextColor(20, 60, 130);
-        doc.text(formatearNombreCursoOficial(nombreCursoCorto), centro, 164, { align: "center" });
+        doc.text(formatearNombreCursoOficial(nombreCursoCorto), centro, 156, { align: "center" });
 
         doc.setTextColor(0, 0, 0);
         doc.setFont("helvetica", "normal");
         doc.setFontSize(11);
-        doc.text("Jornada: MATUTINA", centro, 174, { align: "center" });
+        doc.text("Jornada: MATUTINA", centro, 165, { align: "center" });
 
         const textoLegal = `durante el año lectivo ${anioLectivo}, conforme consta en los registros de esta institución.`;
-        doc.text(doc.splitTextToSize(textoLegal, 168), 20, 185);
+        doc.text(doc.splitTextToSize(textoLegal, 168), 20, 177);
 
         // ── FECHA Y FOLDER ──────────────────────────────────────
         const hoy = new Date();
         const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
         const fechaTxt = `Guayaquil, ${hoy.getDate()} de ${meses[hoy.getMonth()]} del ${hoy.getFullYear()}`;
-        doc.setFont("helvetica", "italic");
-        doc.setFontSize(11);
-        doc.text(fechaTxt, 20, 203);
         doc.setFont("helvetica", "bold");
-        doc.text(`Nro. de Folder: ${String(numFolder).padStart(3, '0')}`, 20, 201);
+        doc.setFontSize(10.5);
+        doc.text(`Nro. de Folder: ${String(numFolder).padStart(3, '0')}`, 20, 190);
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(10.5);
+        doc.text(fechaTxt, 20, 194);
 
         // ── FIRMA ÚNICA: RECTORA (centrada) ─────────────────────
         const firmaX = centro, firmaY = 248;
