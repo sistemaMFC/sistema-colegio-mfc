@@ -225,6 +225,80 @@
       color: var(--muted);
       text-align: center;
     }
+    .att-shell {
+      padding: 14px;
+      display: grid;
+      gap: 14px;
+    }
+    .att-summary {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 12px;
+      align-items: stretch;
+    }
+    .att-chart-card,
+    .att-kpis {
+      border: 1px solid var(--stroke);
+      background: var(--panel2);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .att-kpis {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .att-kpi {
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      padding: 10px;
+      background: var(--panel);
+    }
+    .att-kpi span { display:block;font-size:12px;color:var(--muted); }
+    .att-kpi strong { display:block;font-size:21px;margin-top:4px; }
+    .att-table-wrap {
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      overflow: auto;
+      background: var(--panel);
+    }
+    .att-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 560px;
+      font-size: 14px;
+    }
+    .att-table th, .att-table td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--stroke);
+      text-align: left;
+    }
+    .att-table thead th {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      color: var(--muted);
+      background: var(--panel2);
+    }
+    .att-table tbody tr:nth-child(odd) { background: rgba(37,99,235,.03); }
+    .att-table tbody tr:nth-child(even) { background: rgba(16,185,129,.03); }
+    .att-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-weight: 800;
+      font-size: 12px;
+      border: 1px solid var(--stroke);
+    }
+    .att-status.presente { color:#065f46;background:rgba(16,185,129,.14); }
+    .att-status.ausente { color:#991b1b;background:rgba(239,68,68,.14); }
+    .att-icon {
+      width: 18px;
+      text-align: center;
+      display: inline-block;
+    }
     .prof-chip {
       display: inline-flex;
       align-items: center;
@@ -265,6 +339,8 @@
         padding: 4px 6px;
       }
       .prof-summary { grid-template-columns: 1fr; }
+      .att-summary { grid-template-columns: 1fr; }
+      .att-kpis { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -357,9 +433,51 @@
       <div class="card-head">
         <h3>Asistencia</h3>
       </div>
-      <div id="profAsistenciaTutorPanel">
-        <div class="prof-empty">
-          Cargando estudiantes de tutoría...
+      <div class="att-shell">
+        <div class="att-summary">
+          <div class="att-chart-card">
+            <h4 style="margin:0 0 10px;">Resumen de asistencia</h4>
+            <canvas id="attResumenChart" height="130"></canvas>
+          </div>
+          <div class="att-kpis">
+            <div class="att-kpi">
+              <span>Presentes</span>
+              <strong id="attKpiPresentes">0</strong>
+            </div>
+            <div class="att-kpi">
+              <span>Ausentes</span>
+              <strong id="attKpiAusentes">0</strong>
+            </div>
+            <div class="att-kpi">
+              <span>Total registros</span>
+              <strong id="attKpiTotal">0</strong>
+            </div>
+            <div class="att-kpi">
+              <span>Última fecha</span>
+              <strong id="attKpiFecha">—</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="att-table-wrap">
+          <table class="att-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th>Ícono</th>
+              </tr>
+            </thead>
+            <tbody id="attTableBody">
+              <tr><td colspan="3" class="muted">Cargando asistencia...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="profAsistenciaTutorPanel">
+          <div class="prof-empty">
+            Cargando estudiantes de tutoría...
+          </div>
         </div>
       </div>
     </section>
