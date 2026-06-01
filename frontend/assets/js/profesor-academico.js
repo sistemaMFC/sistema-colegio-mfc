@@ -442,9 +442,9 @@ function renderProfesorCardsMenu() {
     if (!tabsWrap) return;
 
     tabsWrap.innerHTML = `
-        <button class="prof-assignment active" data-prof-section="notas">
-            <strong>📘 Insumos / Notas</strong>
-            <span>Registro y seguimiento trimestral</span>
+        <button class="prof-assignment active" data-prof-section="insumos">
+            <strong>📘 Insumos</strong>
+            <span>Tareas, evaluación individual, taller grupal y examen</span>
         </button>
         <button class="prof-assignment" data-prof-section="asistencia">
             <strong>🗓️ Asistencia</strong>
@@ -458,10 +458,6 @@ function renderProfesorCardsMenu() {
             <strong>💬 Mensajes</strong>
             <span>Comunicaciones y avisos</span>
         </button>
-        <button class="prof-assignment" data-prof-section="tutorias">
-            <strong>👥 Tutorías</strong>
-            <span>Seguimiento del curso tutor</span>
-        </button>
     `;
 }
 
@@ -472,12 +468,16 @@ function setupProfesorTabs() {
             document.querySelectorAll("[data-prof-section]").forEach(item => item.classList.remove("active"));
             btn.classList.add("active");
             const section = btn.dataset.profSection;
-            $("#profSectionNotas").hidden = section !== "notas";
+            const secInsumos = document.getElementById("profSectionInsumos");
+            if (secInsumos) secInsumos.hidden = section !== "insumos";
             $("#profSectionAsistencia").hidden = section !== "asistencia";
             $("#profSectionDocumentacion").hidden = section !== "documentacion";
-            $("#profSectionTutorias").hidden = section !== "tutorias";
             const secMsg = document.getElementById("profSectionMensajes");
             if (secMsg) secMsg.hidden = section !== "mensajes";
+            const secNotas = document.getElementById("profSectionNotas");
+            if (secNotas) secNotas.hidden = true;
+            const secTutorias = document.getElementById("profSectionTutorias");
+            if (secTutorias) secTutorias.hidden = true;
         });
     });
 }
