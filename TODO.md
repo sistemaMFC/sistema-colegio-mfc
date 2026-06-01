@@ -1,6 +1,7 @@
-# TODO - Corrección endpoint enrollments (error 500)
+# TODO - Submenú interno Académico (Admin + Profesor)
 
-- [x] Identificar causa del 500 en `GET /api/enrollments` con evidencia de esquema real.
-- [x] Corregir `backend/src/routes/enrollments.routes.js` para usar `matriculas.fecha_registro` y mantener alias de respuesta `fecha_matricula`.
-- [ ] Documentar cambios con fecha en `docs/funcionamiento-sistema.md`.
-- [ ] Validar endpoint y flujo UI de "Ver matriculados".
+- [ ] Implementar submenú interno en módulo Académico Admin: Insumos/Notas, Asistencia, Documentación.
+- [ ] Mantener menú principal admin intacto (sin nuevas opciones globales).
+- [ ] Implementar submenú interno equivalente en Portal Profesor.
+- [ ] Asegurar comportamiento responsive en ambos módulos.
+- [ ] Documentar cambios realizados con fecha en `docs/funcionamiento-sistema.md`.

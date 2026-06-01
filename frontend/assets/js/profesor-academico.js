@@ -444,6 +444,8 @@ function setupProfesorTabs() {
             btn.classList.add("active");
             const section = btn.dataset.profSection;
             $("#profSectionNotas").hidden = section !== "notas";
+            $("#profSectionAsistencia").hidden = section !== "asistencia";
+            $("#profSectionDocumentacion").hidden = section !== "documentacion";
             $("#profSectionTutorias").hidden = section !== "tutorias";
         });
     });

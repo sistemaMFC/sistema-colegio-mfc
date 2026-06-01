@@ -202,6 +202,7 @@ let _ac = {
     tipos:      [],     // tipos_evaluacion
     tipoExamen: null,
     tiposAct:   [],
+    seccion:    'notas',
     // selección actual
     curso:      null,
     paralelo:   null,
@@ -267,12 +268,30 @@ function _acadBreadcrumb(pasos) {
 /* ----------------------------------------------------------
    PASO 1: Seleccionar Curso + Paralelo
    ---------------------------------------------------------- */
+function _acadRenderSubmenu() {
+    return `
+        <div class="acad-tabs" style="margin-bottom:14px">
+            <button class="acad-tab ${_ac.seccion === 'notas' ? 'on' : ''}" onclick="_acadCambiarSeccion('notas')">Insumos / Notas</button>
+            <button class="acad-tab ${_ac.seccion === 'asistencia' ? 'on' : ''}" onclick="_acadCambiarSeccion('asistencia')">Asistencia</button>
+            <button class="acad-tab ${_ac.seccion === 'documentacion' ? 'on' : ''}" onclick="_acadCambiarSeccion('documentacion')">Documentación</button>
+        </div>
+    `;
+}
+
+function _acadCambiarSeccion(seccion) {
+    _ac.seccion = seccion;
+    if (seccion === 'notas') return _acadPaso1Curso();
+    if (seccion === 'asistencia') return _acadRenderAsistencia();
+    if (seccion === 'documentacion') return _acadRenderDocumentacion();
+}
+
 function _acadPaso1Curso() {
     const cont = document.getElementById('contenedor-academico');
     cont.innerHTML = `
         <div class="acad-topbar">
             <h3>Académico</h3>
         </div>
+        ${_acadRenderSubmenu()}
         ${_acadBreadcrumb([{ label: 'Cursos' }])}
         <p style="font-size:13px;color:var(--muted);margin-bottom:1rem">
             Selecciona el curso y paralelo para gestionar sus calificaciones.
@@ -284,6 +303,34 @@ function _acadPaso1Curso() {
                     <small>${c.nivel} · ${c.codigo}</small>
                 </div>
             `).join('')}
+        </div>
+    `;
+}
+
+function _acadRenderAsistencia() {
+    const cont = document.getElementById('contenedor-academico');
+    cont.innerHTML = `
+        <div class="acad-topbar"><h3>Académico</h3></div>
+        ${_acadRenderSubmenu()}
+        <div class="card" style="padding:14px;">
+            <h3 style="margin:0 0 10px;">Asistencia</h3>
+            <p class="muted" style="margin:0;">
+                Esta sección centralizará el control de asistencia por curso, paralelo y fecha.
+            </p>
+        </div>
+    `;
+}
+
+function _acadRenderDocumentacion() {
+    const cont = document.getElementById('contenedor-academico');
+    cont.innerHTML = `
+        <div class="acad-topbar"><h3>Académico</h3></div>
+        ${_acadRenderSubmenu()}
+        <div class="card" style="padding:14px;">
+            <h3 style="margin:0 0 10px;">Documentación</h3>
+            <p class="muted" style="margin:0;">
+                Aquí se publicarán guías y procesos del módulo académico para administración y docentes.
+            </p>
         </div>
     `;
 }
@@ -851,3 +898,4 @@ window._acadConfirmarNota     = _acadConfirmarNota;
 window._acadVerDetalle        = _acadVerDetalle;
 window._acadEliminarNota      = _acadEliminarNota;
 window._acadVerReporteAnual   = _acadVerReporteAnual;
+window._acadCambiarSeccion    = _acadCambiarSeccion;

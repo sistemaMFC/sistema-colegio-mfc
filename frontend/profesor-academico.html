@@ -287,7 +287,9 @@
         <h1>Academico</h1>
         <p class="muted" id="profSubtitle">Calificaciones, cursos de tutoría y asistencia</p>
         <div class="prof-tabs">
-          <button class="prof-tab active" data-prof-section="notas">Notas</button>
+          <button class="prof-tab active" data-prof-section="notas">Insumos / Notas</button>
+          <button class="prof-tab" data-prof-section="asistencia">Asistencia</button>
+          <button class="prof-tab" data-prof-section="documentacion">Documentación</button>
           <button class="prof-tab" data-prof-section="tutorias">Tutorías</button>
         </div>
       </div>
@@ -325,6 +327,24 @@
         </div>
       </section>
     </div>
+
+    <section class="card" style="margin-top:16px;" id="profSectionAsistencia" hidden>
+      <div class="card-head">
+        <h3>Asistencia</h3>
+      </div>
+      <div class="prof-empty">
+        Desde esta sección se gestionará la asistencia diaria por curso y paralelo.
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:16px;" id="profSectionDocumentacion" hidden>
+      <div class="card-head">
+        <h3>Documentación</h3>
+      </div>
+      <div class="prof-empty">
+        Aquí se publicarán guías, procesos y recursos académicos para docentes.
+      </div>
+    </section>
 
     <section class="card" style="margin-top:16px;" id="profSectionTutorias" hidden>
       <div class="card-head">

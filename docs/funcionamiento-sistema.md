@@ -697,6 +697,23 @@ Pagos queda pendiente de cierre final porque aun hay tablas duplicadas o modelos
 
 ## Bitacora de cambios recientes
 
+Fecha: 2026-06-01
+
+- Se corrigio la estructura de navegacion solicitada:
+  - No se agregaron nuevas opciones en el menu principal del administrador.
+  - Se mantuvo "Academico" como modulo principal en el sidebar admin.
+- Se implemento submenu interno en Academico (admin) con:
+  - Insumos / Notas
+  - Asistencia
+  - Documentacion
+- Se implemento el mismo esquema de submenu en el portal profesor:
+  - Insumos / Notas
+  - Asistencia
+  - Documentacion
+  - Tutorias
+- Objetivo del cambio:
+  - Respetar la distribucion funcional pedida, concentrando opciones dentro de Academico y del Portal Profesor, sin contaminar el menu global.
+
 - Fecha: 2026-05-31
 - Modulo: Matriculas / Enrollments (`backend/src/routes/enrollments.routes.js`)
 - Problema: `GET /api/enrollments` devolvia 500 y en frontend no cargaba "Ver matriculados".
