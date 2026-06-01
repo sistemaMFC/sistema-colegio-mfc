@@ -270,10 +270,25 @@ function _acadBreadcrumb(pasos) {
    ---------------------------------------------------------- */
 function _acadRenderSubmenu() {
     return `
-        <div class="acad-tabs" style="margin-bottom:14px">
-            <button class="acad-tab ${_ac.seccion === 'notas' ? 'on' : ''}" onclick="_acadCambiarSeccion('notas')">Insumos / Notas</button>
-            <button class="acad-tab ${_ac.seccion === 'asistencia' ? 'on' : ''}" onclick="_acadCambiarSeccion('asistencia')">Asistencia</button>
-            <button class="acad-tab ${_ac.seccion === 'documentacion' ? 'on' : ''}" onclick="_acadCambiarSeccion('documentacion')">Documentación</button>
+        <div style="margin-bottom:14px">
+            <div class="acad-grid-sel">
+                <div class="acad-card-sel" onclick="_acadCambiarSeccion('notas')" style="${_ac.seccion === 'notas' ? 'border-color:#1a5fa8;box-shadow:0 4px 16px rgba(37,99,235,.12);' : ''}">
+                    <h4>📘 Insumos / Notas</h4>
+                    <small>Registro y seguimiento trimestral</small>
+                </div>
+                <div class="acad-card-sel" onclick="_acadCambiarSeccion('asistencia')" style="${_ac.seccion === 'asistencia' ? 'border-color:#1a5fa8;box-shadow:0 4px 16px rgba(37,99,235,.12);' : ''}">
+                    <h4>🗓️ Asistencia</h4>
+                    <small>Control diario de asistencia</small>
+                </div>
+                <div class="acad-card-sel" onclick="_acadCambiarSeccion('documentacion')" style="${_ac.seccion === 'documentacion' ? 'border-color:#1a5fa8;box-shadow:0 4px 16px rgba(37,99,235,.12);' : ''}">
+                    <h4>📂 Documentación</h4>
+                    <small>Guías y procesos académicos</small>
+                </div>
+                <div class="acad-card-sel" onclick="_acadCambiarSeccion('mensajes')" style="${_ac.seccion === 'mensajes' ? 'border-color:#1a5fa8;box-shadow:0 4px 16px rgba(37,99,235,.12);' : ''}">
+                    <h4>💬 Mensajes</h4>
+                    <small>Comunicaciones y avisos</small>
+                </div>
+            </div>
         </div>
     `;
 }
@@ -283,6 +298,7 @@ function _acadCambiarSeccion(seccion) {
     if (seccion === 'notas') return _acadPaso1Curso();
     if (seccion === 'asistencia') return _acadRenderAsistencia();
     if (seccion === 'documentacion') return _acadRenderDocumentacion();
+    if (seccion === 'mensajes') return _acadRenderMensajes();
 }
 
 function _acadPaso1Curso() {
@@ -330,6 +346,20 @@ function _acadRenderDocumentacion() {
             <h3 style="margin:0 0 10px;">Documentación</h3>
             <p class="muted" style="margin:0;">
                 Aquí se publicarán guías y procesos del módulo académico para administración y docentes.
+            </p>
+        </div>
+    `;
+}
+
+function _acadRenderMensajes() {
+    const cont = document.getElementById('contenedor-academico');
+    cont.innerHTML = `
+        <div class="acad-topbar"><h3>Académico</h3></div>
+        ${_acadRenderSubmenu()}
+        <div class="card" style="padding:14px;">
+            <h3 style="margin:0 0 10px;">Mensajes</h3>
+            <p class="muted" style="margin:0;">
+                Bandeja de mensajes institucionales y avisos del módulo académico.
             </p>
         </div>
     `;
