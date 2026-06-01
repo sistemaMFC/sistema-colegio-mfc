@@ -1,7 +1,8 @@
-# TODO - Submenú interno Académico (Admin + Profesor)
+# TODO - Asistencia tutor (admin y profesor conectados)
 
-- [ ] Implementar submenú interno en módulo Académico Admin: Insumos/Notas, Asistencia, Documentación.
-- [ ] Mantener menú principal admin intacto (sin nuevas opciones globales).
-- [ ] Implementar submenú interno equivalente en Portal Profesor.
-- [ ] Asegurar comportamiento responsive en ambos módulos.
-- [ ] Documentar cambios realizados con fecha en `docs/funcionamiento-sistema.md`.
+- [ ] Profesor: en sección Asistencia mostrar listado de estudiantes de cursos donde es tutor.
+- [ ] Profesor: reutilizar datos de `state.tutorCursos` para renderizar asistencia.
+- [ ] Admin académico: en sección Asistencia permitir ver cursos/paralelos y estudiantes tutoreados.
+- [ ] Admin académico: consumir endpoint de tutor-estudiantes por docente seleccionado.
+- [ ] Mantener UI responsive y consistente con menú interno actual.
+- [ ] Documentar cambios en `docs/funcionamiento-sistema.md` con fecha.

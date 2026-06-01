@@ -358,17 +358,13 @@ function renderNotas(data) {
     });
 }
 
-function renderTutorCursos() {
-    const panel = $("#profTutorPanel");
-    if (!panel) return;
-
+function buildAsistenciaTutorHTML() {
     if (!state.tutorCursos.length) {
-        panel.innerHTML = `<div class="prof-empty">No tiene cursos asignados como tutor.</div>`;
-        return;
+        return `<div class="prof-empty">No tiene cursos asignados como tutor.</div>`;
     }
 
     const today = new Date().toISOString().slice(0, 10);
-    panel.innerHTML = state.tutorCursos.map((curso) => `
+    return state.tutorCursos.map((curso) => `
         <div style="padding:14px 14px 0;" data-curso-id="${escapeHTML(curso.curso_id)}" data-paralelo-id="${escapeHTML(curso.paralelo_id)}">
             <div class="prof-tools" style="border-bottom:0;">
                 <div>
@@ -393,6 +389,17 @@ function renderTutorCursos() {
             </div>
         </div>
     `).join("");
+}
+
+function renderTutorCursos() {
+    const panel = $("#profTutorPanel");
+    if (panel) {
+        panel.innerHTML = buildAsistenciaTutorHTML();
+    }
+    const asistenciaPanel = document.getElementById("profAsistenciaTutorPanel");
+    if (asistenciaPanel) {
+        asistenciaPanel.innerHTML = buildAsistenciaTutorHTML();
+    }
 }
 
 async function marcarAsistenciaLocal(matriculaId, estado, btn) {
