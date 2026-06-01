@@ -744,6 +744,14 @@ async function init() {
     $("#btnLogout").addEventListener("click", logout);
     setupProfesorTabs();
     $("#btnPerfilProfesor")?.addEventListener("click", abrirPerfilProfesor);
+
+    const btnVolverAdmin = $("#btnVolverAdmin");
+    if (decoded.rol === "ADMIN" && btnVolverAdmin) {
+        btnVolverAdmin.hidden = false;
+        btnVolverAdmin.addEventListener("click", () => {
+            window.location.href = "./app.html";
+        });
+    }
     $("#profTrimSelect").addEventListener("change", async (event) => {
         state.selectedTrimestreId = Number(event.target.value);
         await loadNotas();
