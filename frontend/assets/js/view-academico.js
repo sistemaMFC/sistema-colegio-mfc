@@ -223,6 +223,18 @@ async function mostrarModuloAcademico() {
     const cont = document.getElementById('contenedor-academico');
     cont.innerHTML = '<div class="acad-empty">⏳ Cargando…</div>';
 
+    cont.innerHTML = `
+        <div class="acad-topbar">
+            <h3>Academico</h3>
+        </div>
+        <div class="acad-empty">
+            <strong>Modulo academico en reorganizacion.</strong><br>
+            El bloque de Cursos queda oculto temporalmente mientras se separan Insumos,
+            Asistencia, Documentacion y Mensajes.
+        </div>
+    `;
+    return;
+
     try {
         // Cargar catálogos en paralelo
         const [periodo, cp, trims, tipos] = await Promise.all([

@@ -362,13 +362,12 @@
     <div class="prof-hero">
       <div>
         <h1>Academico</h1>
-        <p class="muted" id="profSubtitle">Calificaciones, cursos de tutoría y asistencia</p>
+        <p class="muted" id="profSubtitle">Insumos, asistencia, documentacion y mensajes</p>
         <div class="prof-tabs">
-          <button class="prof-tab active" data-prof-section="notas">Insumos / Notas</button>
+          <button class="prof-tab active" data-prof-section="insumos">Insumos</button>
           <button class="prof-tab" data-prof-section="asistencia">Asistencia</button>
           <button class="prof-tab" data-prof-section="documentacion">Documentación</button>
           <button class="prof-tab" data-prof-section="mensajes">Mensajes</button>
-          <button class="prof-tab" data-prof-section="tutorias">Tutorías</button>
         </div>
       </div>
       <div class="userbox">
@@ -405,30 +404,6 @@
         </article>
       </div>
     </section>
-
-    <div class="prof-grid" id="profSectionNotas" hidden>
-      <aside class="card">
-        <div class="card-head">
-          <h3>Materias</h3>
-        </div>
-        <div id="profAssignments" class="prof-list">
-          <div class="prof-empty">Cargando...</div>
-        </div>
-      </aside>
-
-      <section class="card prof-workspace">
-        <div class="prof-tools">
-          <div>
-            <h3 id="profCurrentTitle">Seleccione una materia</h3>
-            <p class="muted" id="profCurrentMeta">-</p>
-          </div>
-          <select id="profTrimSelect" disabled></select>
-        </div>
-        <div id="profNotesPanel">
-          <div class="prof-empty">Seleccione una materia para cargar notas.</div>
-        </div>
-      </section>
-    </div>
 
     <section class="card" style="margin-top:16px;" id="profSectionAsistencia" hidden>
       <div class="card-head">
@@ -501,14 +476,6 @@
       </div>
     </section>
 
-    <section class="card" style="margin-top:16px;" id="profSectionTutorias" hidden>
-      <div class="card-head">
-        <h3>Mis cursos como tutor</h3>
-      </div>
-      <div id="profTutorPanel">
-        <div class="prof-empty">Cargando tutorias...</div>
-      </div>
-    </section>
   </main>
 
   <script src="./assets/js/profesor-academico.js"></script>

@@ -1,4 +1,5 @@
 const API_BASE = window.MFC_API_BASE || "https://sistema-colegio-mfc.onrender.com";
+const NOTAS_ACTIVAS = false;
 
 const state = {
     user: null,
@@ -179,7 +180,9 @@ function fillUserUI(decoded, profile) {
 }
 
 function renderAssignments() {
+    if (!NOTAS_ACTIVAS) return;
     const panel = $("#profAssignments");
+    if (!panel) return;
 
     if (!state.docente?.id && !state.asignaciones.length) {
         panel.innerHTML = `<div class="prof-empty">No hay docente activo vinculado a este usuario.</div>`;
@@ -209,7 +212,9 @@ function renderAssignments() {
 }
 
 function renderTrimSelect() {
+    if (!NOTAS_ACTIVAS) return;
     const select = $("#profTrimSelect");
+    if (!select) return;
     select.disabled = !state.trimestres.length || !state.selectedAsignacionId;
     select.innerHTML = state.trimestres.map((trim) => `
         <option value="${escapeHTML(trim.id)}" ${Number(trim.id) === Number(state.selectedTrimestreId) ? "selected" : ""}>
@@ -219,11 +224,16 @@ function renderTrimSelect() {
 }
 
 function setCurrentAssignment(asig) {
-    $("#profCurrentTitle").textContent = asig ? asig.materia : "Seleccione una materia";
-    $("#profCurrentMeta").textContent = asig ? `${asig.curso} - Paralelo ${asig.paralelo}` : "-";
+    if (!NOTAS_ACTIVAS) return;
+    const title = $("#profCurrentTitle");
+    const meta = $("#profCurrentMeta");
+    if (!title || !meta) return;
+    title.textContent = asig ? asig.materia : "Seleccione una materia";
+    meta.textContent = asig ? `${asig.curso} - Paralelo ${asig.paralelo}` : "-";
 }
 
 async function selectAsignacion(asignacionId) {
+    if (!NOTAS_ACTIVAS) return;
     state.selectedAsignacionId = asignacionId;
     if (!state.selectedTrimestreId && state.trimestres.length) {
         state.selectedTrimestreId = state.trimestres[0].id;
@@ -559,8 +569,10 @@ function setupProfesorTabs() {
             const section = btn.dataset.profSection;
             const secInsumos = document.getElementById("profSectionInsumos");
             if (secInsumos) secInsumos.hidden = section !== "insumos";
-            $("#profSectionAsistencia").hidden = section !== "asistencia";
-            $("#profSectionDocumentacion").hidden = section !== "documentacion";
+            const secAsistencia = document.getElementById("profSectionAsistencia");
+            if (secAsistencia) secAsistencia.hidden = section !== "asistencia";
+            const secDocumentacion = document.getElementById("profSectionDocumentacion");
+            if (secDocumentacion) secDocumentacion.hidden = section !== "documentacion";
             const secMsg = document.getElementById("profSectionMensajes");
             if (secMsg) secMsg.hidden = section !== "mensajes";
             const secNotas = document.getElementById("profSectionNotas");
@@ -572,9 +584,11 @@ function setupProfesorTabs() {
 }
 
 async function loadNotas() {
+    if (!NOTAS_ACTIVAS) return;
     if (!state.selectedAsignacionId || !state.selectedTrimestreId) return;
 
     const panel = $("#profNotesPanel");
+    if (!panel) return;
     panel.innerHTML = `<div class="prof-empty">Cargando notas...</div>`;
 
     try {
@@ -591,6 +605,7 @@ async function loadNotas() {
 }
 
 async function handleNotaChange(event) {
+    if (!NOTAS_ACTIVAS) return;
     const input = event.target;
     const value = input.value.trim();
     if (value === "") return;
@@ -752,41 +767,36 @@ async function init() {
             window.location.href = "./app.html";
         });
     }
-    $("#profTrimSelect").addEventListener("change", async (event) => {
-        state.selectedTrimestreId = Number(event.target.value);
-        await loadNotas();
-    });
+    const trimSelect = $("#profTrimSelect");
+    if (trimSelect) {
+        trimSelect.addEventListener("change", async (event) => {
+            state.selectedTrimestreId = Number(event.target.value);
+            await loadNotas();
+        });
+    }
 
     try {
-        const [profile, docenteData, trimestres] = await Promise.all([
-            api("/api/profesor/perfil"),
-            api("/api/profesor/mi-docente"),
-            api("/api/academico/trimestres"),
-        ]);
+        const profile = await api("/api/profesor/perfil");
 
         state.user = profile;
-        state.docente = docenteData.docente;
-        state.asignaciones = docenteData.asignaciones || [];
-        state.trimestres = trimestres || [];
-        state.selectedTrimestreId = state.trimestres[0]?.id || null;
+        state.docente = null;
+        state.asignaciones = [];
+        state.trimestres = [];
+        state.selectedTrimestreId = null;
 
         fillUserUI(decoded, profile);
-        renderAssignments();
-        renderTrimSelect();
         try {
             const tutorData = await api("/api/profesor/tutor-estudiantes");
             state.tutorCursos = tutorData.cursos || [];
             renderTutorCursos();
         } catch (err) {
-            $("#profTutorPanel").innerHTML = `<div class="prof-empty">${escapeHTML(err.message)}</div>`;
-        }
-
-        if (state.asignaciones.length) {
-            await selectAsignacion(Number(state.asignaciones[0].id));
+            const asistenciaPanel = document.getElementById("profAsistenciaTutorPanel");
+            if (asistenciaPanel) {
+                asistenciaPanel.innerHTML = `<div class="prof-empty">${escapeHTML(err.message)}</div>`;
+            }
         }
     } catch (err) {
         showAlert("bad", err.message || "No se pudo cargar el portal.");
-        $("#profAssignments").innerHTML = `<div class="prof-empty">${escapeHTML(err.message)}</div>`;
     }
 }
 

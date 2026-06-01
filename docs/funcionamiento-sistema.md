@@ -700,6 +700,23 @@ Pagos queda pendiente de cierre final porque aun hay tablas duplicadas o modelos
 
 Fecha: 2026-06-01
 
+- Se pauso temporalmente la vista antigua de Notas/Materias del portal profesor.
+- En `frontend/profesor-academico.html` quedan visibles solo estas secciones:
+  - Insumos
+  - Asistencia
+  - Documentacion
+  - Mensajes
+- En `frontend/assets/js/profesor-academico.js` se dejo de cargar temporalmente:
+  - `/api/profesor/mi-docente`
+  - `/api/academico/trimestres`
+  - `/api/academico/notas`
+- La asistencia/tutoria se mantiene desde `GET /api/profesor/tutor-estudiantes`.
+- En `frontend/assets/js/view-academico.js` se oculto temporalmente el bloque de Cursos dentro de Academico admin.
+- Motivo: evitar que el flujo viejo de calificaciones siga mezclandose con el nuevo modelo que se construira por partes.
+- Importante: no se eliminaron rutas ni datos; solo se pauso la interfaz vieja.
+
+Fecha: 2026-06-01
+
 - Se corrigio la estructura de navegacion solicitada:
   - No se agregaron nuevas opciones en el menu principal del administrador.
   - Se mantuvo "Academico" como modulo principal en el sidebar admin.
