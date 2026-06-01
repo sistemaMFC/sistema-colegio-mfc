@@ -437,7 +437,36 @@ async function marcarAsistenciaLocal(matriculaId, estado, btn) {
     }
 }
 
+function renderProfesorCardsMenu() {
+    const tabsWrap = document.querySelector(".prof-tabs");
+    if (!tabsWrap) return;
+
+    tabsWrap.innerHTML = `
+        <button class="prof-assignment active" data-prof-section="notas">
+            <strong>📘 Insumos / Notas</strong>
+            <span>Registro y seguimiento trimestral</span>
+        </button>
+        <button class="prof-assignment" data-prof-section="asistencia">
+            <strong>🗓️ Asistencia</strong>
+            <span>Control diario del curso</span>
+        </button>
+        <button class="prof-assignment" data-prof-section="documentacion">
+            <strong>📂 Documentación</strong>
+            <span>Guías y procesos académicos</span>
+        </button>
+        <button class="prof-assignment" data-prof-section="mensajes">
+            <strong>💬 Mensajes</strong>
+            <span>Comunicaciones y avisos</span>
+        </button>
+        <button class="prof-assignment" data-prof-section="tutorias">
+            <strong>👥 Tutorías</strong>
+            <span>Seguimiento del curso tutor</span>
+        </button>
+    `;
+}
+
 function setupProfesorTabs() {
+    renderProfesorCardsMenu();
     document.querySelectorAll("[data-prof-section]").forEach(btn => {
         btn.addEventListener("click", () => {
             document.querySelectorAll("[data-prof-section]").forEach(item => item.classList.remove("active"));
@@ -447,6 +476,8 @@ function setupProfesorTabs() {
             $("#profSectionAsistencia").hidden = section !== "asistencia";
             $("#profSectionDocumentacion").hidden = section !== "documentacion";
             $("#profSectionTutorias").hidden = section !== "tutorias";
+            const secMsg = document.getElementById("profSectionMensajes");
+            if (secMsg) secMsg.hidden = section !== "mensajes";
         });
     });
 }
