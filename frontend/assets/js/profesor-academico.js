@@ -10,6 +10,12 @@ const state = {
     selectedTrimestreId: null,
     notasData: null,
     tutorCursos: [],
+    periodo: null,
+    trimestresNuevo: [],
+    academicContexts: [],
+    selectedAcademicAsignacionId: null,
+    selectedAcademicTrimestreId: null,
+    libro: null,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -583,6 +589,369 @@ function setupProfesorTabs() {
     });
 }
 
+function injectAcademicProfesorStyles() {
+    if (document.getElementById("prof-academic-new-styles")) return;
+    const style = document.createElement("style");
+    style.id = "prof-academic-new-styles";
+    style.textContent = `
+        .academic-shell { padding: 14px; display: grid; gap: 14px; }
+        .academic-filters { display:grid; grid-template-columns: 1.2fr .7fr auto; gap:10px; align-items:end; }
+        .academic-filters label { display:block; font-size:12px; font-weight:800; color:var(--muted); margin-bottom:5px; }
+        .academic-filters select { width:100%; }
+        .academic-board { display:grid; grid-template-columns: 300px minmax(0,1fr); gap:14px; align-items:start; }
+        .partial-list, .partial-detail { border:1px solid var(--stroke); border-radius:16px; background:var(--panel2); overflow:hidden; }
+        .partial-list-head, .partial-detail-head { padding:12px; border-bottom:1px solid var(--stroke); display:flex; justify-content:space-between; gap:8px; align-items:center; }
+        .partial-list-body { padding:10px; display:grid; gap:8px; }
+        .partial-btn { border:1px solid var(--stroke); background:var(--panel); color:var(--txt); border-radius:12px; padding:10px; text-align:left; cursor:pointer; }
+        .partial-btn.active { border-color:var(--blue); box-shadow:0 0 0 2px rgba(37,99,235,.10); }
+        .partial-status { display:inline-flex; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:900; background:rgba(16,185,129,.12); color:#065f46; }
+        .partial-status.closed { background:rgba(239,68,68,.12); color:#991b1b; }
+        .insumo-toolbar { display:flex; flex-wrap:wrap; gap:8px; padding:12px; border-bottom:1px solid var(--stroke); }
+        .insumo-btn { border:1px solid var(--stroke); background:var(--panel); color:var(--txt); border-radius:999px; padding:8px 10px; font-weight:800; cursor:pointer; }
+        .insumo-btn.tarea { border-color:#93c5fd; }
+        .insumo-btn.leccion { border-color:#fcd34d; }
+        .insumo-btn.taller { border-color:#6ee7b7; }
+        .insumo-btn.aporte { border-color:#c4b5fd; }
+        .insumo-btn.individual { border-color:#67e8f9; }
+        .grade-table-wrap { overflow:auto; background:var(--panel); }
+        .grade-table { width:100%; border-collapse:collapse; min-width:920px; font-size:13px; }
+        .grade-table th, .grade-table td { padding:9px 10px; border-bottom:1px solid var(--stroke); text-align:left; }
+        .grade-table th { font-size:11px; text-transform:uppercase; color:var(--muted); background:var(--panel2); }
+        .grade-table th:first-child, .grade-table td:first-child { position:sticky; left:0; background:var(--panel); z-index:1; min-width:220px; }
+        .grade-input { width:68px; border:1px solid var(--stroke); border-radius:10px; padding:7px; text-align:center; font-weight:800; background:var(--panel2); color:var(--txt); }
+        .grade-input.examen { border-color:#fca5a5; background:rgba(239,68,68,.08); }
+        .calc-chip { display:inline-flex; min-width:46px; justify-content:center; border-radius:9px; padding:5px 8px; background:var(--panel2); font-weight:900; }
+        .calc-chip.ok { background:rgba(16,185,129,.12); color:#065f46; }
+        .calc-chip.warn { background:rgba(245,158,11,.14); color:#92400e; }
+        .calc-chip.bad { background:rgba(239,68,68,.12); color:#991b1b; }
+        .academic-empty { padding:28px; text-align:center; color:var(--muted); }
+        @media (max-width: 900px) {
+            .academic-filters, .academic-board { grid-template-columns:1fr; }
+            .grade-table th:first-child, .grade-table td:first-child { position:static; }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function chipForNota(value) {
+    if (value === null || value === undefined || value === "") return "";
+    const n = Number(value);
+    if (n >= 7) return "ok";
+    if (n >= 5) return "warn";
+    return "bad";
+}
+
+function notaTxt(value) {
+    if (value === null || value === undefined || value === "") return "-";
+    const n = Number(value);
+    return Number.isFinite(n) ? n.toFixed(2) : "-";
+}
+
+function tipoLabel(tipo) {
+    return {
+        TAREA: "Tareas",
+        LECCION: "Lecciones",
+        TALLER: "Talleres",
+        APORTE: "Aportes",
+        INDIVIDUAL: "Individual",
+    }[tipo] || tipo;
+}
+
+function tipoClass(tipo) {
+    return String(tipo || "").toLowerCase();
+}
+
+function renderAcademicShell() {
+    const section = document.getElementById("profSectionInsumos");
+    if (!section) return;
+    const selectedAsignacion = state.academicContexts.find(item => Number(item.id) === Number(state.selectedAcademicAsignacionId));
+    section.innerHTML = `
+        <div class="card-head">
+            <h3>Insumos, parciales y examen trimestral</h3>
+        </div>
+        <div class="academic-shell">
+            <div class="academic-filters">
+                <div>
+                    <label>Materia / curso</label>
+                    <select id="academicAsignacionSelect">
+                        ${state.academicContexts.map(ctx => `
+                            <option value="${escapeHTML(ctx.id)}" ${Number(ctx.id) === Number(state.selectedAcademicAsignacionId) ? "selected" : ""}>
+                                ${escapeHTML(ctx.materia)} - ${escapeHTML(ctx.curso)} ${escapeHTML(ctx.paralelo ? `Paralelo ${ctx.paralelo}` : "")}
+                            </option>
+                        `).join("")}
+                    </select>
+                </div>
+                <div>
+                    <label>Trimestre</label>
+                    <select id="academicTrimestreSelect">
+                        ${state.trimestresNuevo.map(trim => `
+                            <option value="${escapeHTML(trim.id)}" ${Number(trim.id) === Number(state.selectedAcademicTrimestreId) ? "selected" : ""}>
+                                ${escapeHTML(trim.nombre)}
+                            </option>
+                        `).join("")}
+                    </select>
+                </div>
+                <button class="btn" type="button" onclick="profCrearParcial()">Crear parcial</button>
+            </div>
+            <div class="prof-summary">
+                <div class="prof-stat"><span>Periodo</span><strong>${escapeHTML(state.periodo?.nombre || "-")}</strong></div>
+                <div class="prof-stat"><span>Materia</span><strong>${escapeHTML(selectedAsignacion?.materia || "-")}</strong></div>
+                <div class="prof-stat"><span>Parciales</span><strong>${state.libro?.parciales?.length || 0}</strong></div>
+                <div class="prof-stat"><span>Formula</span><strong>70/30</strong></div>
+            </div>
+            <div id="academicBookPanel">${renderAcademicBook()}</div>
+        </div>
+    `;
+
+    document.getElementById("academicAsignacionSelect")?.addEventListener("change", async (event) => {
+        state.selectedAcademicAsignacionId = Number(event.target.value);
+        await loadAcademicBook();
+    });
+    document.getElementById("academicTrimestreSelect")?.addEventListener("change", async (event) => {
+        state.selectedAcademicTrimestreId = Number(event.target.value);
+        await loadAcademicBook();
+    });
+}
+
+function renderAcademicBook() {
+    const libro = state.libro;
+    if (!state.academicContexts.length) {
+        return `<div class="academic-empty">No hay materias asignadas todavia.</div>`;
+    }
+    if (!libro) {
+        return `<div class="academic-empty">Seleccione materia y trimestre para cargar el libro.</div>`;
+    }
+    if (libro.setup_required) {
+        return `<div class="academic-empty">${escapeHTML(libro.error)}<br><small>Ejecute database/academico-parciales-insumos.sql en Railway.</small></div>`;
+    }
+    const parciales = libro.parciales || [];
+    const active = parciales[0] || null;
+    return `
+        <div class="academic-board">
+            <aside class="partial-list">
+                <div class="partial-list-head">
+                    <strong>Parciales</strong>
+                    <button class="prof-mini-btn" type="button" onclick="profCrearParcial()">+</button>
+                </div>
+                <div class="partial-list-body">
+                    ${parciales.length ? parciales.map((parcial, index) => `
+                        <button class="partial-btn ${index === 0 ? "active" : ""}" type="button" data-partial-tab="${escapeHTML(parcial.id)}">
+                            <strong>${escapeHTML(parcial.nombre)}</strong><br>
+                            <span class="partial-status ${parcial.estado === "CERRADO" ? "closed" : ""}">${escapeHTML(parcial.estado)}</span>
+                        </button>
+                    `).join("") : `<div class="academic-empty">Cree el primer parcial para agregar insumos.</div>`}
+                </div>
+            </aside>
+            <section class="partial-detail" id="partialDetailPanel">
+                ${active ? renderParcialDetail(active) : ""}
+            </section>
+        </div>
+    `;
+}
+
+function renderParcialDetail(parcial) {
+    const alumnos = state.libro?.alumnos || [];
+    return `
+        <div class="partial-detail-head">
+            <div>
+                <strong>${escapeHTML(parcial.nombre)}</strong>
+                <span class="partial-status ${parcial.estado === "CERRADO" ? "closed" : ""}">${escapeHTML(parcial.estado)}</span>
+            </div>
+            <div class="actions-inline">
+                <button class="prof-mini-btn" type="button" onclick="profNotaUnicaParcial(${parcial.id})">Nota unica parcial</button>
+                <button class="prof-mini-btn" type="button" onclick="profCambiarEstadoParcial(${parcial.id}, '${parcial.estado === "CERRADO" ? "ABIERTO" : "CERRADO"}')">${parcial.estado === "CERRADO" ? "Reabrir" : "Cerrar"}</button>
+            </div>
+        </div>
+        <div class="insumo-toolbar">
+            ${["TAREA","LECCION","TALLER","APORTE","INDIVIDUAL"].map(tipo => `
+                <button class="insumo-btn ${tipoClass(tipo)}" type="button" onclick="profCrearInsumo(${parcial.id}, '${tipo}')">+ ${tipoLabel(tipo)}</button>
+            `).join("")}
+            <button class="insumo-btn" type="button" onclick="profNotaUnicaExamen()">Nota unica examen</button>
+        </div>
+        <div class="grade-table-wrap">
+            <table class="grade-table">
+                <thead>
+                    <tr>
+                        <th>Estudiante</th>
+                        ${parcial.insumos.map(insumo => `<th>${escapeHTML(insumo.nombre)}<br><small>${tipoLabel(insumo.tipo)}</small></th>`).join("")}
+                        <th>Prom. parcial</th>
+                        <th>Examen trimestral</th>
+                        <th>Prom. parciales</th>
+                        <th>Final trimestre</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${alumnos.map(alumno => {
+                        const parcialAlumno = (alumno.parciales || []).find(p => Number(p.parcial_id) === Number(parcial.id));
+                        return `
+                            <tr>
+                                <td><strong>${escapeHTML(alumno.apellidos_est)}, ${escapeHTML(alumno.nombres_est)}</strong><br><small class="muted">${escapeHTML(alumno.cedula_est || "-")}</small></td>
+                                ${parcial.insumos.map(insumo => {
+                                    const nota = insumo.notas?.[String(alumno.matricula_id)]?.nota ?? "";
+                                    return `<td><input class="grade-input" type="number" min="0" max="10" step="0.01" value="${escapeHTML(nota)}" onchange="profGuardarNotaInsumo(${insumo.id}, ${alumno.matricula_id}, this.value, this)"></td>`;
+                                }).join("")}
+                                <td><span class="calc-chip ${chipForNota(parcialAlumno?.promedio)}">${notaTxt(parcialAlumno?.promedio)}</span></td>
+                                <td><input class="grade-input examen" type="number" min="0" max="10" step="0.01" value="${escapeHTML(alumno.examen_trimestral ?? "")}" onchange="profGuardarExamen(${alumno.matricula_id}, this.value, this)"></td>
+                                <td><span class="calc-chip ${chipForNota(alumno.promedio_parciales)}">${notaTxt(alumno.promedio_parciales)}</span></td>
+                                <td><span class="calc-chip ${chipForNota(alumno.nota_trimestral)}">${notaTxt(alumno.nota_trimestral)}</span></td>
+                            </tr>
+                        `;
+                    }).join("")}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+async function loadAcademicContext() {
+    injectAcademicProfesorStyles();
+    const shell = document.getElementById("profSectionInsumos");
+    if (shell) {
+        shell.innerHTML = `<div class="card-head"><h3>Insumos y parciales</h3></div><div class="prof-empty">Cargando contexto academico...</div>`;
+    }
+    try {
+        const [periodo, trimestres, docenteData] = await Promise.all([
+            api("/api/academico/periodo-activo"),
+            api("/api/academico/trimestres"),
+            api("/api/profesor/mi-docente"),
+        ]);
+        state.periodo = periodo;
+        state.trimestresNuevo = trimestres || [];
+        state.academicContexts = docenteData.asignaciones || [];
+        state.selectedAcademicAsignacionId = state.academicContexts[0]?.id || null;
+        state.selectedAcademicTrimestreId = state.trimestresNuevo[0]?.id || null;
+        await loadAcademicBook();
+    } catch (err) {
+        if (shell) shell.innerHTML = `<div class="card-head"><h3>Insumos y parciales</h3></div><div class="prof-empty">${escapeHTML(err.message)}</div>`;
+    }
+}
+
+async function loadAcademicBook() {
+    if (!state.selectedAcademicAsignacionId || !state.selectedAcademicTrimestreId) {
+        state.libro = null;
+        renderAcademicShell();
+        return;
+    }
+    try {
+        state.libro = await api(`/api/academico/libro?asignacion_id=${state.selectedAcademicAsignacionId}&trimestre_id=${state.selectedAcademicTrimestreId}`);
+    } catch (err) {
+        state.libro = { setup_required: true, error: err.message };
+    }
+    renderAcademicShell();
+}
+
+async function profCrearParcial() {
+    const nombre = prompt("Nombre del parcial:", "");
+    if (nombre === null) return;
+    try {
+        await api("/api/academico/parciales", {
+            method: "POST",
+            body: {
+                asignacion_id: state.selectedAcademicAsignacionId,
+                trimestre_id: state.selectedAcademicTrimestreId,
+                nombre: nombre.trim() || undefined,
+            },
+        });
+        await loadAcademicBook();
+    } catch (err) {
+        showAlert("bad", err.message);
+    }
+}
+
+async function profCrearInsumo(parcialId, tipo) {
+    const nombre = prompt(`Nombre de ${tipoLabel(tipo)}:`, "");
+    if (nombre === null) return;
+    try {
+        await api("/api/academico/insumos", {
+            method: "POST",
+            body: { parcial_id: parcialId, tipo, nombre: nombre.trim() || undefined },
+        });
+        await loadAcademicBook();
+    } catch (err) {
+        showAlert("bad", err.message);
+    }
+}
+
+async function profGuardarNotaInsumo(insumoId, matriculaId, nota, input) {
+    if (nota === "") return;
+    input.disabled = true;
+    try {
+        await api("/api/academico/notas-insumo", {
+            method: "POST",
+            body: { insumo_id: insumoId, matricula_id: matriculaId, nota },
+        });
+        await loadAcademicBook();
+    } catch (err) {
+        showAlert("bad", err.message);
+        input.disabled = false;
+    }
+}
+
+async function profGuardarExamen(matriculaId, nota, input) {
+    if (nota === "") return;
+    input.disabled = true;
+    try {
+        await api("/api/academico/examen-trimestral", {
+            method: "POST",
+            body: {
+                asignacion_id: state.selectedAcademicAsignacionId,
+                trimestre_id: state.selectedAcademicTrimestreId,
+                matricula_id: matriculaId,
+                nota,
+            },
+        });
+        await loadAcademicBook();
+    } catch (err) {
+        showAlert("bad", err.message);
+        input.disabled = false;
+    }
+}
+
+async function profCambiarEstadoParcial(parcialId, estado) {
+    try {
+        await api(`/api/academico/parciales/${parcialId}/estado`, {
+            method: "PATCH",
+            body: { estado },
+        });
+        await loadAcademicBook();
+    } catch (err) {
+        showAlert("bad", err.message);
+    }
+}
+
+async function profNotaUnicaParcial(parcialId) {
+    const nota = prompt("Nota unica para todos los insumos de este parcial:");
+    if (nota === null) return;
+    try {
+        await api("/api/academico/nota-unica", {
+            method: "POST",
+            body: { parcial_id: parcialId, nota },
+        });
+        await loadAcademicBook();
+    } catch (err) {
+        showAlert("bad", err.message);
+    }
+}
+
+async function profNotaUnicaExamen() {
+    const nota = prompt("Nota unica para el examen trimestral:");
+    if (nota === null) return;
+    try {
+        await api("/api/academico/nota-unica", {
+            method: "POST",
+            body: {
+                asignacion_id: state.selectedAcademicAsignacionId,
+                trimestre_id: state.selectedAcademicTrimestreId,
+                alcance: "EXAMEN",
+                nota,
+            },
+        });
+        await loadAcademicBook();
+    } catch (err) {
+        showAlert("bad", err.message);
+    }
+}
+
 async function loadNotas() {
     if (!NOTAS_ACTIVAS) return;
     if (!state.selectedAsignacionId || !state.selectedTrimestreId) return;
@@ -785,6 +1154,7 @@ async function init() {
         state.selectedTrimestreId = null;
 
         fillUserUI(decoded, profile);
+        await loadAcademicContext();
         try {
             const tutorData = await api("/api/profesor/tutor-estudiantes");
             state.tutorCursos = tutorData.cursos || [];
@@ -807,3 +1177,10 @@ window.guardarPasswordProfesor = guardarPasswordProfesor;
 window.guardarFotoPerfilProfesor = guardarFotoPerfilProfesor;
 window.promptNotaUnica = promptNotaUnica;
 window.marcarAsistenciaLocal = marcarAsistenciaLocal;
+window.profCrearParcial = profCrearParcial;
+window.profCrearInsumo = profCrearInsumo;
+window.profGuardarNotaInsumo = profGuardarNotaInsumo;
+window.profGuardarExamen = profGuardarExamen;
+window.profCambiarEstadoParcial = profCambiarEstadoParcial;
+window.profNotaUnicaParcial = profNotaUnicaParcial;
+window.profNotaUnicaExamen = profNotaUnicaExamen;

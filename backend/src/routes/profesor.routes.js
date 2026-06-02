@@ -53,28 +53,35 @@ router.get('/mi-docente', authRequired, soloDocente, async (req, res) => {
 
         let asignaciones = [], tutorias = [];
 
-        if (docente.id || cfg.tipo === 'usuario') {
+        if (docente.id || cfg.tipo === 'usuario' || req.user.rol === 'ADMIN') {
             const [periodo] = await pool.query(
                 `SELECT id FROM periodos_lectivos WHERE estado = 'ACTIVO' LIMIT 1`
             );
             const periodoId = periodo[0]?.id;
 
             if (periodoId) {
-                const filtroProfesor = cfg.tipo === 'docente'
-                    ? `ad.${cfg.col} = ?`
+                const filtroProfesor = req.user.rol === 'ADMIN'
+                    ? '1=1'
                     : `ad.${cfg.col} = ?`;
                 const profesorValor = cfg.tipo === 'docente' ? docente.id : usuarioId;
+                const paramsAsignaciones = req.user.rol === 'ADMIN'
+                    ? [periodoId]
+                    : [profesorValor, periodoId];
                 const [asig] = await pool.query(
                     `SELECT ad.id, ad.materia_id, ad.curso_id, ad.paralelo_id,
                             m.nombre AS materia, m.codigo AS materia_codigo,
-                            c.nombre AS curso, p.nombre AS paralelo
+                            c.nombre AS curso, p.nombre AS paralelo,
+                            u.nombres AS docente_nombres, u.apellidos AS docente_apellidos
                      FROM asignaciones_docente ad
                      JOIN materias  m ON m.id = ad.materia_id
                      JOIN cursos    c ON c.id = ad.curso_id
                      JOIN paralelos p ON p.id = ad.paralelo_id
+                     ${cfg.tipo === 'docente'
+                        ? `LEFT JOIN docentes d ON d.id = ad.${cfg.col} LEFT JOIN usuarios u ON u.id = d.usuario_id`
+                        : `LEFT JOIN usuarios u ON u.id = ad.${cfg.col}`}
                      WHERE ${filtroProfesor} AND ad.periodo_id = ? AND ad.estado = 'ACTIVO'
                      ORDER BY c.nombre, m.nombre`,
-                    [profesorValor, periodoId]
+                    paramsAsignaciones
                 );
                 asignaciones = asig;
 
@@ -108,6 +115,9 @@ router.get('/tutor-estudiantes', authRequired, soloDocente, async (req, res) => 
         const periodoId = periodo[0]?.id;
         if (!periodoId) return res.json({ cursos: [] });
 
+        const filtroTutor = req.user.rol === 'ADMIN' ? '1=1' : 't.docente_usuario_id = ?';
+        const paramsTutor = req.user.rol === 'ADMIN' ? [periodoId] : [usuarioId, periodoId];
+
         const [rows] = await pool.query(
             `SELECT t.id AS tutoria_id, t.curso_id, t.paralelo_id,
                     c.nombre AS curso, p.nombre AS paralelo,
@@ -124,11 +134,11 @@ router.get('/tutor-estudiantes', authRequired, soloDocente, async (req, res) => 
                    AND m.periodo_id = t.periodo_id
                    AND m.estado IN ('ACTIVO','MATRICULADO')
              LEFT JOIN estudiantes e ON e.id = m.estudiante_id
-             WHERE t.docente_usuario_id = ?
+             WHERE ${filtroTutor}
                AND t.periodo_id = ?
                AND t.estado = 'ACTIVO'
              ORDER BY c.nombre ASC, p.nombre ASC, e.apellidos_est ASC, e.nombres_est ASC`,
-            [usuarioId, periodoId]
+            paramsTutor
         );
 
         const cursos = [];

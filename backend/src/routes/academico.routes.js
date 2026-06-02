@@ -134,6 +134,96 @@ async function matriculaPerteneceAsignacion(matriculaId, asignacionId) {
     return rows.length > 0;
 }
 
+function notaValida(nota) {
+    const valor = Number(nota);
+    return Number.isFinite(valor) && valor >= 0 && valor <= 10;
+}
+
+function normalizarTipoInsumo(tipo) {
+    const value = String(tipo || '').trim().toUpperCase();
+    const permitidos = new Set(['TAREA', 'LECCION', 'TALLER', 'INDIVIDUAL', 'APORTE']);
+    return permitidos.has(value) ? value : null;
+}
+
+async function obtenerAsignacionDetalle(asignacionId) {
+    const [rows] = await pool.query(
+        `SELECT ad.id, ad.materia_id, ad.curso_id, ad.paralelo_id, ad.periodo_id,
+                m.nombre AS materia, m.codigo AS materia_codigo,
+                c.nombre AS curso, p.nombre AS paralelo
+         FROM asignaciones_docente ad
+         JOIN materias m ON m.id = ad.materia_id
+         JOIN cursos c ON c.id = ad.curso_id
+         JOIN paralelos p ON p.id = ad.paralelo_id
+         WHERE ad.id = ? AND ad.estado = 'ACTIVO'
+         LIMIT 1`,
+        [asignacionId]
+    );
+    return rows[0] || null;
+}
+
+async function listarAlumnosAsignacion(asignacion) {
+    const [alumnos] = await pool.query(
+        `SELECT m.id AS matricula_id, e.id AS estudiante_id,
+                e.cedula_est, e.nombres_est, e.apellidos_est
+         FROM matriculas m
+         JOIN estudiantes e ON e.id = m.estudiante_id
+         WHERE m.curso_id = ? AND m.paralelo_id = ?
+           AND m.periodo_id = ? AND m.estado IN ('ACTIVO','MATRICULADO')
+         ORDER BY e.apellidos_est, e.nombres_est`,
+        [asignacion.curso_id, asignacion.paralelo_id, asignacion.periodo_id]
+    );
+    return alumnos;
+}
+
+function calcularResumenAcademico(alumnos, parciales, examenes) {
+    return alumnos.map(alumno => {
+        const parcialesAlumno = parciales.map(parcial => {
+            const notas = [];
+            const porTipo = {};
+            parcial.insumos.forEach(insumo => {
+                const nota = insumo.notas[String(alumno.matricula_id)]?.nota;
+                if (nota !== undefined && nota !== null) {
+                    notas.push(Number(nota));
+                    if (!porTipo[insumo.tipo]) porTipo[insumo.tipo] = [];
+                    porTipo[insumo.tipo].push(Number(nota));
+                }
+            });
+            const promedio = notas.length
+                ? Number((notas.reduce((s, n) => s + n, 0) / notas.length).toFixed(2))
+                : null;
+            return {
+                parcial_id: parcial.id,
+                nombre: parcial.nombre,
+                estado: parcial.estado,
+                promedio,
+                por_tipo: Object.fromEntries(Object.entries(porTipo).map(([tipo, valores]) => [
+                    tipo,
+                    Number((valores.reduce((s, n) => s + n, 0) / valores.length).toFixed(2))
+                ])),
+            };
+        });
+
+        const promediosParciales = parcialesAlumno
+            .map(p => p.promedio)
+            .filter(v => v !== null && v !== undefined);
+        const promedioParciales = promediosParciales.length
+            ? Number((promediosParciales.reduce((s, n) => s + n, 0) / promediosParciales.length).toFixed(2))
+            : null;
+        const examen = examenes[String(alumno.matricula_id)]?.nota ?? null;
+        const notaTrimestral = promedioParciales !== null
+            ? Number(((promedioParciales * 0.70) + ((Number(examen) || 0) * 0.30)).toFixed(2))
+            : null;
+
+        return {
+            ...alumno,
+            parciales: parcialesAlumno,
+            promedio_parciales: promedioParciales,
+            examen_trimestral: examen,
+            nota_trimestral: notaTrimestral,
+        };
+    });
+}
+
 /* ════════════════════════════════════
    1. CATÁLOGOS
    ════════════════════════════════════ */
@@ -415,6 +505,301 @@ router.delete('/notas/:id', authRequired, onlyAdmin, async (req, res) => {
    5. REPORTE INDIVIDUAL — /reporte/:matricula_id
       Usa vw_promedios_trimestrales si existe
    ════════════════════════════════════ */
+
+// GET /api/academico/libro?asignacion_id=X&trimestre_id=Y
+router.get('/libro', authRequired, adminOProfesor, async (req, res) => {
+    try {
+        const { asignacion_id, trimestre_id } = req.query;
+        if (!asignacion_id || !trimestre_id) {
+            return res.status(400).json({ error: 'Faltan asignacion_id y trimestre_id' });
+        }
+        if (!(await profesorPuedeAsignacion(req.user, asignacion_id))) {
+            return res.status(403).json({ error: 'No tienes permiso para esta asignacion' });
+        }
+
+        const asignacion = await obtenerAsignacionDetalle(asignacion_id);
+        if (!asignacion) return res.status(404).json({ error: 'Asignacion no encontrada' });
+        const alumnos = await listarAlumnosAsignacion(asignacion);
+
+        const [trimestreRows] = await pool.query(
+            'SELECT id, nombre, numero FROM trimestres WHERE id = ? LIMIT 1',
+            [trimestre_id]
+        );
+        const [parcialRows] = await pool.query(
+            `SELECT id, asignacion_id, trimestre_id, nombre, orden, estado, cerrado_at
+             FROM academico_parciales
+             WHERE asignacion_id = ? AND trimestre_id = ?
+             ORDER BY orden ASC, id ASC`,
+            [asignacion_id, trimestre_id]
+        );
+
+        const parcialIds = parcialRows.map(p => p.id);
+        const insumosPorParcial = {};
+        if (parcialIds.length) {
+            const marks = parcialIds.map(() => '?').join(',');
+            const [insumos] = await pool.query(
+                `SELECT id, parcial_id, tipo, nombre, orden, estado
+                 FROM academico_insumos
+                 WHERE parcial_id IN (${marks}) AND estado = 'ACTIVO'
+                 ORDER BY parcial_id, tipo, orden, id`,
+                parcialIds
+            );
+            const insumoIds = insumos.map(i => i.id);
+            const notasPorInsumo = {};
+            if (insumoIds.length) {
+                const insumoMarks = insumoIds.map(() => '?').join(',');
+                const [notas] = await pool.query(
+                    `SELECT id, insumo_id, matricula_id, nota, observacion
+                     FROM academico_notas_insumos
+                     WHERE insumo_id IN (${insumoMarks})`,
+                    insumoIds
+                );
+                notas.forEach(n => {
+                    if (!notasPorInsumo[n.insumo_id]) notasPorInsumo[n.insumo_id] = {};
+                    notasPorInsumo[n.insumo_id][String(n.matricula_id)] = {
+                        id: n.id,
+                        nota: Number(n.nota),
+                        observacion: n.observacion,
+                    };
+                });
+            }
+            insumos.forEach(i => {
+                if (!insumosPorParcial[i.parcial_id]) insumosPorParcial[i.parcial_id] = [];
+                insumosPorParcial[i.parcial_id].push({
+                    ...i,
+                    notas: notasPorInsumo[i.id] || {},
+                });
+            });
+        }
+
+        const [examenRows] = await pool.query(
+            `SELECT id, matricula_id, nota, observacion
+             FROM academico_examenes_trimestrales
+             WHERE asignacion_id = ? AND trimestre_id = ?`,
+            [asignacion_id, trimestre_id]
+        );
+        const examenes = {};
+        examenRows.forEach(e => {
+            examenes[String(e.matricula_id)] = {
+                id: e.id,
+                nota: Number(e.nota),
+                observacion: e.observacion,
+            };
+        });
+
+        const parciales = parcialRows.map(p => ({
+            ...p,
+            insumos: insumosPorParcial[p.id] || [],
+        }));
+
+        res.json({
+            asignacion,
+            trimestre: trimestreRows[0] || null,
+            alumnos: calcularResumenAcademico(alumnos, parciales, examenes),
+            parciales,
+            examenes,
+            formula: { parciales: 70, examen: 30 },
+        });
+    } catch (err) {
+        if (err.code === 'ER_NO_SUCH_TABLE') {
+            return res.status(501).json({ error: 'Falta ejecutar database/academico-parciales-insumos.sql en MySQL' });
+        }
+        console.error('Error libro academico:', err);
+        res.status(500).json({ error: 'Error al cargar libro academico' });
+    }
+});
+
+router.post('/parciales', authRequired, adminOProfesor, async (req, res) => {
+    try {
+        const { asignacion_id, trimestre_id, nombre } = req.body;
+        if (!asignacion_id || !trimestre_id) return res.status(400).json({ error: 'Faltan datos del parcial' });
+        if (!(await profesorPuedeAsignacion(req.user, asignacion_id))) {
+            return res.status(403).json({ error: 'No tienes permiso para esta asignacion' });
+        }
+        const [ordenRows] = await pool.query(
+            'SELECT COALESCE(MAX(orden), 0) + 1 AS siguiente FROM academico_parciales WHERE asignacion_id = ? AND trimestre_id = ?',
+            [asignacion_id, trimestre_id]
+        );
+        const orden = ordenRows[0]?.siguiente || 1;
+        const parcialNombre = String(nombre || `Parcial ${orden}`).trim().slice(0, 80);
+        const [result] = await pool.query(
+            'INSERT INTO academico_parciales (asignacion_id, trimestre_id, nombre, orden) VALUES (?, ?, ?, ?)',
+            [asignacion_id, trimestre_id, parcialNombre, orden]
+        );
+        res.json({ success: true, id: result.insertId, nombre: parcialNombre, orden });
+    } catch (err) {
+        if (err.code === 'ER_NO_SUCH_TABLE') return res.status(501).json({ error: 'Falta ejecutar database/academico-parciales-insumos.sql en MySQL' });
+        console.error('Error crear parcial:', err);
+        res.status(500).json({ error: 'Error al crear parcial' });
+    }
+});
+
+router.patch('/parciales/:id/estado', authRequired, adminOProfesor, async (req, res) => {
+    try {
+        const estado = String(req.body.estado || '').toUpperCase();
+        if (!['ABIERTO', 'CERRADO'].includes(estado)) return res.status(400).json({ error: 'Estado invalido' });
+        const [rows] = await pool.query('SELECT id, asignacion_id FROM academico_parciales WHERE id = ? LIMIT 1', [req.params.id]);
+        if (!rows.length) return res.status(404).json({ error: 'Parcial no encontrado' });
+        if (!(await profesorPuedeAsignacion(req.user, rows[0].asignacion_id))) {
+            return res.status(403).json({ error: 'No tienes permiso para este parcial' });
+        }
+        await pool.query(
+            `UPDATE academico_parciales
+             SET estado = ?, cerrado_por = ?, cerrado_at = ${estado === 'CERRADO' ? 'NOW()' : 'NULL'}
+             WHERE id = ?`,
+            [estado, estado === 'CERRADO' ? req.user.id : null, req.params.id]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error cambiar parcial:', err);
+        res.status(500).json({ error: 'Error al cambiar estado del parcial' });
+    }
+});
+
+router.post('/insumos', authRequired, adminOProfesor, async (req, res) => {
+    try {
+        const { parcial_id, tipo, nombre } = req.body;
+        const tipoFinal = normalizarTipoInsumo(tipo);
+        if (!parcial_id || !tipoFinal) return res.status(400).json({ error: 'Faltan datos del insumo' });
+        const [parcialRows] = await pool.query('SELECT id, asignacion_id, estado FROM academico_parciales WHERE id = ? LIMIT 1', [parcial_id]);
+        if (!parcialRows.length) return res.status(404).json({ error: 'Parcial no encontrado' });
+        if (parcialRows[0].estado === 'CERRADO' && req.user.rol !== 'ADMIN') return res.status(403).json({ error: 'El parcial esta cerrado' });
+        if (!(await profesorPuedeAsignacion(req.user, parcialRows[0].asignacion_id))) {
+            return res.status(403).json({ error: 'No tienes permiso para este parcial' });
+        }
+        const [ordenRows] = await pool.query(
+            'SELECT COALESCE(MAX(orden), 0) + 1 AS siguiente FROM academico_insumos WHERE parcial_id = ? AND tipo = ?',
+            [parcial_id, tipoFinal]
+        );
+        const orden = ordenRows[0]?.siguiente || 1;
+        const insumoNombre = String(nombre || `${tipoFinal} ${orden}`).trim().slice(0, 120);
+        const [result] = await pool.query(
+            'INSERT INTO academico_insumos (parcial_id, tipo, nombre, orden) VALUES (?, ?, ?, ?)',
+            [parcial_id, tipoFinal, insumoNombre, orden]
+        );
+        res.json({ success: true, id: result.insertId, nombre: insumoNombre, tipo: tipoFinal, orden });
+    } catch (err) {
+        console.error('Error crear insumo:', err);
+        res.status(500).json({ error: 'Error al crear insumo' });
+    }
+});
+
+router.post('/notas-insumo', authRequired, adminOProfesor, async (req, res) => {
+    try {
+        const { insumo_id, matricula_id, nota, observacion } = req.body;
+        if (!insumo_id || !matricula_id || nota === undefined) return res.status(400).json({ error: 'Faltan datos de nota' });
+        if (!notaValida(nota)) return res.status(400).json({ error: 'La nota debe estar entre 0 y 10' });
+        const [rows] = await pool.query(
+            `SELECT i.id, p.asignacion_id, p.estado
+             FROM academico_insumos i
+             JOIN academico_parciales p ON p.id = i.parcial_id
+             WHERE i.id = ? AND i.estado = 'ACTIVO'
+             LIMIT 1`,
+            [insumo_id]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Insumo no encontrado' });
+        if (rows[0].estado === 'CERRADO' && req.user.rol !== 'ADMIN') return res.status(403).json({ error: 'El parcial esta cerrado' });
+        if (!(await profesorPuedeAsignacion(req.user, rows[0].asignacion_id))) return res.status(403).json({ error: 'No tienes permiso para este insumo' });
+        if (!(await matriculaPerteneceAsignacion(matricula_id, rows[0].asignacion_id))) return res.status(400).json({ error: 'La matricula no pertenece a esta asignacion' });
+        await pool.query(
+            `INSERT INTO academico_notas_insumos (insumo_id, matricula_id, nota, observacion, created_by, updated_by)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE nota = VALUES(nota), observacion = VALUES(observacion), updated_by = VALUES(updated_by)`,
+            [insumo_id, matricula_id, Number(nota), observacion || null, req.user.id, req.user.id]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error guardar nota insumo:', err);
+        res.status(500).json({ error: 'Error al guardar nota de insumo' });
+    }
+});
+
+router.post('/examen-trimestral', authRequired, adminOProfesor, async (req, res) => {
+    try {
+        const { asignacion_id, trimestre_id, matricula_id, nota, observacion } = req.body;
+        if (!asignacion_id || !trimestre_id || !matricula_id || nota === undefined) return res.status(400).json({ error: 'Faltan datos del examen' });
+        if (!notaValida(nota)) return res.status(400).json({ error: 'La nota debe estar entre 0 y 10' });
+        if (!(await profesorPuedeAsignacion(req.user, asignacion_id))) return res.status(403).json({ error: 'No tienes permiso para esta asignacion' });
+        if (!(await matriculaPerteneceAsignacion(matricula_id, asignacion_id))) return res.status(400).json({ error: 'La matricula no pertenece a esta asignacion' });
+        await pool.query(
+            `INSERT INTO academico_examenes_trimestrales (asignacion_id, trimestre_id, matricula_id, nota, observacion, created_by, updated_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE nota = VALUES(nota), observacion = VALUES(observacion), updated_by = VALUES(updated_by)`,
+            [asignacion_id, trimestre_id, matricula_id, Number(nota), observacion || null, req.user.id, req.user.id]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error guardar examen:', err);
+        res.status(500).json({ error: 'Error al guardar examen trimestral' });
+    }
+});
+
+router.post('/nota-unica', authRequired, adminOProfesor, async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        const { parcial_id, asignacion_id, trimestre_id, insumo_id, alcance, nota } = req.body;
+        if (!notaValida(nota)) return res.status(400).json({ error: 'La nota debe estar entre 0 y 10' });
+        let asignacionId = asignacion_id;
+        let trimestreId = trimestre_id;
+        let insumoIds = [];
+        if (insumo_id) {
+            const [rows] = await connection.query(
+                `SELECT i.id, p.asignacion_id, p.trimestre_id, p.estado
+                 FROM academico_insumos i JOIN academico_parciales p ON p.id = i.parcial_id
+                 WHERE i.id = ? LIMIT 1`,
+                [insumo_id]
+            );
+            if (!rows.length) return res.status(404).json({ error: 'Insumo no encontrado' });
+            if (rows[0].estado === 'CERRADO' && req.user.rol !== 'ADMIN') return res.status(403).json({ error: 'El parcial esta cerrado' });
+            asignacionId = rows[0].asignacion_id;
+            trimestreId = rows[0].trimestre_id;
+            insumoIds = [rows[0].id];
+        } else if (parcial_id) {
+            const [rows] = await connection.query('SELECT id, asignacion_id, trimestre_id, estado FROM academico_parciales WHERE id = ? LIMIT 1', [parcial_id]);
+            if (!rows.length) return res.status(404).json({ error: 'Parcial no encontrado' });
+            if (rows[0].estado === 'CERRADO' && req.user.rol !== 'ADMIN') return res.status(403).json({ error: 'El parcial esta cerrado' });
+            asignacionId = rows[0].asignacion_id;
+            trimestreId = rows[0].trimestre_id;
+            const [ins] = await connection.query('SELECT id FROM academico_insumos WHERE parcial_id = ? AND estado = ?',[parcial_id, 'ACTIVO']);
+            insumoIds = ins.map(i => i.id);
+        }
+        if (!asignacionId || !trimestreId) return res.status(400).json({ error: 'Falta contexto academico' });
+        if (!(await profesorPuedeAsignacion(req.user, asignacionId))) return res.status(403).json({ error: 'No tienes permiso para esta asignacion' });
+        const asignacion = await obtenerAsignacionDetalle(asignacionId);
+        const alumnos = await listarAlumnosAsignacion(asignacion);
+        await connection.beginTransaction();
+        if (alcance === 'EXAMEN') {
+            for (const alumno of alumnos) {
+                await connection.query(
+                    `INSERT INTO academico_examenes_trimestrales (asignacion_id, trimestre_id, matricula_id, nota, created_by, updated_by)
+                     VALUES (?, ?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE nota = VALUES(nota), updated_by = VALUES(updated_by)`,
+                    [asignacionId, trimestreId, alumno.matricula_id, Number(nota), req.user.id, req.user.id]
+                );
+            }
+        } else {
+            if (!insumoIds.length) return res.status(400).json({ error: 'No hay insumos para aplicar nota unica' });
+            for (const insumoId of insumoIds) {
+                for (const alumno of alumnos) {
+                    await connection.query(
+                        `INSERT INTO academico_notas_insumos (insumo_id, matricula_id, nota, created_by, updated_by)
+                         VALUES (?, ?, ?, ?, ?)
+                         ON DUPLICATE KEY UPDATE nota = VALUES(nota), updated_by = VALUES(updated_by)`,
+                        [insumoId, alumno.matricula_id, Number(nota), req.user.id, req.user.id]
+                    );
+                }
+            }
+        }
+        await connection.commit();
+        res.json({ success: true, alumnos: alumnos.length });
+    } catch (err) {
+        await connection.rollback();
+        console.error('Error nota unica:', err);
+        res.status(500).json({ error: 'Error al aplicar nota unica' });
+    } finally {
+        connection.release();
+    }
+});
 
 router.get('/reporte/:matricula_id', authRequired, adminOProfesor, async (req, res) => {
     try {

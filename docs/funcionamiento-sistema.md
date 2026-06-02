@@ -320,7 +320,9 @@ Regla:
 
 ### Nuevo modelo de notas
 
-El modelo actual con `calificaciones` queda como base temporal.
+El modelo actual con `calificaciones` queda como base temporal y legado.
+El modelo nuevo usa tablas separadas para parciales, insumos, notas por insumo
+y examen trimestral.
 
 Modelo academico requerido:
 
@@ -344,6 +346,9 @@ Reglas:
 - El promedio de parciales representa el 70%.
 - El examen representa el porcentaje restante definido por la institucion.
 - El examen no se mezcla con tareas, lecciones, talleres, aportes ni individual.
+- El examen es unico por estudiante, asignacion y trimestre, aunque existan varios parciales.
+- El administrador puede entrar a cualquier curso, paralelo, materia y profesor.
+- El profesor solo entra a sus asignaciones activas.
 
 Tablas propuestas:
 
@@ -352,6 +357,17 @@ Tablas propuestas:
 - `calificaciones_insumos`
 - `calificaciones_examenes`
 - `calificaciones_comportamiento`
+
+Tablas implementadas:
+
+- `academico_parciales`
+- `academico_insumos`
+- `academico_notas_insumos`
+- `academico_examenes_trimestrales`
+
+Script de instalacion:
+
+- `database/academico-parciales-insumos.sql`
 
 Colores oficiales de insumos:
 
@@ -697,6 +713,33 @@ El sistema no debe usar para desarrollo nuevo:
 Pagos queda pendiente de cierre final porque aun hay tablas duplicadas o modelos mezclados.
 
 ## Bitacora de cambios recientes
+
+Fecha: 2026-06-01
+
+- Se implemento la primera version funcional del nuevo modelo academico por:
+  - periodo lectivo,
+  - trimestre,
+  - parciales dinamicos,
+  - insumos por parcial,
+  - examen trimestral separado.
+- Se creo `database/academico-parciales-insumos.sql` con las tablas:
+  - `academico_parciales`
+  - `academico_insumos`
+  - `academico_notas_insumos`
+  - `academico_examenes_trimestrales`
+- Se agregaron rutas nuevas en `backend/src/routes/academico.routes.js`:
+  - `GET /api/academico/libro`
+  - `POST /api/academico/parciales`
+  - `PATCH /api/academico/parciales/:id/estado`
+  - `POST /api/academico/insumos`
+  - `POST /api/academico/notas-insumo`
+  - `POST /api/academico/examen-trimestral`
+  - `POST /api/academico/nota-unica`
+- El administrador puede usar la vista academica para cualquier asignacion activa del periodo.
+- El portal profesor usa la misma logica academica, pero limitado a sus asignaciones.
+- Se ajusto `backend/src/routes/profesor.routes.js` para que ADMIN vea todas las asignaciones y tutorias desde el portal profesor.
+- Formula implementada: promedio de parciales 70% + examen trimestral 30%.
+- Importante: para activar la persistencia en Railway hay que ejecutar `database/academico-parciales-insumos.sql`.
 
 Fecha: 2026-06-01
 

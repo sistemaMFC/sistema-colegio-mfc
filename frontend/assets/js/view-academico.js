@@ -209,6 +209,9 @@ let _ac = {
     asignacion: null,   // { id, materia, curso, paralelo, ... }
     trimestre:  null,   // { id, nombre, numero }
     dataNota:   null,   // última respuesta del GET /notas
+    asignaciones: [],
+    libroNuevo: null,
+    asignacionNueva: null,
 };
 
 /* ----------------------------------------------------------
@@ -222,18 +225,6 @@ async function mostrarModuloAcademico() {
 
     const cont = document.getElementById('contenedor-academico');
     cont.innerHTML = '<div class="acad-empty">⏳ Cargando…</div>';
-
-    cont.innerHTML = `
-        <div class="acad-topbar">
-            <h3>Academico</h3>
-        </div>
-        <div class="acad-empty">
-            <strong>Modulo academico en reorganizacion.</strong><br>
-            El bloque de Cursos queda oculto temporalmente mientras se separan Insumos,
-            Asistencia, Documentacion y Mensajes.
-        </div>
-    `;
-    return;
 
     try {
         // Cargar catálogos en paralelo
@@ -253,10 +244,215 @@ async function mostrarModuloAcademico() {
         _ac.tiposAct   = tipos.filter(t => t.codigo !== 'EXAMEN');
         _ac.trimestre  = trims[0] || null;
 
-        _acadPaso1Curso();
+        _ac.asignaciones = await api(`/api/academico/asignaciones?periodo_id=${periodo.id}`);
+        _ac.asignacionNueva = _ac.asignaciones[0] || null;
+        await _acadCargarLibroNuevo();
     } catch (err) {
         cont.innerHTML = `<div class="acad-empty">⚠️ Error al inicializar el módulo académico.<br><small>${err.message}</small></div>`;
     }
+}
+
+function _acadNotaTxt(value) {
+    if (value === null || value === undefined || value === '') return '-';
+    const n = Number(value);
+    return Number.isFinite(n) ? n.toFixed(2) : '-';
+}
+
+function _acadTipoLabel(tipo) {
+    return {
+        TAREA: 'Tareas',
+        LECCION: 'Lecciones',
+        TALLER: 'Talleres',
+        APORTE: 'Aportes',
+        INDIVIDUAL: 'Individual',
+    }[tipo] || tipo;
+}
+
+function _acadChipClass(value) {
+    if (value === null || value === undefined || value === '') return 'n';
+    const n = Number(value);
+    if (n >= 7) return 'a';
+    if (n >= 5) return 'm';
+    return 'b';
+}
+
+async function _acadCargarLibroNuevo() {
+    const cont = document.getElementById('contenedor-academico');
+    if (!_ac.asignacionNueva || !_ac.trimestre) {
+        cont.innerHTML = '<div class="acad-empty">No hay asignaciones academicas activas para el periodo.</div>';
+        return;
+    }
+    try {
+        _ac.libroNuevo = await api(`/api/academico/libro?asignacion_id=${_ac.asignacionNueva.id}&trimestre_id=${_ac.trimestre.id}`);
+    } catch (err) {
+        _ac.libroNuevo = { error: err.message, setup_required: true, parciales: [], alumnos: [] };
+    }
+    _acadRenderLibroNuevo();
+}
+
+function _acadRenderLibroNuevo() {
+    const cont = document.getElementById('contenedor-academico');
+    const libro = _ac.libroNuevo || {};
+    const parcial = (libro.parciales || [])[0] || null;
+    cont.innerHTML = `
+        <div class="acad-topbar">
+            <div>
+                <h3>Academico</h3>
+                <p class="muted" style="margin:4px 0 0;">Administrador: acceso a todos los cursos, paralelos y profesores.</p>
+            </div>
+            <button class="acad-btn prim" onclick="_acadCrearParcialNuevo()">+ Crear parcial</button>
+        </div>
+        <div class="card" style="padding:14px;margin-bottom:14px;">
+            <div class="acad-grid-sel">
+                <label>
+                    <strong>Curso / materia / profesor</strong>
+                    <select class="nota-inp" style="width:100%;margin-top:6px;text-align:left;" onchange="_acadCambiarAsignacionNueva(this.value)">
+                        ${_ac.asignaciones.map(a => `
+                            <option value="${a.id}" ${Number(a.id) === Number(_ac.asignacionNueva?.id) ? 'selected' : ''}>
+                                ${a.curso} ${a.paralelo} - ${a.materia} - ${a.docente_nombres || ''} ${a.docente_apellidos || ''}
+                            </option>
+                        `).join('')}
+                    </select>
+                </label>
+                <label>
+                    <strong>Trimestre</strong>
+                    <select class="nota-inp" style="width:100%;margin-top:6px;text-align:left;" onchange="_acadCambiarTrimestreNuevo(this.value)">
+                        ${_ac.trimestres.map(t => `
+                            <option value="${t.id}" ${Number(t.id) === Number(_ac.trimestre?.id) ? 'selected' : ''}>${t.nombre}</option>
+                        `).join('')}
+                    </select>
+                </label>
+            </div>
+        </div>
+        ${libro.setup_required ? `
+            <div class="acad-empty">${libro.error}<br><small>Ejecuta database/academico-parciales-insumos.sql en Railway MySQL.</small></div>
+        ` : `
+            <div class="acad-bar">
+                <div class="acad-bar-item"><span>Periodo</span><span>${_ac.periodo?.nombre || '-'}</span></div>
+                <div class="acad-bar-item"><span>Parciales</span><span>${(libro.parciales || []).length}</span></div>
+                <div class="acad-bar-item"><span>Estudiantes</span><span>${(libro.alumnos || []).length}</span></div>
+                <div class="acad-bar-item"><span>Formula</span><span>70% parciales / 30% examen</span></div>
+            </div>
+            <div class="acad-reporte-grid" style="margin:14px 0;">
+                ${(libro.parciales || []).map((p, idx) => `
+                    <div class="acad-mat-card" style="${idx === 0 ? 'border-color:#2563eb;' : ''}">
+                        <h4>${p.nombre}</h4>
+                        <div class="acad-trim-row"><span>Estado</span><strong>${p.estado}</strong></div>
+                        <div class="acad-trim-row"><span>Insumos</span><strong>${p.insumos.length}</strong></div>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">
+                            <button class="acad-btn sm" onclick="_acadCrearInsumoNuevo(${p.id}, 'TAREA')">+ Tarea</button>
+                            <button class="acad-btn sm" onclick="_acadCrearInsumoNuevo(${p.id}, 'LECCION')">+ Leccion</button>
+                            <button class="acad-btn sm" onclick="_acadCrearInsumoNuevo(${p.id}, 'TALLER')">+ Taller</button>
+                            <button class="acad-btn sm" onclick="_acadCrearInsumoNuevo(${p.id}, 'APORTE')">+ Aporte</button>
+                            <button class="acad-btn sm" onclick="_acadCrearInsumoNuevo(${p.id}, 'INDIVIDUAL')">+ Individual</button>
+                            <button class="acad-btn sm" onclick="_acadNotaUnicaParcialNuevo(${p.id})">Nota unica</button>
+                            <button class="acad-btn sm" onclick="_acadCambiarEstadoParcialNuevo(${p.id}, '${p.estado === 'CERRADO' ? 'ABIERTO' : 'CERRADO'}')">${p.estado === 'CERRADO' ? 'Reabrir' : 'Cerrar'}</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            ${parcial ? _acadRenderTablaParcialNuevo(parcial) : '<div class="acad-empty">Crea un parcial para empezar a registrar insumos.</div>'}
+        `}
+    `;
+}
+
+function _acadRenderTablaParcialNuevo(parcial) {
+    const alumnos = _ac.libroNuevo?.alumnos || [];
+    return `
+        <div class="card" style="overflow:hidden;">
+            <div class="acad-topbar" style="padding:14px;margin:0;border-bottom:1px solid var(--stroke);">
+                <h3>${parcial.nombre}</h3>
+                <button class="acad-btn" onclick="_acadNotaUnicaExamenNuevo()">Nota unica examen</button>
+            </div>
+            <div class="acad-tbl-wrap">
+                <table class="acad-tbl">
+                    <thead>
+                        <tr>
+                            <th>Estudiante</th>
+                            ${parcial.insumos.map(i => `<th>${i.nombre}<br><small>${_acadTipoLabel(i.tipo)}</small></th>`).join('')}
+                            <th>Prom. parcial</th>
+                            <th>Examen trimestral</th>
+                            <th>Prom. parciales</th>
+                            <th>Final trimestre</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${alumnos.map(al => {
+                            const parcialAlumno = (al.parciales || []).find(p => Number(p.parcial_id) === Number(parcial.id));
+                            return `
+                                <tr>
+                                    <td class="acad-alumno-cell">${al.apellidos_est}, ${al.nombres_est}<br><small class="muted">${al.cedula_est || '-'}</small></td>
+                                    ${parcial.insumos.map(i => {
+                                        const nota = i.notas?.[String(al.matricula_id)]?.nota ?? '';
+                                        return `<td><input class="nota-inp" type="number" min="0" max="10" step="0.01" value="${nota}" onchange="_acadGuardarNotaInsumoNuevo(${i.id}, ${al.matricula_id}, this.value)"></td>`;
+                                    }).join('')}
+                                    <td><span class="nota-chip ${_acadChipClass(parcialAlumno?.promedio)}">${_acadNotaTxt(parcialAlumno?.promedio)}</span></td>
+                                    <td><input class="nota-inp" type="number" min="0" max="10" step="0.01" value="${al.examen_trimestral ?? ''}" onchange="_acadGuardarExamenNuevo(${al.matricula_id}, this.value)"></td>
+                                    <td><span class="nota-chip ${_acadChipClass(al.promedio_parciales)}">${_acadNotaTxt(al.promedio_parciales)}</span></td>
+                                    <td><span class="nota-chip ${_acadChipClass(al.nota_trimestral)}">${_acadNotaTxt(al.nota_trimestral)}</span></td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+async function _acadCambiarAsignacionNueva(id) {
+    _ac.asignacionNueva = _ac.asignaciones.find(a => Number(a.id) === Number(id)) || null;
+    await _acadCargarLibroNuevo();
+}
+
+async function _acadCambiarTrimestreNuevo(id) {
+    _ac.trimestre = _ac.trimestres.find(t => Number(t.id) === Number(id)) || _ac.trimestre;
+    await _acadCargarLibroNuevo();
+}
+
+async function _acadCrearParcialNuevo() {
+    const nombre = prompt('Nombre del parcial:', '');
+    if (nombre === null) return;
+    await api('/api/academico/parciales', { method: 'POST', body: { asignacion_id: _ac.asignacionNueva.id, trimestre_id: _ac.trimestre.id, nombre: nombre.trim() || undefined } });
+    await _acadCargarLibroNuevo();
+}
+
+async function _acadCrearInsumoNuevo(parcialId, tipo) {
+    const nombre = prompt(`Nombre de ${_acadTipoLabel(tipo)}:`, '');
+    if (nombre === null) return;
+    await api('/api/academico/insumos', { method: 'POST', body: { parcial_id: parcialId, tipo, nombre: nombre.trim() || undefined } });
+    await _acadCargarLibroNuevo();
+}
+
+async function _acadGuardarNotaInsumoNuevo(insumoId, matriculaId, nota) {
+    if (nota === '') return;
+    await api('/api/academico/notas-insumo', { method: 'POST', body: { insumo_id: insumoId, matricula_id: matriculaId, nota } });
+    await _acadCargarLibroNuevo();
+}
+
+async function _acadGuardarExamenNuevo(matriculaId, nota) {
+    if (nota === '') return;
+    await api('/api/academico/examen-trimestral', { method: 'POST', body: { asignacion_id: _ac.asignacionNueva.id, trimestre_id: _ac.trimestre.id, matricula_id: matriculaId, nota } });
+    await _acadCargarLibroNuevo();
+}
+
+async function _acadCambiarEstadoParcialNuevo(parcialId, estado) {
+    await api(`/api/academico/parciales/${parcialId}/estado`, { method: 'PATCH', body: { estado } });
+    await _acadCargarLibroNuevo();
+}
+
+async function _acadNotaUnicaParcialNuevo(parcialId) {
+    const nota = prompt('Nota unica para todos los insumos del parcial:');
+    if (nota === null) return;
+    await api('/api/academico/nota-unica', { method: 'POST', body: { parcial_id: parcialId, nota } });
+    await _acadCargarLibroNuevo();
+}
+
+async function _acadNotaUnicaExamenNuevo() {
+    const nota = prompt('Nota unica para el examen trimestral:');
+    if (nota === null) return;
+    await api('/api/academico/nota-unica', { method: 'POST', body: { asignacion_id: _ac.asignacionNueva.id, trimestre_id: _ac.trimestre.id, alcance: 'EXAMEN', nota } });
+    await _acadCargarLibroNuevo();
 }
 
 /* ----------------------------------------------------------
@@ -941,3 +1137,12 @@ window._acadVerDetalle        = _acadVerDetalle;
 window._acadEliminarNota      = _acadEliminarNota;
 window._acadVerReporteAnual   = _acadVerReporteAnual;
 window._acadCambiarSeccion    = _acadCambiarSeccion;
+window._acadCambiarAsignacionNueva = _acadCambiarAsignacionNueva;
+window._acadCambiarTrimestreNuevo = _acadCambiarTrimestreNuevo;
+window._acadCrearParcialNuevo = _acadCrearParcialNuevo;
+window._acadCrearInsumoNuevo = _acadCrearInsumoNuevo;
+window._acadGuardarNotaInsumoNuevo = _acadGuardarNotaInsumoNuevo;
+window._acadGuardarExamenNuevo = _acadGuardarExamenNuevo;
+window._acadCambiarEstadoParcialNuevo = _acadCambiarEstadoParcialNuevo;
+window._acadNotaUnicaParcialNuevo = _acadNotaUnicaParcialNuevo;
+window._acadNotaUnicaExamenNuevo = _acadNotaUnicaExamenNuevo;
