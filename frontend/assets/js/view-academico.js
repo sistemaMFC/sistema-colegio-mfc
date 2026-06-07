@@ -261,10 +261,10 @@ function _acadNotaTxt(value) {
 function _acadTipoLabel(tipo) {
     return {
         TAREA: 'Tareas',
-        LECCION: 'Lecciones',
-        TALLER: 'Talleres',
-        APORTE: 'Aportes',
-        INDIVIDUAL: 'Individual',
+        LECCION: 'Leccion',
+        TALLER: 'Actividad Grupal',
+        APORTE: 'Prueba',
+        INDIVIDUAL: 'Actividad Individual',
     }[tipo] || tipo;
 }
 
@@ -325,6 +325,22 @@ function _acadRenderLibroNuevo() {
             </div>
         </div>
         ${libro.setup_required ? `
+            <div class="acad-bar">
+                <div class="acad-bar-item"><span>Periodo</span><span>${_ac.periodo?.nombre || '-'}</span></div>
+                <div class="acad-bar-item"><span>Parciales</span><span>2 (visual)</span></div>
+                <div class="acad-bar-item"><span>Estudiantes</span><span>${(_ac.libroNuevo?.alumnos || []).length}</span></div>
+                <div class="acad-bar-item"><span>Formula</span><span>70% parciales / 30% examen</span></div>
+            </div>
+            <div class="card" style="padding:12px;margin-top:12px;">
+                <strong>Parciales:</strong>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+                    <button class="acad-btn sm prim">PARCIAL 1</button>
+                    <button class="acad-btn sm">PARCIAL 2</button>
+                    <button class="acad-btn sm" onclick="showAlert('bad','Modo visual activo: ejecuta database/academico-parciales-insumos.sql para guardar cambios reales.')">+</button>
+                </div>
+                <div style="margin-top:8px;font-size:12px;color:#64748b;">PARCIAL 1 y PARCIAL 2 son obligatorios y no se pueden eliminar.</div>
+                <div style="margin-top:4px;font-size:12px;color:#b45309;">Modo visual activo: se muestra estructura base, pero no guarda hasta ejecutar SQL en Railway.</div>
+            </div>
             <div class="acad-empty">${libro.error}<br><small>Ejecuta database/academico-parciales-insumos.sql en Railway MySQL.</small></div>
         ` : `
             <div class="acad-bar">
@@ -340,11 +356,11 @@ function _acadRenderLibroNuevo() {
                         <div class="acad-trim-row"><span>Estado</span><strong>${p.estado}</strong></div>
                         <div class="acad-trim-row"><span>Insumos</span><strong>${p.insumos.length}</strong></div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">
-                            <button class="acad-btn sm" onclick="_acadCrearInsumoNuevo(${p.id}, 'TAREA')">+ Tarea</button>
+                            <button class="acad-btn sm" onclick="_acadCrearInsumoNuevo(${p.id}, 'TAREA')">+ Tareas</button>
+                            <button class="acad-btn sm" onclick="_acadCrearInsumoNuevo(${p.id}, 'INDIVIDUAL')">+ Actividad Individual</button>
+                            <button class="acad-btn sm" onclick="_acadCrearInsumoNuevo(${p.id}, 'TALLER')">+ Actividad Grupal</button>
                             <button class="acad-btn sm" onclick="_acadCrearInsumoNuevo(${p.id}, 'LECCION')">+ Leccion</button>
-                            <button class="acad-btn sm" onclick="_acadCrearInsumoNuevo(${p.id}, 'TALLER')">+ Taller</button>
-                            <button class="acad-btn sm" onclick="_acadCrearInsumoNuevo(${p.id}, 'APORTE')">+ Aporte</button>
-                            <button class="acad-btn sm" onclick="_acadCrearInsumoNuevo(${p.id}, 'INDIVIDUAL')">+ Individual</button>
+                            <button class="acad-btn sm" onclick="_acadCrearInsumoNuevo(${p.id}, 'APORTE')">+ Prueba</button>
                             <button class="acad-btn sm" onclick="_acadNotaUnicaParcialNuevo(${p.id})">Nota unica</button>
                             <button class="acad-btn sm" onclick="_acadCambiarEstadoParcialNuevo(${p.id}, '${p.estado === 'CERRADO' ? 'ABIERTO' : 'CERRADO'}')">${p.estado === 'CERRADO' ? 'Reabrir' : 'Cerrar'}</button>
                         </div>
