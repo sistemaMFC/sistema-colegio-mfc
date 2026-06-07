@@ -712,8 +712,6 @@ function injectAcademicProfesorStyles() {
         .grade-table { width:100%; border-collapse:collapse; min-width:980px; font-size:13px; table-layout:auto; }
         .grade-table th, .grade-table td { padding:8px; border-bottom:1px solid var(--stroke); text-align:left; white-space:nowrap; }
         .grade-table th { font-size:11px; text-transform:uppercase; color:var(--muted); background:var(--panel2); }
-        .grade-table th:first-child, .grade-table td:first-child { position:sticky; left:0; background:var(--panel); z-index:1; min-width:52px; }
-        .grade-table th:nth-child(2), .grade-table td:nth-child(2) { position:sticky; left:52px; background:var(--panel); z-index:1; min-width:240px; max-width:260px; }
         .grade-input { width:60px; border:1px solid var(--stroke); border-radius:8px; padding:6px; text-align:center; font-weight:700; background:var(--panel2); color:var(--txt); }
         .calc-chip { display:inline-flex; min-width:42px; justify-content:center; border-radius:8px; padding:4px 7px; background:var(--panel2); font-weight:800; }
         .calc-chip.ok { background:rgba(16,185,129,.12); color:#065f46; }
@@ -725,11 +723,6 @@ function injectAcademicProfesorStyles() {
 
         @media (max-width: 900px) {
             .academic-filters { grid-template-columns:1fr; }
-            .grade-table th:first-child, .grade-table td:first-child,
-            .grade-table th:nth-child(2), .grade-table td:nth-child(2) {
-                position: static;
-                left: auto;
-            }
         }
     `;
     document.head.appendChild(style);
