@@ -746,10 +746,10 @@ function notaTxt(value) {
 function tipoLabel(tipo) {
     return {
         TAREA: "Tareas",
-        LECCION: "Lecciones",
-        TALLER: "Talleres",
-        APORTE: "Aportes",
-        INDIVIDUAL: "Individual",
+        LECCION: "Leccion",
+        TALLER: "Actividad Grupal",
+        APORTE: "Prueba",
+        INDIVIDUAL: "Actividad Individual",
     }[tipo] || tipo;
 }
 
@@ -998,7 +998,7 @@ function renderParcialDetail(parcial) {
             </div>
         </div>
         <div class="insumo-toolbar">
-            ${["TAREA","LECCION","TALLER","APORTE","INDIVIDUAL"].map(tipo => `
+            ${["TAREA","INDIVIDUAL","TALLER","LECCION","APORTE"].map(tipo => `
                 <button class="insumo-btn ${tipoClass(tipo)}" type="button" onclick="profCrearInsumo(${parcial.id}, '${tipo}')">+ ${tipoLabel(tipo)}</button>
             `).join("")}
         </div>
