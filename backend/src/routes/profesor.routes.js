@@ -31,6 +31,13 @@ async function obtenerConfigProfesorAsignacion() {
     throw new Error('asignaciones_docente no tiene columna de profesor reconocida');
 }
 
+async function obtenerPeriodoActivo() {
+    const [periodo] = await pool.query(
+        `SELECT id, nombre FROM periodos_lectivos WHERE estado = 'ACTIVO' LIMIT 1`
+    );
+    return periodo[0] || null;
+}
+
 /* ── GET /api/profesor/mi-docente ──────────────────────────────
    Devuelve: datos del docente + sus asignaciones + sus tutorias
    El portal del profesor usa esto para construir toda la UI.
@@ -106,6 +113,74 @@ router.get('/mi-docente', authRequired, soloDocente, async (req, res) => {
 });
 
 /* ── GET /api/profesor/perfil ── */
+router.get('/materias', authRequired, soloDocente, async (req, res) => {
+    try {
+        const usuarioId = req.user.id;
+        const cfg = await obtenerConfigProfesorAsignacion();
+        const periodo = await obtenerPeriodoActivo();
+        if (!periodo?.id) return res.json([]);
+
+        const filtroProfesor = req.user.rol === 'ADMIN'
+            ? '1=1'
+            : cfg.tipo === 'docente'
+                ? 'd.usuario_id = ?'
+                : `ad.${cfg.col} = ?`;
+        const params = req.user.rol === 'ADMIN'
+            ? [periodo.id]
+            : [usuarioId, periodo.id];
+
+        const joinProfesor = cfg.tipo === 'docente'
+            ? `LEFT JOIN docentes d ON d.id = ad.${cfg.col}
+               LEFT JOIN usuarios u ON u.id = d.usuario_id`
+            : `LEFT JOIN usuarios u ON u.id = ad.${cfg.col}
+               LEFT JOIN docentes d ON d.usuario_id = u.id`;
+
+        const [rows] = await pool.query(
+            `SELECT
+                ad.id AS asignacion_id,
+                ad.id,
+                ad.materia_id,
+                m.nombre AS materia_nombre,
+                m.nombre AS materia,
+                m.codigo AS materia_codigo,
+                ad.curso_id,
+                c.nombre AS curso_nombre,
+                c.nombre AS curso,
+                ad.paralelo_id,
+                p.nombre AS paralelo,
+                ad.periodo_id,
+                pl.nombre AS periodo_nombre,
+                u.nombres AS docente_nombres,
+                u.apellidos AS docente_apellidos,
+                COUNT(mt.id) AS total_estudiantes
+             FROM asignaciones_docente ad
+             JOIN materias m ON m.id = ad.materia_id
+             JOIN cursos c ON c.id = ad.curso_id
+             JOIN paralelos p ON p.id = ad.paralelo_id
+             JOIN periodos_lectivos pl ON pl.id = ad.periodo_id
+             ${joinProfesor}
+             LEFT JOIN matriculas mt
+                    ON mt.curso_id = ad.curso_id
+                   AND mt.paralelo_id = ad.paralelo_id
+                   AND mt.periodo_id = ad.periodo_id
+                   AND mt.estado IN ('ACTIVO','MATRICULADO')
+             WHERE ${filtroProfesor}
+               AND ad.periodo_id = ?
+               AND ad.estado = 'ACTIVO'
+             GROUP BY ad.id, ad.materia_id, m.nombre, m.codigo, ad.curso_id,
+                      c.nombre, ad.paralelo_id, p.nombre, ad.periodo_id,
+                      pl.nombre, u.nombres, u.apellidos
+             ORDER BY c.nombre ASC, p.nombre ASC, m.nombre ASC`,
+            params
+        );
+
+        res.json(rows);
+    } catch (err) {
+        console.error('Error materias profesor:', err);
+        res.status(500).json({ error: 'Error al cargar materias del docente' });
+    }
+});
+
 router.get('/tutor-estudiantes', authRequired, soloDocente, async (req, res) => {
     try {
         const usuarioId = req.user.id;

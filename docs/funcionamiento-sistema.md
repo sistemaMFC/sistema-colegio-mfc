@@ -714,6 +714,21 @@ Pagos queda pendiente de cierre final porque aun hay tablas duplicadas o modelos
 
 ## Bitacora de cambios recientes
 
+Fecha: 2026-06-07
+
+- Se reorganizo el flujo academico del portal profesor para empezar por `Materias`.
+- Nueva ruta backend:
+  - `GET /api/profesor/materias`
+- Flujo nuevo:
+  - Profesor entra a Academico.
+  - Ve tarjetas de materias asignadas.
+  - Selecciona `Gestionar materia`.
+  - Recien dentro de esa materia ve insumos, notas por insumo, examen trimestral, promedios y asistencia.
+- Toda gestion de insumos/notas/examen usa la `asignacion_id` de la materia seleccionada.
+- Se agrego boton `Volver a materias` para salir de la gestion de una materia.
+- El backend valida que el profesor solo consulte materias propias; `ADMIN` puede ver todas.
+- Se dejo de seleccionar/cargar automaticamente la primera materia para evitar confundir al docente cuando tiene muchas materias.
+
 Fecha: 2026-06-01
 
 - Se implemento la primera version funcional del nuevo modelo academico por:

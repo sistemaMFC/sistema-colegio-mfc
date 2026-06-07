@@ -15,6 +15,8 @@ const state = {
     academicContexts: [],
     selectedAcademicAsignacionId: null,
     selectedAcademicTrimestreId: null,
+    selectedAcademicParcialId: null,
+    academicMode: "materias",
     libro: null,
 };
 
@@ -600,7 +602,7 @@ function renderProfesorCardsMenu() {
     if (!tabsWrap) return;
 
     tabsWrap.innerHTML = `
-        <button class="prof-assignment active" data-prof-section="insumos">
+        <button class="prof-assignment active" data-prof-section="materias">
             <strong>📘 Insumos</strong>
             <span>Tareas, evaluación individual, taller grupal y examen</span>
         </button>
@@ -621,13 +623,41 @@ function renderProfesorCardsMenu() {
 
 function setupProfesorTabs() {
     renderProfesorCardsMenu();
+    const tabsWrap = document.querySelector(".prof-tabs");
+    if (tabsWrap) {
+        tabsWrap.innerHTML = `
+            <button class="prof-assignment active" data-prof-section="materias">
+                <strong>Materias</strong>
+                <span>Selecciona una materia antes de gestionar notas</span>
+            </button>
+            <button class="prof-assignment" data-prof-section="asistencia">
+                <strong>Asistencia</strong>
+                <span>Control diario del curso</span>
+            </button>
+            <button class="prof-assignment" data-prof-section="documentacion">
+                <strong>Documentacion</strong>
+                <span>Guias y procesos academicos</span>
+            </button>
+            <button class="prof-assignment" data-prof-section="mensajes">
+                <strong>Mensajes</strong>
+                <span>Comunicaciones y avisos</span>
+            </button>
+        `;
+    }
     document.querySelectorAll("[data-prof-section]").forEach(btn => {
         btn.addEventListener("click", () => {
             document.querySelectorAll("[data-prof-section]").forEach(item => item.classList.remove("active"));
             btn.classList.add("active");
             const section = btn.dataset.profSection;
+            if (section === "materias") {
+                state.academicMode = "materias";
+                state.selectedAcademicAsignacionId = null;
+                state.selectedAcademicParcialId = null;
+                state.libro = null;
+                renderAcademicShell();
+            }
             const secInsumos = document.getElementById("profSectionInsumos");
-            if (secInsumos) secInsumos.hidden = section !== "insumos";
+            if (secInsumos) secInsumos.hidden = section !== "materias";
             const secAsistencia = document.getElementById("profSectionAsistencia");
             if (secAsistencia) secAsistencia.hidden = section !== "asistencia";
             const secDocumentacion = document.getElementById("profSectionDocumentacion");
@@ -648,6 +678,17 @@ function injectAcademicProfesorStyles() {
     style.id = "prof-academic-new-styles";
     style.textContent = `
         .academic-shell { padding: 14px; display: grid; gap: 14px; }
+        .materias-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; padding:14px; }
+        .materia-card { border:1px solid var(--stroke); border-radius:16px; background:var(--panel2); padding:14px; display:grid; gap:10px; min-height:190px; }
+        .materia-card h4 { margin:0; font-size:17px; line-height:1.2; }
+        .materia-card-meta { display:grid; gap:6px; color:var(--muted); font-size:13px; }
+        .materia-card-kpi { display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid var(--stroke); border-radius:12px; padding:9px 10px; background:var(--panel); }
+        .materia-card-kpi strong { color:var(--blue); font-size:18px; }
+        .materia-card-actions { margin-top:auto; }
+        .materia-header { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start; padding:14px; border-bottom:1px solid var(--stroke); background:var(--panel2); }
+        .materia-header h3 { margin:0; font-size:20px; }
+        .materia-options { display:flex; gap:8px; flex-wrap:wrap; }
+        .materia-option { border:1px solid var(--stroke); border-radius:999px; padding:8px 10px; background:var(--panel); color:var(--txt); font-weight:800; font-size:12px; }
         .academic-filters { display:grid; grid-template-columns: 1.2fr .7fr auto; gap:10px; align-items:end; }
         .academic-filters label { display:block; font-size:12px; font-weight:800; color:var(--muted); margin-bottom:5px; }
         .academic-filters select { width:100%; }
@@ -714,26 +755,116 @@ function tipoClass(tipo) {
     return String(tipo || "").toLowerCase();
 }
 
+function renderMateriasDocente(materias) {
+    if (!materias.length) {
+        return `<div class="academic-empty">No tienes materias asignadas todavia.</div>`;
+    }
+
+    return `
+        <div class="materias-grid">
+            ${materias.map(materia => `
+                <article class="materia-card">
+                    <div>
+                        <h4>${escapeHTML(materia.materia_nombre || materia.materia || "-")}</h4>
+                        <div class="materia-card-meta">
+                            <span>${escapeHTML(materia.curso_nombre || materia.curso || "-")} - Paralelo ${escapeHTML(materia.paralelo || "-")}</span>
+                            <span>Periodo: ${escapeHTML(materia.periodo_nombre || state.periodo?.nombre || "-")}</span>
+                            ${materia.docente_nombres ? `<span>Docente: ${escapeHTML(`${materia.docente_nombres} ${materia.docente_apellidos || ""}`.trim())}</span>` : ""}
+                        </div>
+                    </div>
+                    <div class="materia-card-kpi">
+                        <span>Estudiantes</span>
+                        <strong>${escapeHTML(materia.total_estudiantes ?? "-")}</strong>
+                    </div>
+                    <div class="materia-card-actions">
+                        <button class="btn" type="button" onclick="seleccionarMateria(${Number(materia.asignacion_id || materia.id)})">Gestionar materia</button>
+                    </div>
+                </article>
+            `).join("")}
+        </div>
+    `;
+}
+
+async function cargarMateriasDocente() {
+    state.academicContexts = await api("/api/profesor/materias");
+    state.academicMode = "materias";
+    state.selectedAcademicAsignacionId = null;
+    state.selectedAcademicParcialId = null;
+    state.libro = null;
+    renderAcademicShell();
+}
+
+async function seleccionarMateria(asignacionId) {
+    const materia = state.academicContexts.find(item => Number(item.asignacion_id || item.id) === Number(asignacionId));
+    if (!materia) {
+        showAlert("bad", "Materia no encontrada o no asignada.");
+        return;
+    }
+    state.selectedAcademicAsignacionId = Number(materia.asignacion_id || materia.id);
+    state.academicMode = "gestion";
+    state.selectedAcademicParcialId = null;
+    await loadAcademicBook();
+}
+
+function volverMateriasDocente() {
+    state.academicMode = "materias";
+    state.selectedAcademicAsignacionId = null;
+    state.selectedAcademicParcialId = null;
+    state.libro = null;
+    renderAcademicShell();
+}
+
+function renderPanelMateriaSeleccionada() {
+    renderAcademicShell();
+}
+
+async function cargarInsumosPorMateria() {
+    await loadAcademicBook();
+}
+
+async function cargarNotasPorMateria() {
+    await loadAcademicBook();
+}
+
+async function cargarExamenPorMateria() {
+    await loadAcademicBook();
+}
+
 function renderAcademicShell() {
     const section = document.getElementById("profSectionInsumos");
     if (!section) return;
     const selectedAsignacion = state.academicContexts.find(item => Number(item.id) === Number(state.selectedAcademicAsignacionId));
+    if (state.academicMode === "materias" || !selectedAsignacion) {
+        section.innerHTML = `
+            <div class="card-head">
+                <h3>Materias</h3>
+            </div>
+            ${renderMateriasDocente(state.academicContexts)}
+        `;
+        return;
+    }
+
     section.innerHTML = `
         <div class="card-head">
-            <h3>Insumos, parciales y examen trimestral</h3>
+            <h3>Gestion academica de materia</h3>
+            <button class="btn-soft" type="button" onclick="volverMateriasDocente()">Volver a materias</button>
         </div>
         <div class="academic-shell">
-            <div class="academic-filters">
+            <div class="materia-header">
                 <div>
-                    <label>Materia / curso</label>
-                    <select id="academicAsignacionSelect">
-                        ${state.academicContexts.map(ctx => `
-                            <option value="${escapeHTML(ctx.id)}" ${Number(ctx.id) === Number(state.selectedAcademicAsignacionId) ? "selected" : ""}>
-                                ${escapeHTML(ctx.materia)} - ${escapeHTML(ctx.curso)} ${escapeHTML(ctx.paralelo ? `Paralelo ${ctx.paralelo}` : "")}
-                            </option>
-                        `).join("")}
-                    </select>
+                    <h3>Materia: ${escapeHTML(selectedAsignacion?.materia_nombre || selectedAsignacion?.materia || "-")}</h3>
+                    <p class="muted" style="margin:4px 0 0;">Curso: ${escapeHTML(selectedAsignacion?.curso_nombre || selectedAsignacion?.curso || "-")} - Paralelo ${escapeHTML(selectedAsignacion?.paralelo || "-")}</p>
+                    <p class="muted" style="margin:4px 0 0;">Periodo: ${escapeHTML(selectedAsignacion?.periodo_nombre || state.periodo?.nombre || "-")}</p>
                 </div>
+                <div class="materia-options">
+                    <span class="materia-option">Insumos</span>
+                    <span class="materia-option">Notas por insumo</span>
+                    <span class="materia-option">Examen trimestral</span>
+                    <span class="materia-option">Promedios</span>
+                    <span class="materia-option">Asistencia</span>
+                </div>
+            </div>
+            <div class="academic-filters">
                 <div>
                     <label>Trimestre</label>
                     <select id="academicTrimestreSelect">
@@ -748,7 +879,7 @@ function renderAcademicShell() {
             </div>
             <div class="prof-summary">
                 <div class="prof-stat"><span>Periodo</span><strong>${escapeHTML(state.periodo?.nombre || "-")}</strong></div>
-                <div class="prof-stat"><span>Materia</span><strong>${escapeHTML(selectedAsignacion?.materia || "-")}</strong></div>
+                <div class="prof-stat"><span>Estudiantes</span><strong>${escapeHTML(selectedAsignacion?.total_estudiantes ?? state.libro?.alumnos?.length ?? 0)}</strong></div>
                 <div class="prof-stat"><span>Parciales</span><strong>${state.libro?.parciales?.length || 0}</strong></div>
                 <div class="prof-stat"><span>Formula</span><strong>70/30</strong></div>
             </div>
@@ -756,12 +887,9 @@ function renderAcademicShell() {
         </div>
     `;
 
-    document.getElementById("academicAsignacionSelect")?.addEventListener("change", async (event) => {
-        state.selectedAcademicAsignacionId = Number(event.target.value);
-        await loadAcademicBook();
-    });
     document.getElementById("academicTrimestreSelect")?.addEventListener("change", async (event) => {
         state.selectedAcademicTrimestreId = Number(event.target.value);
+        state.selectedAcademicParcialId = null;
         await loadAcademicBook();
     });
 }
@@ -778,7 +906,10 @@ function renderAcademicBook() {
         return `<div class="academic-empty">${escapeHTML(libro.error)}<br><small>Ejecute database/academico-parciales-insumos.sql en Railway.</small></div>`;
     }
     const parciales = libro.parciales || [];
-    const active = parciales[0] || null;
+    const active = parciales.find(p => Number(p.id) === Number(state.selectedAcademicParcialId)) || parciales[0] || null;
+    if (active && !state.selectedAcademicParcialId) {
+        state.selectedAcademicParcialId = active.id;
+    }
     return `
         <div class="academic-board">
             <aside class="partial-list">
@@ -787,8 +918,8 @@ function renderAcademicBook() {
                     <button class="prof-mini-btn" type="button" onclick="profCrearParcial()">+</button>
                 </div>
                 <div class="partial-list-body">
-                    ${parciales.length ? parciales.map((parcial, index) => `
-                        <button class="partial-btn ${index === 0 ? "active" : ""}" type="button" data-partial-tab="${escapeHTML(parcial.id)}">
+                    ${parciales.length ? parciales.map((parcial) => `
+                        <button class="partial-btn ${Number(parcial.id) === Number(active?.id) ? "active" : ""}" type="button" onclick="seleccionarParcial(${Number(parcial.id)})">
                             <strong>${escapeHTML(parcial.nombre)}</strong><br>
                             <span class="partial-status ${parcial.estado === "CERRADO" ? "closed" : ""}">${escapeHTML(parcial.estado)}</span>
                         </button>
@@ -800,6 +931,11 @@ function renderAcademicBook() {
             </section>
         </div>
     `;
+}
+
+function seleccionarParcial(parcialId) {
+    state.selectedAcademicParcialId = Number(parcialId);
+    renderAcademicShell();
 }
 
 function renderParcialDetail(parcial) {
@@ -874,19 +1010,16 @@ async function loadAcademicContext() {
         shell.innerHTML = `<div class="card-head"><h3>Insumos y parciales</h3></div><div class="prof-empty">Cargando contexto academico...</div>`;
     }
     try {
-        const [periodo, trimestres, docenteData] = await Promise.all([
+        const [periodo, trimestres] = await Promise.all([
             api("/api/academico/periodo-activo"),
             api("/api/academico/trimestres"),
-            api("/api/profesor/mi-docente"),
         ]);
         state.periodo = periodo;
         state.trimestresNuevo = trimestres || [];
-        state.academicContexts = docenteData.asignaciones || [];
-        state.selectedAcademicAsignacionId = state.academicContexts[0]?.id || null;
         state.selectedAcademicTrimestreId = state.trimestresNuevo[0]?.id || null;
-        await loadAcademicBook();
+        await cargarMateriasDocente();
     } catch (err) {
-        if (shell) shell.innerHTML = `<div class="card-head"><h3>Insumos y parciales</h3></div><div class="prof-empty">${escapeHTML(err.message)}</div>`;
+        if (shell) shell.innerHTML = `<div class="card-head"><h3>Materias</h3></div><div class="prof-empty">${escapeHTML(err.message)}</div>`;
     }
 }
 
@@ -898,10 +1031,6 @@ async function loadAcademicBook() {
     }
     try {
         state.libro = await api(`/api/academico/libro?asignacion_id=${state.selectedAcademicAsignacionId}&trimestre_id=${state.selectedAcademicTrimestreId}`);
-        if (!state.libro?.setup_required) {
-            await asegurarParcialesBase();
-            state.libro = await api(`/api/academico/libro?asignacion_id=${state.selectedAcademicAsignacionId}&trimestre_id=${state.selectedAcademicTrimestreId}`);
-        }
     } catch (err) {
         state.libro = { setup_required: true, error: err.message };
     }
@@ -1297,3 +1426,12 @@ window.profCambiarEstadoParcial = profCambiarEstadoParcial;
 window.profNotaUnicaParcial = profNotaUnicaParcial;
 window.profNotaUnicaExamen = profNotaUnicaExamen;
 window.profEditarFila = function() {};
+window.cargarMateriasDocente = cargarMateriasDocente;
+window.renderMateriasDocente = renderMateriasDocente;
+window.seleccionarMateria = seleccionarMateria;
+window.volverMateriasDocente = volverMateriasDocente;
+window.renderPanelMateriaSeleccionada = renderPanelMateriaSeleccionada;
+window.cargarInsumosPorMateria = cargarInsumosPorMateria;
+window.cargarNotasPorMateria = cargarNotasPorMateria;
+window.cargarExamenPorMateria = cargarExamenPorMateria;
+window.seleccionarParcial = seleccionarParcial;
