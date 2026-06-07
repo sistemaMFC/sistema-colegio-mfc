@@ -694,8 +694,8 @@ function injectAcademicProfesorStyles() {
         .academic-filters { display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:end; }
         .academic-filters label { display:block; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:4px; }
         .academic-filters select { width:100%; }
-        .academic-board { display:grid; grid-template-columns:1fr; gap:12px; align-items:start; }
-        .partial-detail { border:1px solid var(--stroke); border-radius:14px; background:var(--panel2); overflow:hidden; }
+        .academic-board { display:block; width:100%; }
+        .partial-detail { width:100%; border:1px solid var(--stroke); border-radius:14px; background:var(--panel2); overflow:hidden; }
         .partial-detail-head { padding:10px; border-bottom:1px solid var(--stroke); display:flex; justify-content:space-between; gap:8px; align-items:center; flex-wrap:wrap; }
         .partial-btn { border:1px solid var(--stroke); background:var(--panel); color:var(--txt); border-radius:10px; padding:8px 10px; text-align:left; cursor:pointer; font-weight:700; }
         .partial-btn.active { border-color:var(--blue); box-shadow:0 0 0 2px rgba(37,99,235,.10); }
@@ -708,8 +708,8 @@ function injectAcademicProfesorStyles() {
         .insumo-btn.taller { border-color:#6ee7b7; }
         .insumo-btn.aporte { border-color:#c4b5fd; }
         .insumo-btn.individual { border-color:#67e8f9; }
-        .grade-table-wrap { overflow:auto; background:var(--panel); }
-        .grade-table { width:100%; border-collapse:collapse; min-width:980px; font-size:13px; }
+        .grade-table-wrap { width:100%; overflow-x:auto; overflow-y:hidden; background:var(--panel); }
+        .grade-table { width:100%; border-collapse:collapse; min-width:980px; font-size:13px; table-layout:auto; }
         .grade-table th, .grade-table td { padding:8px; border-bottom:1px solid var(--stroke); text-align:left; white-space:nowrap; }
         .grade-table th { font-size:11px; text-transform:uppercase; color:var(--muted); background:var(--panel2); }
         .grade-table th:first-child, .grade-table td:first-child { position:sticky; left:0; background:var(--panel); z-index:1; min-width:52px; }
@@ -720,8 +720,16 @@ function injectAcademicProfesorStyles() {
         .calc-chip.warn { background:rgba(245,158,11,.14); color:#92400e; }
         .calc-chip.bad { background:rgba(239,68,68,.12); color:#991b1b; }
         .academic-empty { padding:20px; text-align:center; color:var(--muted); }
+        #academicBookPanel { width:100%; }
+        #partialDetailPanel { width:100%; }
+
         @media (max-width: 900px) {
             .academic-filters { grid-template-columns:1fr; }
+            .grade-table th:first-child, .grade-table td:first-child,
+            .grade-table th:nth-child(2), .grade-table td:nth-child(2) {
+                position: static;
+                left: auto;
+            }
         }
     `;
     document.head.appendChild(style);
