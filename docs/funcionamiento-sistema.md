@@ -784,3 +784,16 @@ Fecha: 2026-06-01
   - En listado (`GET /api/enrollments`) se cambio a `m.fecha_registro AS fecha_matricula` para mantener compatibilidad con el frontend actual.
   - Se agrego fallback de fecha en backend cuando no se envia `fecha_matricula` desde el cliente.
 - Resultado esperado: eliminar el 500 del endpoint y restaurar la carga de estudiantes matriculados en la vista administrativa.
+
+- Fecha: 2026-06-02
+- Módulo: Asistencia (Portal Profesor y Académico Admin)
+- Cambios aplicados:
+  - `frontend/assets/js/profesor-academico.js`:
+    - Se rediseñó la sección de asistencia al formato solicitado (filtros superiores + pestañas + tabla tipo nómina).
+    - Se incorporaron checkboxes de `Atrasos` e `Inasistencia` por estudiante.
+    - Se conectó guardado directo al backend con `POST /api/profesor/asistencia` usando estados `ATRASO`, `AUSENTE` y `PRESENTE`.
+  - `frontend/assets/js/view-academico.js`:
+    - Se rediseñó la vista de Asistencia del módulo académico admin con la misma estructura visual base de la maqueta.
+- Estado:
+  - Profesor: funcional para registrar asistencia por estudiante desde la nueva tabla.
+  - Admin Académico: UI nueva aplicada; la carga dinámica de nómina por docente/curso/paralelo queda como siguiente fase.

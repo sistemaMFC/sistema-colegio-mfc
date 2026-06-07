@@ -380,31 +380,84 @@ function buildAsistenciaTutorHTML() {
     }
 
     const today = new Date().toISOString().slice(0, 10);
-    return state.tutorCursos.map((curso) => `
-        <div style="padding:14px 14px 0;" data-curso-id="${escapeHTML(curso.curso_id)}" data-paralelo-id="${escapeHTML(curso.paralelo_id)}">
-            <div class="prof-tools" style="border-bottom:0;">
-                <div>
-                    <h3>${escapeHTML(curso.curso)} - Paralelo ${escapeHTML(curso.paralelo)}</h3>
-                    <p class="muted">${curso.estudiantes.length} estudiantes matriculados · Asistencia ${today}</p>
+    const curso = state.tutorCursos[0];
+    const estudiantes = curso.estudiantes || [];
+
+    return `
+        <div class="card" style="padding:14px">
+            <h3 style="margin:0 0 10px;text-align:center">CONTROL DE ASISTENCIA</h3>
+            <div class="prof-grid" style="grid-template-columns:repeat(3,minmax(180px,1fr));gap:10px">
+                <div class="form-group">
+                    <label>Curso</label>
+                    <select id="attCursoSel">
+                        ${state.tutorCursos.map(c => `<option value="${escapeHTML(c.curso_id)}">${escapeHTML(c.curso)}</option>`).join("")}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Especialidad</label>
+                    <input value="GENERAL" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Paralelo</label>
+                    <select id="attParaleloSel">
+                        ${state.tutorCursos.map(c => `<option value="${escapeHTML(c.paralelo_id)}">${escapeHTML(c.paralelo)}</option>`).join("")}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Materia</label>
+                    <input value="TUTORÍA" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Parcial</label>
+                    <select id="attParcialSel"><option>Primero</option><option>Segundo</option><option>Tercero</option></select>
+                </div>
+                <div class="form-group">
+                    <label>Trimestre</label>
+                    <select id="attTrimestreSel"><option>Primero</option><option>Segundo</option><option>Tercero</option></select>
                 </div>
             </div>
-            <div class="prof-tutor-grid">
-                ${curso.estudiantes.length ? curso.estudiantes.map((est) => `
-                    <article class="prof-student-card">
-                        <strong>${escapeHTML(est.apellidos_est)}, ${escapeHTML(est.nombres_est)}</strong>
-                        <span class="muted">Cedula: ${escapeHTML(est.cedula_est || "-")}</span>
-                        <span class="muted">Representante: ${escapeHTML(est.nombre_rep || "-")}</span>
-                        <span class="muted">Telefono: ${escapeHTML(est.telefono_rep || "-")}</span>
-                        <div class="prof-att-row" data-attendance="${escapeHTML(est.matricula_id)}">
-                            ${["Presente", "Ausente", "Atraso", "Justificado"].map(label => `
-                                <button type="button" onclick="marcarAsistenciaLocal('${escapeHTML(est.matricula_id)}','${label}', this)">${label}</button>
-                            `).join("")}
-                        </div>
-                    </article>
-                `).join("") : `<div class="prof-empty">No hay estudiantes matriculados.</div>`}
+        </div>
+        <div class="card" style="padding:14px;margin-top:12px" data-curso-id="${escapeHTML(curso.curso_id)}" data-paralelo-id="${escapeHTML(curso.paralelo_id)}">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+                <button class="prof-mini-btn" type="button">Nómina</button>
+                <button class="prof-mini-btn" type="button">Porcentaje Asistencia</button>
+                <button class="prof-mini-btn" type="button">Control de Faltas</button>
+                <button class="prof-mini-btn" type="button">Control de Atrasos</button>
+            </div>
+            <div class="prof-grid" style="grid-template-columns:repeat(4,minmax(140px,1fr));gap:10px;margin-bottom:10px">
+                <div class="form-group"><label>Fecha</label><input id="attFecha" type="date" value="${today}"></div>
+                <div class="form-group"><label>Carga Horaria</label><input id="attCarga" type="number" min="0" step="1" value="1"></div>
+                <div class="form-group"><label>Días Laborables</label><input id="attDias" type="number" min="0" step="1" value="35"></div>
+                <div class="form-group"><label>N° Horas Diarias</label><input id="attHoras" type="number" min="0" step="1" value="1"></div>
+            </div>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>N°</th>
+                            <th>Estudiante</th>
+                            <th>Atrasos</th>
+                            <th>Inasistencia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${estudiantes.length ? estudiantes.map((est, i) => `
+                            <tr>
+                                <td>${i + 1}</td>
+                                <td>${escapeHTML(est.apellidos_est)}, ${escapeHTML(est.nombres_est)}</td>
+                                <td style="text-align:center">
+                                    <input type="checkbox" onchange="guardarAsistenciaCheck(${Number(curso.curso_id)},${Number(curso.paralelo_id)},${Number(est.matricula_id)},'ATRASO',this)">
+                                </td>
+                                <td style="text-align:center">
+                                    <input type="checkbox" onchange="guardarAsistenciaCheck(${Number(curso.curso_id)},${Number(curso.paralelo_id)},${Number(est.matricula_id)},'AUSENTE',this)">
+                                </td>
+                            </tr>
+                        `).join("") : `<tr><td colspan="4" class="muted">No hay estudiantes matriculados.</td></tr>`}
+                    </tbody>
+                </table>
             </div>
         </div>
-    `).join("");
+    `;
 }
 
 function renderAsistenciaResumenUI() {
@@ -1177,6 +1230,28 @@ window.guardarPasswordProfesor = guardarPasswordProfesor;
 window.guardarFotoPerfilProfesor = guardarFotoPerfilProfesor;
 window.promptNotaUnica = promptNotaUnica;
 window.marcarAsistenciaLocal = marcarAsistenciaLocal;
+window.guardarAsistenciaCheck = async function(cursoId, paraleloId, matriculaId, tipo, checkbox) {
+    const fecha = (document.getElementById("attFecha")?.value || new Date().toISOString().slice(0, 10));
+    const estado = checkbox.checked ? tipo : "PRESENTE";
+    checkbox.disabled = true;
+    try {
+        await api("/api/profesor/asistencia", {
+            method: "POST",
+            body: {
+                curso_id: Number(cursoId),
+                paralelo_id: Number(paraleloId),
+                fecha,
+                registros: [{ matricula_id: Number(matriculaId), estado }],
+            },
+        });
+        showAlert("ok", `Asistencia guardada: ${estado}`);
+    } catch (err) {
+        showAlert("bad", err.message || "No se pudo guardar asistencia.");
+        checkbox.checked = !checkbox.checked;
+    } finally {
+        checkbox.disabled = false;
+    }
+};
 window.profCrearParcial = profCrearParcial;
 window.profCrearInsumo = profCrearInsumo;
 window.profGuardarNotaInsumo = profGuardarNotaInsumo;

@@ -1,8 +1,10 @@
-# TODO - Asistencia tutor (admin y profesor conectados)
+# TODO - Rediseño Control de Asistencia (según maqueta)
 
-- [ ] Profesor: en sección Asistencia mostrar listado de estudiantes de cursos donde es tutor.
-- [ ] Profesor: reutilizar datos de `state.tutorCursos` para renderizar asistencia.
-- [ ] Admin académico: en sección Asistencia permitir ver cursos/paralelos y estudiantes tutoreados.
-- [ ] Admin académico: consumir endpoint de tutor-estudiantes por docente seleccionado.
-- [ ] Mantener UI responsive y consistente con menú interno actual.
-- [ ] Documentar cambios en `docs/funcionamiento-sistema.md` con fecha.
+- [x] Profesor: reemplazar UI de Asistencia por formato de maqueta (filtros + pestañas + tabla nominal).
+- [x] Profesor: usar datos reales de tutoría para cargar estudiantes según curso/paralelo.
+- [x] Profesor: permitir marcar ATRASOS e INASISTENCIA por estudiante con checkboxes.
+- [x] Profesor: guardar asistencia en backend por fecha y filtros seleccionados.
+- [x] Admin Académico: aplicar el mismo formato visual de control de asistencia.
+- [ ] Admin Académico: permitir seleccionar docente/curso/paralelo y cargar nómina.
+- [ ] Mantener diseño responsive y consistente con estilos del sistema.
+- [ ] Documentar cambios con fecha en `docs/funcionamiento-sistema.md`.

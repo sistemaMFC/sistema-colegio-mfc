@@ -533,14 +533,44 @@ function _acadPaso1Curso() {
 
 function _acadRenderAsistencia() {
     const cont = document.getElementById('contenedor-academico');
+    const today = new Date().toISOString().slice(0, 10);
     cont.innerHTML = `
         <div class="acad-topbar"><h3>Académico</h3></div>
         ${_acadRenderSubmenu()}
         <div class="card" style="padding:14px;">
-            <h3 style="margin:0 0 10px;">Asistencia</h3>
-            <p class="muted" style="margin:0;">
-                Esta sección centralizará el control de asistencia por curso, paralelo y fecha.
-            </p>
+            <h3 style="margin:0 0 10px;text-align:center">CONTROL DE ASISTENCIA</h3>
+            <div class="acad-grid-sel">
+                <label><strong>Curso</strong><select class="nota-inp" style="width:100%;text-align:left">${_ac.cursos.map(c => `<option>${c.nombre}</option>`).join('')}</select></label>
+                <label><strong>Especialidad</strong><input class="nota-inp" style="width:100%;text-align:left" value="GENERAL" disabled></label>
+                <label><strong>Paralelo</strong><select class="nota-inp" style="width:100%;text-align:left">${_ac.paralelos.map(p => `<option>${p.nombre}</option>`).join('')}</select></label>
+                <label><strong>Materia</strong><input class="nota-inp" style="width:100%;text-align:left" value="TUTORÍA" disabled></label>
+                <label><strong>Parcial</strong><select class="nota-inp" style="width:100%;text-align:left"><option>Primero</option><option>Segundo</option><option>Tercero</option></select></label>
+                <label><strong>Trimestre</strong><select class="nota-inp" style="width:100%;text-align:left"><option>Primero</option><option>Segundo</option><option>Tercero</option></select></label>
+            </div>
+        </div>
+        <div class="card" style="padding:14px;margin-top:12px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+                <button class="acad-btn">Nómina</button>
+                <button class="acad-btn">Porcentaje Asistencia</button>
+                <button class="acad-btn">Control de Faltas</button>
+                <button class="acad-btn">Control de Atrasos</button>
+            </div>
+            <div class="acad-grid-sel" style="grid-template-columns:repeat(4,minmax(140px,1fr));margin-bottom:10px">
+                <label><strong>Fecha</strong><input class="nota-inp" style="width:100%" type="date" value="${today}"></label>
+                <label><strong>Carga Horaria</strong><input class="nota-inp" style="width:100%" type="number" value="1"></label>
+                <label><strong>Días Laborables</strong><input class="nota-inp" style="width:100%" type="number" value="35"></label>
+                <label><strong>N° Horas Diarias</strong><input class="nota-inp" style="width:100%" type="number" value="1"></label>
+            </div>
+            <div class="acad-tbl-wrap">
+                <table class="acad-tbl">
+                    <thead>
+                        <tr><th>N°</th><th>Estudiante</th><th>Atrasos</th><th>Inasistencia</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="4" class="muted">Seleccione curso/paralelo para cargar nómina en la próxima fase.</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     `;
 }
