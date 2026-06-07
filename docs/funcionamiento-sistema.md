@@ -797,3 +797,23 @@ Fecha: 2026-06-01
 - Estado:
   - Profesor: funcional para registrar asistencia por estudiante desde la nueva tabla.
   - Admin Académico: UI nueva aplicada; la carga dinámica de nómina por docente/curso/paralelo queda como siguiente fase.
+
+- Fecha: 2026-06-02
+- Módulo: Insumos (Portal Profesor)
+- Cambios y correcciones documentadas:
+  - Archivo: `frontend/assets/js/profesor-academico.js`
+  - Se ajustó la UX del botón de parciales para evitar estado vacío inicial:
+    - Al cargar libro académico (`loadAcademicBook`) ahora se ejecuta `asegurarParcialesBase()`.
+    - Si existen menos de 2 parciales para la asignación/trimestre seleccionados, se crean automáticamente:
+      - `PARCIAL 1`
+      - `PARCIAL 2`
+    - Luego se recarga el libro para reflejar inmediatamente los parciales creados.
+  - Se cambió el texto del prompt de creación manual:
+    - Antes: "Nombre del parcial:"
+    - Ahora: "Nombre del parcial adicional:"
+    - Objetivo: dejar claro que el botón es para agregar parciales extra, no para crear los dos base.
+- Resultado esperado:
+  - Al entrar en Insumos, el docente siempre dispone de al menos dos parciales para trabajar.
+  - El botón "Crear parcial" queda reservado para crear parciales adicionales según necesidad.
+- Nota técnica:
+  - Esta lógica se ejecuta solo cuando el backend responde con libro válido (no `setup_required`).

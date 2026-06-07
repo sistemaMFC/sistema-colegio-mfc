@@ -898,14 +898,40 @@ async function loadAcademicBook() {
     }
     try {
         state.libro = await api(`/api/academico/libro?asignacion_id=${state.selectedAcademicAsignacionId}&trimestre_id=${state.selectedAcademicTrimestreId}`);
+        if (!state.libro?.setup_required) {
+            await asegurarParcialesBase();
+            state.libro = await api(`/api/academico/libro?asignacion_id=${state.selectedAcademicAsignacionId}&trimestre_id=${state.selectedAcademicTrimestreId}`);
+        }
     } catch (err) {
         state.libro = { setup_required: true, error: err.message };
     }
     renderAcademicShell();
 }
 
+async function asegurarParcialesBase() {
+    const parciales = state.libro?.parciales || [];
+    if (parciales.length >= 2) return;
+
+    const existentes = new Set(
+        parciales.map(p => String(p.nombre || "").trim().toUpperCase())
+    );
+
+    const base = ["PARCIAL 1", "PARCIAL 2"];
+    for (const nombre of base) {
+        if (existentes.has(nombre)) continue;
+        await api("/api/academico/parciales", {
+            method: "POST",
+            body: {
+                asignacion_id: state.selectedAcademicAsignacionId,
+                trimestre_id: state.selectedAcademicTrimestreId,
+                nombre,
+            },
+        });
+    }
+}
+
 async function profCrearParcial() {
-    const nombre = prompt("Nombre del parcial:", "");
+    const nombre = prompt("Nombre del parcial adicional:", "");
     if (nombre === null) return;
     try {
         await api("/api/academico/parciales", {
