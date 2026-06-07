@@ -243,6 +243,21 @@ router.get('/periodo-activo', authRequired, async (req, res) => {
     }
 });
 
+// GET /api/academico/periodos
+router.get('/periodos', authRequired, async (req, res) => {
+    try {
+        const [rows] = await pool.query(
+            `SELECT id, nombre, fecha_inicio, fecha_fin, estado
+             FROM periodos_lectivos
+             ORDER BY fecha_inicio DESC, id DESC`
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Error periodos:', err);
+        res.status(500).json({ error: 'Error al obtener periodos lectivos' });
+    }
+});
+
 // GET /api/academico/trimestres
 router.get('/trimestres', authRequired, async (req, res) => {
     try {
@@ -609,6 +624,34 @@ router.get('/libro', authRequired, adminOProfesor, async (req, res) => {
     }
 });
 
+router.get('/parciales', authRequired, adminOProfesor, async (req, res) => {
+    try {
+        const { asignacion_id, trimestre_id } = req.query;
+        if (!asignacion_id || !trimestre_id) {
+            return res.status(400).json({ error: 'Faltan asignacion_id y trimestre_id' });
+        }
+        if (!(await profesorPuedeAsignacion(req.user, asignacion_id))) {
+            return res.status(403).json({ error: 'No tienes permiso para esta asignacion' });
+        }
+
+        const [rows] = await pool.query(
+            `SELECT id, asignacion_id, trimestre_id, nombre, orden, estado, cerrado_at
+             FROM academico_parciales
+             WHERE asignacion_id = ? AND trimestre_id = ?
+             ORDER BY orden ASC, id ASC`,
+            [asignacion_id, trimestre_id]
+        );
+
+        res.json(rows);
+    } catch (err) {
+        if (err.code === 'ER_NO_SUCH_TABLE') {
+            return res.status(501).json({ error: 'Falta ejecutar database/academico-parciales-insumos.sql en MySQL' });
+        }
+        console.error('Error listar parciales:', err);
+        res.status(500).json({ error: 'Error al listar parciales' });
+    }
+});
+
 router.post('/parciales', authRequired, adminOProfesor, async (req, res) => {
     try {
         const { asignacion_id, trimestre_id, nombre } = req.body;
@@ -616,12 +659,16 @@ router.post('/parciales', authRequired, adminOProfesor, async (req, res) => {
         if (!(await profesorPuedeAsignacion(req.user, asignacion_id))) {
             return res.status(403).json({ error: 'No tienes permiso para esta asignacion' });
         }
+
         const [ordenRows] = await pool.query(
-            'SELECT COALESCE(MAX(orden), 0) + 1 AS siguiente FROM academico_parciales WHERE asignacion_id = ? AND trimestre_id = ?',
+            `SELECT COALESCE(MAX(orden), 0) + 1 AS siguiente
+             FROM academico_parciales
+             WHERE asignacion_id = ? AND trimestre_id = ?`,
             [asignacion_id, trimestre_id]
         );
-        const orden = ordenRows[0]?.siguiente || 1;
-        const parcialNombre = String(nombre || `Parcial ${orden}`).trim().slice(0, 80);
+        const orden = Number(ordenRows[0]?.siguiente || 1);
+        const parcialNombre = String(nombre || `PARCIAL ${orden}`).trim().toUpperCase().slice(0, 80);
+
         const [result] = await pool.query(
             'INSERT INTO academico_parciales (asignacion_id, trimestre_id, nombre, orden) VALUES (?, ?, ?, ?)',
             [asignacion_id, trimestre_id, parcialNombre, orden]
@@ -631,6 +678,65 @@ router.post('/parciales', authRequired, adminOProfesor, async (req, res) => {
         if (err.code === 'ER_NO_SUCH_TABLE') return res.status(501).json({ error: 'Falta ejecutar database/academico-parciales-insumos.sql en MySQL' });
         console.error('Error crear parcial:', err);
         res.status(500).json({ error: 'Error al crear parcial' });
+    }
+});
+
+router.delete('/parciales/:id', authRequired, adminOProfesor, async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        const parcialId = Number(req.params.id);
+        if (!parcialId) return res.status(400).json({ error: 'Parcial invalido' });
+
+        const [rows] = await connection.query(
+            `SELECT id, asignacion_id, nombre, orden
+             FROM academico_parciales
+             WHERE id = ?
+             LIMIT 1`,
+            [parcialId]
+        );
+
+        if (!rows.length) return res.status(404).json({ error: 'Parcial no encontrado' });
+
+        const parcial = rows[0];
+        if (!(await profesorPuedeAsignacion(req.user, parcial.asignacion_id))) {
+            return res.status(403).json({ error: 'No tienes permiso para este parcial' });
+        }
+
+        if (Number(parcial.orden) <= 2) {
+            return res.status(400).json({ error: 'PARCIAL 1 y PARCIAL 2 son obligatorios y no se pueden eliminar' });
+        }
+
+        await connection.beginTransaction();
+
+        await connection.query(
+            `DELETE n
+             FROM academico_notas_insumos n
+             JOIN academico_insumos i ON i.id = n.insumo_id
+             WHERE i.parcial_id = ?`,
+            [parcialId]
+        );
+
+        await connection.query(
+            `DELETE FROM academico_insumos
+             WHERE parcial_id = ?`,
+            [parcialId]
+        );
+
+        await connection.query(
+            `DELETE FROM academico_parciales
+             WHERE id = ?`,
+            [parcialId]
+        );
+
+        await connection.commit();
+        res.json({ success: true, message: `Parcial eliminado: ${parcial.nombre}` });
+    } catch (err) {
+        await connection.rollback();
+        if (err.code === 'ER_NO_SUCH_TABLE') return res.status(501).json({ error: 'Falta ejecutar database/academico-parciales-insumos.sql en MySQL' });
+        console.error('Error eliminar parcial:', err);
+        res.status(500).json({ error: 'Error al eliminar parcial' });
+    } finally {
+        connection.release();
     }
 });
 

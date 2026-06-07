@@ -1,20 +1,14 @@
-# TODO - Rediseño Control de Asistencia e Insumos (según maqueta)
+# TODO - Reorganización académica Profesor/Admin (Periodo → Trimestre → Parcial → Insumos)
 
-## Asistencia
-- [x] Profesor: reemplazar UI de Asistencia por formato de maqueta (filtros + pestañas + tabla nominal).
-- [x] Profesor: usar datos reales de tutoría para cargar estudiantes según curso/paralelo.
-- [x] Profesor: permitir marcar ATRASOS e INASISTENCIA por estudiante con checkboxes.
-- [x] Profesor: guardar asistencia en backend por fecha y filtros seleccionados.
-- [x] Admin Académico: aplicar el mismo formato visual de control de asistencia.
-- [ ] Admin Académico: permitir seleccionar docente/curso/paralelo y cargar nómina.
+## Estado
+- [x] 1. Backend académico: periodos, parciales por contexto, eliminación de parciales opcionales
+- [ ] 2. Frontend Profesor: selector periodo + trimestre, chips de parciales, botón [+], tachito en parciales 3+
+- [ ] 3. Frontend Admin Académico: misma estructura académica que profesor (con permisos de admin)
+- [ ] 4. Documentación: registrar cambios con fecha en docs/funcionamiento-sistema.md
+- [ ] 5. Validación de sintaxis (node --check) en archivos modificados
 
-## Insumos
-- [ ] Profesor: rediseñar cabecera de Insumos (Curso, Especialidad, Paralelo, Asignatura, Parcial, Trimestre, Actividad).
-- [ ] Profesor: tabla nominal estilo maqueta con calificación y acción rápida por estudiante.
-- [ ] Profesor: mantener guardado real con endpoints académicos existentes.
-- [ ] Admin Académico: aplicar rediseño equivalente de Insumos.
-- [ ] Admin Académico: mantener operación completa sobre cualquier asignación activa.
-
-## Cierre
-- [ ] Mantener diseño responsive y consistente con estilos del sistema.
-- [ ] Documentar cambios con fecha en `docs/funcionamiento-sistema.md`.
+## Notas de implementación
+- PARCIAL 1 y PARCIAL 2 obligatorios y no eliminables.
+- PARCIAL 3+ eliminables con confirmación.
+- Examen trimestral siempre separado de insumos.
+- Filtros de contexto: asignación + periodo + trimestre.
