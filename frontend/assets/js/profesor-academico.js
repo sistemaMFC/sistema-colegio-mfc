@@ -924,14 +924,19 @@ function renderAcademicBook() {
     if (!libro) {
         return `<div class="academic-empty">Seleccione materia y trimestre para cargar el libro.</div>`;
     }
-    if (libro.setup_required) {
-        return `<div class="academic-empty">${escapeHTML(libro.error)}<br><small>Ejecute database/academico-parciales-insumos.sql en Railway.</small></div>`;
-    }
-    const parciales = libro.parciales || [];
+
+    const isSetupRequired = Boolean(libro?.setup_required);
+    const fallbackParciales = [
+        { id: -1, nombre: "PARCIAL 1", orden: 1, estado: "ABIERTO", insumos: [] },
+        { id: -2, nombre: "PARCIAL 2", orden: 2, estado: "ABIERTO", insumos: [] },
+    ];
+    const parciales = isSetupRequired ? fallbackParciales : (libro.parciales || []);
     const active = parciales.find(p => Number(p.id) === Number(state.selectedAcademicParcialId)) || parciales[0] || null;
+
     if (active && !state.selectedAcademicParcialId) {
         state.selectedAcademicParcialId = active.id;
     }
+
     return `
         <div class="card" style="padding:12px">
             <strong>Parciales:</strong>
@@ -941,16 +946,20 @@ function renderAcademicBook() {
                         <button class="partial-btn ${Number(parcial.id) === Number(active?.id) ? "active" : ""}" type="button" onclick="seleccionarParcial(${Number(parcial.id)})">
                             <strong>${escapeHTML(parcial.nombre)}</strong>
                         </button>
-                        ${Number(parcial.orden) >= 3 ? `<button class="btn-soft" type="button" title="Eliminar parcial" onclick="profEliminarParcial(${Number(parcial.id)}, '${escapeHTML(parcial.nombre)}')">🗑</button>` : ""}
+                        ${!isSetupRequired && Number(parcial.orden) >= 3 ? `<button class="btn-soft" type="button" title="Eliminar parcial" onclick="profEliminarParcial(${Number(parcial.id)}, '${escapeHTML(parcial.nombre)}')">🗑</button>` : ""}
                     </div>
                 `).join("") : `<div class="academic-empty">Cree el primer parcial para agregar insumos.</div>`}
-                <button class="prof-mini-btn" type="button" onclick="profCrearParcial()">+</button>
+                <button class="prof-mini-btn" type="button" onclick="${isSetupRequired ? "showAlert('bad','Modo visual: primero ejecuta database/academico-parciales-insumos.sql en Railway para guardar cambios reales.')" : "profCrearParcial()"}">+</button>
             </div>
             <div class="muted" style="margin-top:6px;font-size:12px">PARCIAL 1 y PARCIAL 2 son obligatorios y no se pueden eliminar.</div>
+            ${isSetupRequired ? `<div class="muted" style="margin-top:6px;font-size:12px;color:#b45309">Modo visual activo: se muestra lista base de parciales, pero no guarda hasta ejecutar SQL de estructura nueva.</div>` : ""}
         </div>
         <div class="academic-board">
             <section class="partial-detail" id="partialDetailPanel">
-                ${active ? renderParcialDetail(active) : ""}
+                ${isSetupRequired
+                    ? `<div class="academic-empty">${escapeHTML(libro.error)}<br><small>Ejecute database/academico-parciales-insumos.sql en Railway.</small></div>`
+                    : (active ? renderParcialDetail(active) : "")
+                }
             </section>
         </div>
     `;

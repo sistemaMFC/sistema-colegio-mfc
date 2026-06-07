@@ -832,3 +832,25 @@ Fecha: 2026-06-01
   - El botón "Crear parcial" queda reservado para crear parciales adicionales según necesidad.
 - Nota técnica:
   - Esta lógica se ejecuta solo cuando el backend responde con libro válido (no `setup_required`).
+
+- Fecha: 2026-06-07
+- Módulo: Reorganización académica (Periodo → Trimestre → Parcial → Insumos)
+- Cambios implementados:
+  - Backend (`backend/src/routes/academico.routes.js`):
+    - Nuevo endpoint `GET /api/academico/periodos`.
+    - Nuevo endpoint `GET /api/academico/parciales?asignacion_id=&trimestre_id=`.
+    - Ajuste en `POST /api/academico/parciales` para nombre estándar `PARCIAL N`.
+    - Nuevo endpoint `DELETE /api/academico/parciales/:id` con reglas:
+      - PARCIAL 1 y PARCIAL 2 no eliminables.
+      - Solo parciales opcionales (orden 3+) eliminables.
+      - Elimina insumos y notas vinculadas del parcial eliminado.
+  - Frontend profesor (`frontend/assets/js/profesor-academico.js`):
+    - Se agregó selector de año lectivo (`/api/academico/periodos`) y filtro por periodo.
+    - Se reorganizó la vista para mostrar lista/chips de parciales con botón `+`.
+    - Se agregó tachito de eliminación solo para parciales opcionales (3+).
+    - Se implementó fallback visual cuando falta estructura SQL nueva:
+      - muestra `PARCIAL 1` y `PARCIAL 2` para visualizar la estructura,
+      - bloquea guardado real y muestra aviso claro de “modo visual”.
+- Estado actual:
+  - Si falta ejecutar `database/academico-parciales-insumos.sql`, ya no desaparece la lista de parciales: se muestra estructura base visual.
+  - Cuando la base esté lista, la gestión de parciales opera de forma real con persistencia.
