@@ -2,7 +2,7 @@
 
 ## Estado
 - [x] 1. Backend académico: periodos, parciales por contexto, eliminación de parciales opcionales
-- [ ] 2. Frontend Profesor: selector periodo + trimestre, chips de parciales, botón [+], tachito en parciales 3+
+- [x] 2. Frontend Profesor: selector periodo + trimestre, chips de parciales, botón [+], tachito en parciales 3+
 - [ ] 3. Frontend Admin Académico: misma estructura académica que profesor (con permisos de admin)
 - [ ] 4. Documentación: registrar cambios con fecha en docs/funcionamiento-sistema.md
 - [ ] 5. Validación de sintaxis (node --check) en archivos modificados

@@ -11,6 +11,8 @@ const state = {
     notasData: null,
     tutorCursos: [],
     periodo: null,
+    periodosAcademicos: [],
+    selectedAcademicPeriodoId: null,
     trimestresNuevo: [],
     academicContexts: [],
     selectedAcademicAsignacionId: null,
@@ -786,7 +788,12 @@ function renderMateriasDocente(materias) {
 }
 
 async function cargarMateriasDocente() {
-    state.academicContexts = await api("/api/profesor/materias");
+    const materias = await api("/api/profesor/materias");
+    if (state.selectedAcademicPeriodoId) {
+        state.academicContexts = materias.filter(item => Number(item.periodo_id) === Number(state.selectedAcademicPeriodoId));
+    } else {
+        state.academicContexts = materias;
+    }
     state.academicMode = "materias";
     state.selectedAcademicAsignacionId = null;
     state.selectedAcademicParcialId = null;
@@ -833,7 +840,7 @@ async function cargarExamenPorMateria() {
 function renderAcademicShell() {
     const section = document.getElementById("profSectionInsumos");
     if (!section) return;
-    const selectedAsignacion = state.academicContexts.find(item => Number(item.id) === Number(state.selectedAcademicAsignacionId));
+    const selectedAsignacion = state.academicContexts.find(item => Number(item.asignacion_id || item.id) === Number(state.selectedAcademicAsignacionId));
     if (state.academicMode === "materias" || !selectedAsignacion) {
         section.innerHTML = `
             <div class="card-head">
@@ -854,17 +861,27 @@ function renderAcademicShell() {
                 <div>
                     <h3>Materia: ${escapeHTML(selectedAsignacion?.materia_nombre || selectedAsignacion?.materia || "-")}</h3>
                     <p class="muted" style="margin:4px 0 0;">Curso: ${escapeHTML(selectedAsignacion?.curso_nombre || selectedAsignacion?.curso || "-")} - Paralelo ${escapeHTML(selectedAsignacion?.paralelo || "-")}</p>
-                    <p class="muted" style="margin:4px 0 0;">Periodo: ${escapeHTML(selectedAsignacion?.periodo_nombre || state.periodo?.nombre || "-")}</p>
+                    <p class="muted" style="margin:4px 0 0;">Periodo: ${escapeHTML((state.periodosAcademicos.find(p => Number(p.id) === Number(state.selectedAcademicPeriodoId))?.nombre) || selectedAsignacion?.periodo_nombre || state.periodo?.nombre || "-")}</p>
                 </div>
                 <div class="materia-options">
                     <span class="materia-option">Insumos</span>
-                    <span class="materia-option">Notas por insumo</span>
+                    <span class="materia-option">Parciales</span>
                     <span class="materia-option">Examen trimestral</span>
                     <span class="materia-option">Promedios</span>
                     <span class="materia-option">Asistencia</span>
                 </div>
             </div>
-            <div class="academic-filters">
+            <div class="academic-filters" style="grid-template-columns:1fr 1fr;">
+                <div>
+                    <label>Año lectivo</label>
+                    <select id="academicPeriodoSelect">
+                        ${state.periodosAcademicos.map(periodo => `
+                            <option value="${escapeHTML(periodo.id)}" ${Number(periodo.id) === Number(state.selectedAcademicPeriodoId) ? "selected" : ""}>
+                                ${escapeHTML(periodo.nombre)}
+                            </option>
+                        `).join("")}
+                    </select>
+                </div>
                 <div>
                     <label>Trimestre</label>
                     <select id="academicTrimestreSelect">
@@ -875,10 +892,9 @@ function renderAcademicShell() {
                         `).join("")}
                     </select>
                 </div>
-                <button class="btn" type="button" onclick="profCrearParcial()">Crear parcial</button>
             </div>
             <div class="prof-summary">
-                <div class="prof-stat"><span>Periodo</span><strong>${escapeHTML(state.periodo?.nombre || "-")}</strong></div>
+                <div class="prof-stat"><span>Periodo</span><strong>${escapeHTML((state.periodosAcademicos.find(p => Number(p.id) === Number(state.selectedAcademicPeriodoId))?.nombre) || state.periodo?.nombre || "-")}</strong></div>
                 <div class="prof-stat"><span>Estudiantes</span><strong>${escapeHTML(selectedAsignacion?.total_estudiantes ?? state.libro?.alumnos?.length ?? 0)}</strong></div>
                 <div class="prof-stat"><span>Parciales</span><strong>${state.libro?.parciales?.length || 0}</strong></div>
                 <div class="prof-stat"><span>Formula</span><strong>70/30</strong></div>
@@ -886,6 +902,12 @@ function renderAcademicShell() {
             <div id="academicBookPanel">${renderAcademicBook()}</div>
         </div>
     `;
+
+    document.getElementById("academicPeriodoSelect")?.addEventListener("change", async (event) => {
+        state.selectedAcademicPeriodoId = Number(event.target.value);
+        state.selectedAcademicParcialId = null;
+        await cargarMateriasDocente();
+    });
 
     document.getElementById("academicTrimestreSelect")?.addEventListener("change", async (event) => {
         state.selectedAcademicTrimestreId = Number(event.target.value);
@@ -911,21 +933,22 @@ function renderAcademicBook() {
         state.selectedAcademicParcialId = active.id;
     }
     return `
-        <div class="academic-board">
-            <aside class="partial-list">
-                <div class="partial-list-head">
-                    <strong>Parciales</strong>
-                    <button class="prof-mini-btn" type="button" onclick="profCrearParcial()">+</button>
-                </div>
-                <div class="partial-list-body">
-                    ${parciales.length ? parciales.map((parcial) => `
+        <div class="card" style="padding:12px">
+            <strong>Parciales:</strong>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+                ${parciales.length ? parciales.map((parcial) => `
+                    <div style="display:flex;align-items:center;gap:4px">
                         <button class="partial-btn ${Number(parcial.id) === Number(active?.id) ? "active" : ""}" type="button" onclick="seleccionarParcial(${Number(parcial.id)})">
-                            <strong>${escapeHTML(parcial.nombre)}</strong><br>
-                            <span class="partial-status ${parcial.estado === "CERRADO" ? "closed" : ""}">${escapeHTML(parcial.estado)}</span>
+                            <strong>${escapeHTML(parcial.nombre)}</strong>
                         </button>
-                    `).join("") : `<div class="academic-empty">Cree el primer parcial para agregar insumos.</div>`}
-                </div>
-            </aside>
+                        ${Number(parcial.orden) >= 3 ? `<button class="btn-soft" type="button" title="Eliminar parcial" onclick="profEliminarParcial(${Number(parcial.id)}, '${escapeHTML(parcial.nombre)}')">🗑</button>` : ""}
+                    </div>
+                `).join("") : `<div class="academic-empty">Cree el primer parcial para agregar insumos.</div>`}
+                <button class="prof-mini-btn" type="button" onclick="profCrearParcial()">+</button>
+            </div>
+            <div class="muted" style="margin-top:6px;font-size:12px">PARCIAL 1 y PARCIAL 2 son obligatorios y no se pueden eliminar.</div>
+        </div>
+        <div class="academic-board">
             <section class="partial-detail" id="partialDetailPanel">
                 ${active ? renderParcialDetail(active) : ""}
             </section>
@@ -940,7 +963,7 @@ function seleccionarParcial(parcialId) {
 
 function renderParcialDetail(parcial) {
     const alumnos = state.libro?.alumnos || [];
-    const selectedAsignacion = state.academicContexts.find(item => Number(item.id) === Number(state.selectedAcademicAsignacionId));
+    const selectedAsignacion = state.academicContexts.find(item => Number(item.asignacion_id || item.id) === Number(state.selectedAcademicAsignacionId));
 
     return `
         <div style="padding:12px;border-bottom:1px solid var(--stroke);background:var(--panel)">
@@ -1010,11 +1033,14 @@ async function loadAcademicContext() {
         shell.innerHTML = `<div class="card-head"><h3>Insumos y parciales</h3></div><div class="prof-empty">Cargando contexto academico...</div>`;
     }
     try {
-        const [periodo, trimestres] = await Promise.all([
+        const [periodo, periodos, trimestres] = await Promise.all([
             api("/api/academico/periodo-activo"),
+            api("/api/academico/periodos"),
             api("/api/academico/trimestres"),
         ]);
         state.periodo = periodo;
+        state.periodosAcademicos = periodos || [];
+        state.selectedAcademicPeriodoId = periodo?.id || state.periodosAcademicos[0]?.id || null;
         state.trimestresNuevo = trimestres || [];
         state.selectedAcademicTrimestreId = state.trimestresNuevo[0]?.id || null;
         await cargarMateriasDocente();
@@ -1031,6 +1057,10 @@ async function loadAcademicBook() {
     }
     try {
         state.libro = await api(`/api/academico/libro?asignacion_id=${state.selectedAcademicAsignacionId}&trimestre_id=${state.selectedAcademicTrimestreId}`);
+        if (!state.libro?.setup_required) {
+            await asegurarParcialesBase();
+            state.libro = await api(`/api/academico/libro?asignacion_id=${state.selectedAcademicAsignacionId}&trimestre_id=${state.selectedAcademicTrimestreId}`);
+        }
     } catch (err) {
         state.libro = { setup_required: true, error: err.message };
     }
@@ -1426,6 +1456,20 @@ window.profCambiarEstadoParcial = profCambiarEstadoParcial;
 window.profNotaUnicaParcial = profNotaUnicaParcial;
 window.profNotaUnicaExamen = profNotaUnicaExamen;
 window.profEditarFila = function() {};
+window.profEliminarParcial = async function(parcialId, nombre) {
+    const ok = confirm(`¿Seguro que deseas eliminar este parcial adicional?\n\n${nombre}\n\nSe eliminarán sus insumos y notas relacionadas.`);
+    if (!ok) return;
+    try {
+        await api(`/api/academico/parciales/${parcialId}`, { method: "DELETE" });
+        if (Number(state.selectedAcademicParcialId) === Number(parcialId)) {
+            state.selectedAcademicParcialId = null;
+        }
+        await loadAcademicBook();
+        showAlert("ok", "Parcial eliminado correctamente.");
+    } catch (err) {
+        showAlert("bad", err.message || "No se pudo eliminar el parcial.");
+    }
+};
 window.cargarMateriasDocente = cargarMateriasDocente;
 window.renderMateriasDocente = renderMateriasDocente;
 window.seleccionarMateria = seleccionarMateria;
