@@ -804,7 +804,20 @@ function renderAcademicBook() {
 
 function renderParcialDetail(parcial) {
     const alumnos = state.libro?.alumnos || [];
+    const selectedAsignacion = state.academicContexts.find(item => Number(item.id) === Number(state.selectedAcademicAsignacionId));
+
     return `
+        <div style="padding:12px;border-bottom:1px solid var(--stroke);background:var(--panel)">
+            <h3 style="margin:0 0 8px;text-align:center">INSUMOS</h3>
+            <div class="prof-grid" style="grid-template-columns:repeat(3,minmax(180px,1fr));gap:10px">
+                <div class="form-group"><label>Curso</label><input value="${escapeHTML(selectedAsignacion?.curso || '-')}" disabled></div>
+                <div class="form-group"><label>Especialidad</label><input value="GENERAL" disabled></div>
+                <div class="form-group"><label>Paralelo</label><input value="${escapeHTML(selectedAsignacion?.paralelo || '-')}" disabled></div>
+                <div class="form-group"><label>Asignatura</label><input value="${escapeHTML(selectedAsignacion?.materia || '-')}" disabled></div>
+                <div class="form-group"><label>Parcial</label><input value="${escapeHTML(parcial.nombre)}" disabled></div>
+                <div class="form-group"><label>Trimestre</label><input value="${escapeHTML((state.trimestresNuevo.find(t => Number(t.id) === Number(state.selectedAcademicTrimestreId))?.nombre) || '-')}" disabled></div>
+            </div>
+        </div>
         <div class="partial-detail-head">
             <div>
                 <strong>${escapeHTML(parcial.nombre)}</strong>
@@ -812,6 +825,7 @@ function renderParcialDetail(parcial) {
             </div>
             <div class="actions-inline">
                 <button class="prof-mini-btn" type="button" onclick="profNotaUnicaParcial(${parcial.id})">Nota unica parcial</button>
+                <button class="prof-mini-btn" type="button" onclick="profNotaUnicaExamen()">Nota unica examen</button>
                 <button class="prof-mini-btn" type="button" onclick="profCambiarEstadoParcial(${parcial.id}, '${parcial.estado === "CERRADO" ? "ABIERTO" : "CERRADO"}')">${parcial.estado === "CERRADO" ? "Reabrir" : "Cerrar"}</button>
             </div>
         </div>
@@ -819,34 +833,31 @@ function renderParcialDetail(parcial) {
             ${["TAREA","LECCION","TALLER","APORTE","INDIVIDUAL"].map(tipo => `
                 <button class="insumo-btn ${tipoClass(tipo)}" type="button" onclick="profCrearInsumo(${parcial.id}, '${tipo}')">+ ${tipoLabel(tipo)}</button>
             `).join("")}
-            <button class="insumo-btn" type="button" onclick="profNotaUnicaExamen()">Nota unica examen</button>
         </div>
         <div class="grade-table-wrap">
             <table class="grade-table">
                 <thead>
                     <tr>
+                        <th>N°</th>
                         <th>Estudiante</th>
                         ${parcial.insumos.map(insumo => `<th>${escapeHTML(insumo.nombre)}<br><small>${tipoLabel(insumo.tipo)}</small></th>`).join("")}
-                        <th>Prom. parcial</th>
-                        <th>Examen trimestral</th>
-                        <th>Prom. parciales</th>
-                        <th>Final trimestre</th>
+                        <th>Calificación</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${alumnos.map(alumno => {
+                    ${alumnos.map((alumno, idx) => {
                         const parcialAlumno = (alumno.parciales || []).find(p => Number(p.parcial_id) === Number(parcial.id));
                         return `
                             <tr>
-                                <td><strong>${escapeHTML(alumno.apellidos_est)}, ${escapeHTML(alumno.nombres_est)}</strong><br><small class="muted">${escapeHTML(alumno.cedula_est || "-")}</small></td>
+                                <td>${idx + 1}</td>
+                                <td><strong>${escapeHTML(alumno.apellidos_est)}, ${escapeHTML(alumno.nombres_est)}</strong></td>
                                 ${parcial.insumos.map(insumo => {
                                     const nota = insumo.notas?.[String(alumno.matricula_id)]?.nota ?? "";
                                     return `<td><input class="grade-input" type="number" min="0" max="10" step="0.01" value="${escapeHTML(nota)}" onchange="profGuardarNotaInsumo(${insumo.id}, ${alumno.matricula_id}, this.value, this)"></td>`;
                                 }).join("")}
                                 <td><span class="calc-chip ${chipForNota(parcialAlumno?.promedio)}">${notaTxt(parcialAlumno?.promedio)}</span></td>
-                                <td><input class="grade-input examen" type="number" min="0" max="10" step="0.01" value="${escapeHTML(alumno.examen_trimestral ?? "")}" onchange="profGuardarExamen(${alumno.matricula_id}, this.value, this)"></td>
-                                <td><span class="calc-chip ${chipForNota(alumno.promedio_parciales)}">${notaTxt(alumno.promedio_parciales)}</span></td>
-                                <td><span class="calc-chip ${chipForNota(alumno.nota_trimestral)}">${notaTxt(alumno.nota_trimestral)}</span></td>
+                                <td><button class="prof-mini-btn" type="button" onclick="profEditarFila(${alumno.matricula_id})">✎</button></td>
                             </tr>
                         `;
                     }).join("")}
@@ -1259,3 +1270,4 @@ window.profGuardarExamen = profGuardarExamen;
 window.profCambiarEstadoParcial = profCambiarEstadoParcial;
 window.profNotaUnicaParcial = profNotaUnicaParcial;
 window.profNotaUnicaExamen = profNotaUnicaExamen;
+window.profEditarFila = function() {};
