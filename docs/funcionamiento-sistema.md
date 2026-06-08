@@ -854,3 +854,24 @@ Fecha: 2026-06-01
 - Estado actual:
   - Si falta ejecutar `database/academico-parciales-insumos.sql`, ya no desaparece la lista de parciales: se muestra estructura base visual.
   - Cuando la base esté lista, la gestión de parciales opera de forma real con persistencia.
+
+- Fecha: 2026-06-07
+- Módulo: Catálogo de insumos (Portal Profesor)
+- Ajuste solicitado por usuario:
+  - Los insumos permitidos/visibles en la UI quedan definidos como:
+    1. Tareas
+    2. Actividad Individual
+    3. Actividad Grupal
+    4. Leccion
+    5. Prueba
+- Implementación técnica:
+  - Archivo: `frontend/assets/js/profesor-academico.js`
+  - Se actualizaron las etiquetas visibles (`tipoLabel`) para reflejar el catálogo solicitado.
+  - Se ajustó el orden de botones del toolbar de creación de insumos a:
+    - `TAREA`, `INDIVIDUAL`, `TALLER`, `LECCION`, `APORTE`
+  - Equivalencias internas:
+    - `TAREA` → Tareas
+    - `INDIVIDUAL` → Actividad Individual
+    - `TALLER` → Actividad Grupal
+    - `LECCION` → Leccion
+    - `APORTE` → Prueba
