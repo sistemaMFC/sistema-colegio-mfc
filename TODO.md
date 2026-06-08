@@ -1,14 +1,20 @@
-# TODO - Auditoría completa de base de datos
+# TODO - Ajustes finales Bachillerato + Especialidades + Académico Admin/Profesor
 
-## Estado
-- [ ] 1. Inventariar tablas reales (fuente: SQLs del repo + referencias en código backend).
-- [ ] 2. Mapear tablas usadas por el programa (endpoint/archivo + lectura/escritura).
-- [ ] 3. Clasificar tablas: uso correcto, uso riesgoso/mix, legado/no usadas.
-- [ ] 4. Recomendar por tabla: mantener, migrar/archivar, eliminar (con motivo).
-- [ ] 5. Crear documento formal en `docs/` con plan por fases y checklist de respaldo.
-- [ ] 6. Actualizar `docs/funcionamiento-sistema.md` con fecha y resumen de la auditoría.
+## En progreso
+- [ ] Reforzar permisos backend académico (403 por pertenencia de asignación para PROFESOR).
+- [ ] Ajustar rutas profesor para filtrar por especialidad y asignaciones propias.
+- [ ] Ajustar rutas admin para soportar `especialidad_id` consistente en asignaciones.
+- [ ] Revisar enrollments para filtros/listados robustos por especialidad.
 
-## Notas de implementación
-- No eliminar tablas directamente desde código ni SQL sin respaldo previo.
-- Marcar claramente qué recomendaciones requieren validación de datos históricos.
-- Incluir matriz tabla ↔ endpoint para que el equipo sepa impacto real.
+## Frontend
+- [ ] Homologar estructura visual de Académico Admin con Profesor (manteniendo permisos diferentes).
+- [ ] Mostrar especialidad en flujos de Matrículas/Distribución y Académico.
+- [ ] Limitar acciones de Profesor a su alcance.
+
+## Documentación
+- [ ] Actualizar `docs/funcionamiento-sistema.md` con fecha y resumen técnico de cambios.
+- [ ] Dejar registro final de archivos/rutas/tablas ajustadas.
+
+## Validación pendiente
+- [ ] Checklist de pruebas Admin.
+- [ ] Checklist de pruebas Profesor.
