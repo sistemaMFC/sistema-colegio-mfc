@@ -790,6 +790,56 @@ router.post('/insumos', authRequired, adminOProfesor, async (req, res) => {
     }
 });
 
+router.delete('/insumos/:id', authRequired, adminOProfesor, async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        const insumoId = Number(req.params.id);
+        if (!insumoId) return res.status(400).json({ error: 'Insumo invalido' });
+
+        const [rows] = await connection.query(
+            `SELECT i.id, i.nombre, i.tipo, i.estado, i.parcial_id,
+                    p.asignacion_id, p.estado AS parcial_estado
+             FROM academico_insumos i
+             JOIN academico_parciales p ON p.id = i.parcial_id
+             WHERE i.id = ?
+             LIMIT 1`,
+            [insumoId]
+        );
+
+        if (!rows.length) return res.status(404).json({ error: 'Insumo no encontrado' });
+
+        const insumo = rows[0];
+        if (!(await profesorPuedeAsignacion(req.user, insumo.asignacion_id))) {
+            return res.status(403).json({ error: 'No tienes permiso para este insumo' });
+        }
+
+        if (insumo.parcial_estado === 'CERRADO' && req.user.rol !== 'ADMIN') {
+            return res.status(403).json({ error: 'El parcial esta cerrado, no se puede eliminar el insumo' });
+        }
+
+        await connection.beginTransaction();
+
+        await connection.query(
+            'DELETE FROM academico_notas_insumos WHERE insumo_id = ?',
+            [insumoId]
+        );
+
+        await connection.query(
+            'DELETE FROM academico_insumos WHERE id = ?',
+            [insumoId]
+        );
+
+        await connection.commit();
+        res.json({ success: true, message: `Insumo eliminado: ${insumo.nombre}` });
+    } catch (err) {
+        await connection.rollback();
+        console.error('Error eliminar insumo:', err);
+        res.status(500).json({ error: 'Error al eliminar insumo' });
+    } finally {
+        connection.release();
+    }
+});
+
 router.post('/notas-insumo', authRequired, adminOProfesor, async (req, res) => {
     try {
         const { insumo_id, matricula_id, nota, observacion } = req.body;

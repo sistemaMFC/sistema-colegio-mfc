@@ -631,6 +631,8 @@ Motivo:
 29. Se agrego asignacion manual oficial de estudiantes a curso/paralelo con `POST /api/enrollments/asignar-manual`.
 30. La pantalla de matriculas ahora incluye `Distribucion`, separada de `Pre-Matriculados`, para mover estudiantes entre paralelos usando `matriculas` como fuente real.
 31. Se agrego `POST /api/enrollments/distribuir` para mover en bloque matriculas seleccionadas a paralelo A, B, C o D.
+32. 2026-06-08: Se agrego la seccion **Ver insumos** en Profesor y Admin para listar insumos creados (tareas, actividad individual, actividad grupal, leccion y prueba) y se habilito eliminacion segura de insumos con confirmacion.
+33. 2026-06-08: Se implemento `DELETE /api/academico/insumos/:id` con validacion de permisos por asignacion, bloqueo si el parcial esta cerrado (excepto admin), y borrado de notas hijas antes de eliminar el insumo.
 32. Fecha: 2026-06-01 — Portal profesor: se agregó botón `Volver a Admin` visible solo para usuarios con rol `ADMIN`, con redirección a `app.html`. Para rol `PROFESOR` el botón permanece oculto.
 32. Fecha 2026-05-31: Se corrigio `POST /api/students` para quitar el periodo hardcodeado (`2026-2027`), permitir alta sin curso obligatorio y reforzar validaciones (cedula de estudiante, cedula de representante y fecha de nacimiento no futura).
 33. Fecha 2026-05-31: Se ajusto `frontend/assets/js/view-estudiantes.js` con validaciones de formulario adicionales (cedula representante y fecha no futura) y sanitizacion de datos en el render de tarjetas para reducir riesgo de XSS.

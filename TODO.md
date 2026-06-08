@@ -1,14 +1,13 @@
-# TODO - Reorganización académica Profesor/Admin (Periodo → Trimestre → Parcial → Insumos)
+# TODO - Ver/Eliminar insumos (Profesor/Admin)
 
 ## Estado
-- [x] 1. Backend académico: periodos, parciales por contexto, eliminación de parciales opcionales
-- [x] 2. Frontend Profesor: selector periodo + trimestre, chips de parciales, botón [+], tachito en parciales 3+
-- [ ] 3. Frontend Admin Académico: misma estructura académica que profesor (con permisos de admin)
-- [ ] 4. Documentación: registrar cambios con fecha en docs/funcionamiento-sistema.md
-- [ ] 5. Validación de sintaxis (node --check) en archivos modificados
+- [x] 1. Backend: agregar `DELETE /api/academico/insumos/:id` con validación de permisos y estado del parcial.
+- [x] 2. Frontend Profesor: sección "Ver insumos" (lista de creados) + botón eliminar con confirmación.
+- [x] 3. Frontend Admin: sección equivalente "Ver insumos" + eliminar con confirmación.
+- [x] 4. Documentación: registrar cambios con fecha en `docs/funcionamiento-sistema.md`.
+- [ ] 5. Prueba rápida: eliminar insumo y refrescar vista sin romper libro de notas.
 
 ## Notas de implementación
-- PARCIAL 1 y PARCIAL 2 obligatorios y no eliminables.
-- PARCIAL 3+ eliminables con confirmación.
-- Examen trimestral siempre separado de insumos.
-- Filtros de contexto: asignación + periodo + trimestre.
+- La eliminación debe bloquearse si el parcial está cerrado.
+- Se deben eliminar primero notas hijas (`academico_notas_insumos`) y luego el insumo.
+- Solo ADMIN/SECRETARIA o profesor dueño de la asignación pueden eliminar.

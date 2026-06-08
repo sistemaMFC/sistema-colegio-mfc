@@ -364,6 +364,17 @@ function _acadRenderLibroNuevo() {
                             <button class="acad-btn sm" onclick="_acadNotaUnicaParcialNuevo(${p.id})">Nota unica</button>
                             <button class="acad-btn sm" onclick="_acadCambiarEstadoParcialNuevo(${p.id}, '${p.estado === 'CERRADO' ? 'ABIERTO' : 'CERRADO'}')">${p.estado === 'CERRADO' ? 'Reabrir' : 'Cerrar'}</button>
                         </div>
+                        <div style="margin-top:10px;display:grid;gap:6px;">
+                            ${(p.insumos || []).length ? p.insumos.map(i => `
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--stroke);border-radius:10px;padding:7px 9px;background:var(--panel2);">
+                                    <div>
+                                        <strong>${i.nombre}</strong>
+                                        <small style="display:block;color:var(--muted)">Tipo: ${_acadTipoLabel(i.tipo)}</small>
+                                    </div>
+                                    <button class="acad-btn sm danger" onclick="_acadEliminarInsumoNuevo(${i.id}, '${i.nombre.replace(/'/g, "\\'")}')">Eliminar</button>
+                                </div>
+                            `).join('') : `<small class="muted">Sin insumos creados.</small>`}
+                        </div>
                     </div>
                 `).join('')}
             </div>
@@ -468,6 +479,13 @@ async function _acadNotaUnicaExamenNuevo() {
     const nota = prompt('Nota unica para el examen trimestral:');
     if (nota === null) return;
     await api('/api/academico/nota-unica', { method: 'POST', body: { asignacion_id: _ac.asignacionNueva.id, trimestre_id: _ac.trimestre.id, alcance: 'EXAMEN', nota } });
+    await _acadCargarLibroNuevo();
+}
+
+async function _acadEliminarInsumoNuevo(insumoId, nombre) {
+    const ok = confirm(`¿Eliminar insumo?\n\n${nombre}\n\nSe eliminarán sus notas relacionadas.`);
+    if (!ok) return;
+    await api(`/api/academico/insumos/${insumoId}`, { method: 'DELETE' });
     await _acadCargarLibroNuevo();
 }
 
@@ -1192,3 +1210,4 @@ window._acadGuardarExamenNuevo = _acadGuardarExamenNuevo;
 window._acadCambiarEstadoParcialNuevo = _acadCambiarEstadoParcialNuevo;
 window._acadNotaUnicaParcialNuevo = _acadNotaUnicaParcialNuevo;
 window._acadNotaUnicaExamenNuevo = _acadNotaUnicaExamenNuevo;
+window._acadEliminarInsumoNuevo = _acadEliminarInsumoNuevo;

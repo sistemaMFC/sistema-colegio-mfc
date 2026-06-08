@@ -969,6 +969,30 @@ function seleccionarParcial(parcialId) {
     renderAcademicShell();
 }
 
+function renderListaInsumos(parcial) {
+    const insumos = parcial?.insumos || [];
+    if (!insumos.length) {
+        return `<div class="academic-empty" style="padding:10px">No hay insumos creados en este parcial.</div>`;
+    }
+
+    return `
+        <div style="padding:10px;border-top:1px solid var(--stroke);background:var(--panel2)">
+            <strong style="display:block;margin-bottom:8px;">Ver insumos creados</strong>
+            <div style="display:grid;gap:8px;">
+                ${insumos.map((insumo, idx) => `
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--stroke);border-radius:10px;padding:8px 10px;background:var(--panel)">
+                        <div>
+                            <strong>${idx + 1}. ${escapeHTML(insumo.nombre)}</strong>
+                            <div class="muted" style="font-size:12px;">Tipo: ${escapeHTML(tipoLabel(insumo.tipo))}</div>
+                        </div>
+                        <button class="btn-soft" type="button" onclick="profEliminarInsumo(${Number(insumo.id)}, '${escapeHTML(insumo.nombre)}')">Eliminar</button>
+                    </div>
+                `).join("")}
+            </div>
+        </div>
+    `;
+}
+
 function renderParcialDetail(parcial) {
     const alumnos = state.libro?.alumnos || [];
     const selectedAsignacion = state.academicContexts.find(item => Number(item.asignacion_id || item.id) === Number(state.selectedAcademicAsignacionId));
@@ -1001,6 +1025,7 @@ function renderParcialDetail(parcial) {
                 <button class="insumo-btn ${tipoClass(tipo)}" type="button" onclick="profCrearInsumo(${parcial.id}, '${tipo}')">+ ${tipoLabel(tipo)}</button>
             `).join("")}
         </div>
+        ${renderListaInsumos(parcial)}
         <div class="grade-table-wrap">
             <table class="grade-table">
                 <thead>
@@ -1464,6 +1489,18 @@ window.profCambiarEstadoParcial = profCambiarEstadoParcial;
 window.profNotaUnicaParcial = profNotaUnicaParcial;
 window.profNotaUnicaExamen = profNotaUnicaExamen;
 window.profEditarFila = function() {};
+window.profEliminarInsumo = async function(insumoId, nombre) {
+    const ok = confirm(`¿Seguro que deseas eliminar este insumo?\n\n${nombre}\n\nSe eliminarán sus notas relacionadas.`);
+    if (!ok) return;
+    try {
+        await api(`/api/academico/insumos/${insumoId}`, { method: "DELETE" });
+        await loadAcademicBook();
+        showAlert("ok", "Insumo eliminado correctamente.");
+    } catch (err) {
+        showAlert("bad", err.message || "No se pudo eliminar el insumo.");
+    }
+};
+
 window.profEliminarParcial = async function(parcialId, nombre) {
     const ok = confirm(`¿Seguro que deseas eliminar este parcial adicional?\n\n${nombre}\n\nSe eliminarán sus insumos y notas relacionadas.`);
     if (!ok) return;
