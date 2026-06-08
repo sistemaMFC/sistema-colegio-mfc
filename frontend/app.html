@@ -195,6 +195,12 @@
                   <label>Paralelo</label>
                   <select name="paralelo_id" required></select>
                 </div>
+                <div class="form-group">
+                  <label>Especialidad</label>
+                  <select name="especialidad_id">
+                    <option value="">Sin especialidad</option>
+                  </select>
+                </div>
               </div>
               <div class="form-row">
                 <div class="form-group">
@@ -331,6 +337,10 @@
               <div class="form-group">
                 <label>Mover seleccionados a</label>
                 <select id="selectParaleloDistribucion"></select>
+              </div>
+              <div class="form-group" id="grupoEspecialidadDistribucion" hidden>
+                <label>Especialidad</label>
+                <select id="selectEspecialidadDistribucion"></select>
               </div>
               <div class="form-group">
                 <label>Accion</label>

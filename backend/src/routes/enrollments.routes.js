@@ -11,6 +11,84 @@ async function obtenerPeriodoActivoId() {
   return rows[0]?.id || null;
 }
 
+async function obtenerColumnasTabla(nombreTabla) {
+  const permitidas = new Set(["matriculas", "especialidades"]);
+  if (!permitidas.has(nombreTabla)) throw new Error("Tabla no permitida");
+  const [cols] = await pool.query(`SHOW COLUMNS FROM ${nombreTabla}`);
+  return new Set(cols.map(col => col.Field));
+}
+
+async function tablaExiste(nombreTabla) {
+  try {
+    await obtenerColumnasTabla(nombreTabla);
+    return true;
+  } catch (err) {
+    if (err.code === "ER_NO_SUCH_TABLE") return false;
+    throw err;
+  }
+}
+
+async function matriculasTieneEspecialidad() {
+  try {
+    const cols = await obtenerColumnasTabla("matriculas");
+    return cols.has("especialidad_id");
+  } catch (err) {
+    if (err.code === "ER_NO_SUCH_TABLE") return false;
+    throw err;
+  }
+}
+
+async function validarEspecialidadActiva(especialidadId, cursoId) {
+  if (!especialidadId) return true;
+  const existe = await tablaExiste("especialidades");
+  if (!existe) return false;
+
+  const cols = await obtenerColumnasTabla("especialidades");
+  let sql = "SELECT id FROM especialidades WHERE id = ?";
+  const params = [especialidadId];
+  if (cols.has("curso_id")) {
+    sql += " AND curso_id = ?";
+    params.push(cursoId);
+  }
+  if (cols.has("estado")) sql += " AND estado = 'ACTIVO'";
+  sql += " LIMIT 1";
+
+  const [rows] = await pool.query(sql, params);
+  return rows.length > 0;
+}
+
+async function listarEspecialidadesCurso(cursoId) {
+  const existe = await tablaExiste("especialidades");
+  if (!existe) return [];
+
+  const cols = await obtenerColumnasTabla("especialidades");
+  const selectCodigo = cols.has("codigo") ? "codigo" : "NULL AS codigo";
+  const selectCurso = cols.has("curso_id") ? "curso_id" : "NULL AS curso_id";
+  const selectEstado = cols.has("estado") ? "estado" : "'ACTIVO' AS estado";
+  let sql = `SELECT id, ${selectCodigo}, nombre, ${selectCurso}, ${selectEstado} FROM especialidades WHERE 1=1`;
+  const params = [];
+
+  if (cursoId && cols.has("curso_id")) {
+    sql += " AND curso_id = ?";
+    params.push(cursoId);
+  }
+  if (cols.has("estado")) sql += " AND estado = 'ACTIVO'";
+  sql += " ORDER BY nombre ASC";
+
+  const [rows] = await pool.query(sql, params);
+  return rows || [];
+}
+
+router.get("/especialidades", authRequired, async (req, res) => {
+  try {
+    const rows = await listarEspecialidadesCurso(req.query.curso_id);
+    return res.json(rows);
+  } catch (err) {
+    console.error("Error listando especialidades:", err);
+    return res.status(500).json({ error: "Error listando especialidades" });
+  }
+});
+
 /**
  * POST /enrollments
  * (ADMIN) Matricular estudiante + Generación Automática de Cargos (Deudas)
@@ -19,7 +97,7 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
   const connection = await pool.getConnection(); // Usamos conexión individual para la transacción
   
   try {
-    const { estudiante_id, periodo_id, curso_id, paralelo_id, fecha_matricula } = req.body;
+    const { estudiante_id, periodo_id, curso_id, paralelo_id, especialidad_id, fecha_matricula } = req.body;
     const fechaRegistro = fecha_matricula || new Date().toISOString().slice(0, 10);
 
     if (!estudiante_id || !periodo_id || !curso_id || !paralelo_id) {
@@ -41,10 +119,25 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
     }
 
     // 2. Insertar la Matrícula 
+    const tieneEspecialidad = await matriculasTieneEspecialidad();
+    if (tieneEspecialidad && especialidad_id) {
+      const okEspecialidad = await validarEspecialidadActiva(especialidad_id, curso_id);
+      if (!okEspecialidad) {
+        await connection.rollback();
+        return res.status(400).json({ error: "La especialidad no esta activa para este curso" });
+      }
+    }
+
+    const columnasMatricula = ["estudiante_id", "periodo_id", "curso_id", "paralelo_id", "fecha_registro", "estado"];
+    const valoresMatricula = [estudiante_id, periodo_id, curso_id, paralelo_id, fechaRegistro, "MATRICULADO"];
+    if (tieneEspecialidad) {
+      columnasMatricula.splice(4, 0, "especialidad_id");
+      valoresMatricula.splice(4, 0, especialidad_id || null);
+    }
+    const placeholdersMatricula = columnasMatricula.map(() => "?").join(", ");
     const [resultMat] = await connection.query(
-      `INSERT INTO matriculas (estudiante_id, periodo_id, curso_id, paralelo_id, fecha_registro, estado)
-       VALUES (?, ?, ?, ?, ?, 'MATRICULADO')`,
-      [estudiante_id, periodo_id, curso_id, paralelo_id, fechaRegistro]
+      `INSERT INTO matriculas (${columnasMatricula.join(", ")}) VALUES (${placeholdersMatricula})`,
+      valoresMatricula
     );
     const matriculaId = resultMat.insertId;
 
@@ -100,6 +193,7 @@ router.post("/asignar-manual", authRequired, onlyAdmin, async (req, res) => {
       periodo_id,
       curso_id,
       paralelo_id,
+      especialidad_id,
       fecha_matricula,
     } = req.body;
 
@@ -131,6 +225,15 @@ router.post("/asignar-manual", authRequired, onlyAdmin, async (req, res) => {
       return res.status(400).json({ error: "El paralelo no esta activo" });
     }
 
+    const tieneEspecialidad = await matriculasTieneEspecialidad();
+    if (tieneEspecialidad && especialidad_id) {
+      const okEspecialidad = await validarEspecialidadActiva(especialidad_id, curso_id);
+      if (!okEspecialidad) {
+        await connection.rollback();
+        return res.status(400).json({ error: "La especialidad no esta activa para este curso" });
+      }
+    }
+
     const [exist] = await connection.query(
       "SELECT id FROM matriculas WHERE estudiante_id = ? AND periodo_id = ? LIMIT 1",
       [estudiante_id, periodoFinal]
@@ -141,16 +244,23 @@ router.post("/asignar-manual", authRequired, onlyAdmin, async (req, res) => {
       matriculaId = exist[0].id;
       await connection.query(
         `UPDATE matriculas
-         SET curso_id = ?, paralelo_id = ?, estado = 'MATRICULADO'
+         SET curso_id = ?, paralelo_id = ?${tieneEspecialidad ? ", especialidad_id = ?" : ""}, estado = 'MATRICULADO'
          WHERE id = ?`,
-        [curso_id, paralelo_id, matriculaId]
+        tieneEspecialidad
+          ? [curso_id, paralelo_id, especialidad_id || null, matriculaId]
+          : [curso_id, paralelo_id, matriculaId]
       );
     } else {
+      const columnasMatricula = ["estudiante_id", "periodo_id", "curso_id", "paralelo_id", "fecha_registro", "estado"];
+      const valoresMatricula = [estudiante_id, periodoFinal, curso_id, paralelo_id, fechaFinal, "MATRICULADO"];
+      if (tieneEspecialidad) {
+        columnasMatricula.splice(4, 0, "especialidad_id");
+        valoresMatricula.splice(4, 0, especialidad_id || null);
+      }
+      const placeholdersMatricula = columnasMatricula.map(() => "?").join(", ");
       const [result] = await connection.query(
-        `INSERT INTO matriculas
-         (estudiante_id, periodo_id, curso_id, paralelo_id, fecha_registro, estado)
-         VALUES (?, ?, ?, ?, ?, 'MATRICULADO')`,
-        [estudiante_id, periodoFinal, curso_id, paralelo_id, fechaFinal]
+        `INSERT INTO matriculas (${columnasMatricula.join(", ")}) VALUES (${placeholdersMatricula})`,
+        valoresMatricula
       );
       matriculaId = result.insertId;
     }
@@ -181,7 +291,7 @@ router.post("/asignar-manual", authRequired, onlyAdmin, async (req, res) => {
  */
 router.post("/distribuir", authRequired, onlyAdmin, async (req, res) => {
   try {
-    const { matricula_ids, curso_id, paralelo_id, periodo_id } = req.body;
+    const { matricula_ids, curso_id, paralelo_id, periodo_id, especialidad_id } = req.body;
     const periodoFinal = periodo_id || await obtenerPeriodoActivoId();
 
     if (!Array.isArray(matricula_ids) || !matricula_ids.length || !curso_id || !paralelo_id || !periodoFinal) {
@@ -198,6 +308,12 @@ router.post("/distribuir", authRequired, onlyAdmin, async (req, res) => {
 
     if (!curso.length) return res.status(400).json({ error: "El curso no esta activo" });
     if (!paralelo.length) return res.status(400).json({ error: "El paralelo no esta activo" });
+
+    const tieneEspecialidad = await matriculasTieneEspecialidad();
+    if (tieneEspecialidad && especialidad_id) {
+      const okEspecialidad = await validarEspecialidadActiva(especialidad_id, curso_id);
+      if (!okEspecialidad) return res.status(400).json({ error: "La especialidad no esta activa para este curso" });
+    }
 
     const placeholders = ids.map(() => "?").join(",");
     const [elegibles] = await pool.query(
@@ -222,9 +338,11 @@ router.post("/distribuir", authRequired, onlyAdmin, async (req, res) => {
     const placeholdersElegibles = elegiblesIds.map(() => "?").join(",");
     const [result] = await pool.query(
       `UPDATE matriculas
-       SET paralelo_id = ?, estado = 'MATRICULADO'
+       SET paralelo_id = ?${tieneEspecialidad ? ", especialidad_id = ?" : ""}, estado = 'MATRICULADO'
        WHERE id IN (${placeholdersElegibles})`,
-      [paralelo_id, ...elegiblesIds]
+      tieneEspecialidad
+        ? [paralelo_id, especialidad_id || null, ...elegiblesIds]
+        : [paralelo_id, ...elegiblesIds]
     );
 
     return res.json({
@@ -246,24 +364,35 @@ router.post("/distribuir", authRequired, onlyAdmin, async (req, res) => {
  */
 router.get("/", authRequired, async (req, res) => {
   try {
-    const { periodo_id, curso_id, paralelo_id, estado } = req.query;
+    const { periodo_id, curso_id, paralelo_id, especialidad_id, estado } = req.query;
+    const tieneEspecialidad = await matriculasTieneEspecialidad();
+    const existeEspecialidades = tieneEspecialidad ? await tablaExiste("especialidades") : false;
+    const selectEspecialidad = tieneEspecialidad
+      ? ", m.especialidad_id, esp.nombre AS especialidad"
+      : ", NULL AS especialidad_id, NULL AS especialidad";
+    const joinEspecialidad = existeEspecialidades
+      ? "LEFT JOIN especialidades esp ON esp.id = m.especialidad_id"
+      : "";
     let sql = `
       SELECT m.id, m.estudiante_id, m.periodo_id, m.curso_id, m.paralelo_id,
              CONCAT(e.apellidos_est, ' ', e.nombres_est) AS estudiante,
              e.cedula_est AS cedula,
              p.nombre AS periodo, c.nombre AS curso, pr.nombre AS paralelo, 
              m.fecha_registro AS fecha_matricula, m.estado
+             ${selectEspecialidad}
       FROM matriculas m
       JOIN estudiantes e ON e.id = m.estudiante_id
       JOIN periodos_lectivos p ON p.id = m.periodo_id
       JOIN cursos c ON c.id = m.curso_id
       JOIN paralelos pr ON pr.id = m.paralelo_id
+      ${joinEspecialidad}
       WHERE 1=1
     `;
     const params = [];
     if (periodo_id) { sql += " AND m.periodo_id=?"; params.push(periodo_id); }
     if (curso_id) { sql += " AND m.curso_id=?"; params.push(curso_id); }
     if (paralelo_id) { sql += " AND m.paralelo_id=?"; params.push(paralelo_id); }
+    if (especialidad_id && tieneEspecialidad) { sql += " AND m.especialidad_id=?"; params.push(especialidad_id); }
     if (estado) { sql += " AND m.estado=?"; params.push(estado); }
 
     sql += " ORDER BY e.apellidos_est ASC";

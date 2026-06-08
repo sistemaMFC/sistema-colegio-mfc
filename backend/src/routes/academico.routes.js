@@ -32,7 +32,7 @@ const adminOProfesor = (req, res, next) => {
 };
 
 async function obtenerColumnasTabla(nombreTabla) {
-    const permitidas = new Set(['asignaciones_docente']);
+    const permitidas = new Set(['asignaciones_docente', 'matriculas']);
     if (!permitidas.has(nombreTabla)) throw new Error('Tabla no permitida');
     const [cols] = await pool.query(`SHOW COLUMNS FROM ${nombreTabla}`);
     return new Set(cols.map(col => col.Field));
@@ -119,6 +119,11 @@ async function profesorPuedeMatricula(user, matriculaId) {
 }
 
 async function matriculaPerteneceAsignacion(matriculaId, asignacionId) {
+    const [adCols, mCols] = await Promise.all([
+        obtenerColumnasTabla('asignaciones_docente'),
+        obtenerColumnasTabla('matriculas')
+    ]);
+    const validarEspecialidad = adCols.has('especialidad_id') && mCols.has('especialidad_id');
     const [rows] = await pool.query(
         `SELECT m.id
          FROM matriculas m
@@ -127,6 +132,7 @@ async function matriculaPerteneceAsignacion(matriculaId, asignacionId) {
           AND ad.curso_id = m.curso_id
           AND ad.paralelo_id = m.paralelo_id
           AND ad.periodo_id = m.periodo_id
+          ${validarEspecialidad ? 'AND (ad.especialidad_id IS NULL OR ad.especialidad_id = m.especialidad_id)' : ''}
          WHERE m.id = ?
          LIMIT 1`,
         [asignacionId, matriculaId]
@@ -146,8 +152,12 @@ function normalizarTipoInsumo(tipo) {
 }
 
 async function obtenerAsignacionDetalle(asignacionId) {
+    const adCols = await obtenerColumnasTabla('asignaciones_docente');
+    const tieneEspecialidad = adCols.has('especialidad_id');
+    const selectEspecialidad = tieneEspecialidad ? ', ad.especialidad_id' : ', NULL AS especialidad_id';
     const [rows] = await pool.query(
-        `SELECT ad.id, ad.materia_id, ad.curso_id, ad.paralelo_id, ad.periodo_id,
+        `SELECT ad.id, ad.materia_id, ad.curso_id, ad.paralelo_id, ad.periodo_id
+                ${selectEspecialidad},
                 m.nombre AS materia, m.codigo AS materia_codigo,
                 c.nombre AS curso, p.nombre AS paralelo
          FROM asignaciones_docente ad
@@ -162,6 +172,8 @@ async function obtenerAsignacionDetalle(asignacionId) {
 }
 
 async function listarAlumnosAsignacion(asignacion) {
+    const mCols = await obtenerColumnasTabla('matriculas');
+    const filtrarEspecialidad = mCols.has('especialidad_id') && asignacion.especialidad_id;
     const [alumnos] = await pool.query(
         `SELECT m.id AS matricula_id, e.id AS estudiante_id,
                 e.cedula_est, e.nombres_est, e.apellidos_est
@@ -169,8 +181,11 @@ async function listarAlumnosAsignacion(asignacion) {
          JOIN estudiantes e ON e.id = m.estudiante_id
          WHERE m.curso_id = ? AND m.paralelo_id = ?
            AND m.periodo_id = ? AND m.estado IN ('ACTIVO','MATRICULADO')
+           ${filtrarEspecialidad ? 'AND m.especialidad_id = ?' : ''}
          ORDER BY e.apellidos_est, e.nombres_est`,
-        [asignacion.curso_id, asignacion.paralelo_id, asignacion.periodo_id]
+        filtrarEspecialidad
+            ? [asignacion.curso_id, asignacion.paralelo_id, asignacion.periodo_id, asignacion.especialidad_id]
+            : [asignacion.curso_id, asignacion.paralelo_id, asignacion.periodo_id]
     );
     return alumnos;
 }

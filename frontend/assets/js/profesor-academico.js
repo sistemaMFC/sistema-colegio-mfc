@@ -978,6 +978,7 @@ function renderMateriasDocente(materias) {
                         <h4>${escapeHTML(materia.materia_nombre || materia.materia || "-")}</h4>
                         <div class="materia-card-meta">
                             <span>${escapeHTML(materia.curso_nombre || materia.curso || "-")} - Paralelo ${escapeHTML(materia.paralelo || "-")}</span>
+                            ${materia.especialidad ? `<span>Especialidad: ${escapeHTML(materia.especialidad)}</span>` : ""}
                             <span>Periodo: ${escapeHTML(materia.periodo_nombre || state.periodo?.nombre || "-")}</span>
                             ${materia.docente_nombres ? `<span>Docente: ${escapeHTML(`${materia.docente_nombres} ${materia.docente_apellidos || ""}`.trim())}</span>` : ""}
                         </div>
@@ -1068,7 +1069,7 @@ function renderAcademicShell() {
             <div class="materia-header">
                 <div>
                     <h3>Materia: ${escapeHTML(selectedAsignacion?.materia_nombre || selectedAsignacion?.materia || "-")}</h3>
-                    <p class="muted" style="margin:4px 0 0;">Curso: ${escapeHTML(selectedAsignacion?.curso_nombre || selectedAsignacion?.curso || "-")} - Paralelo ${escapeHTML(selectedAsignacion?.paralelo || "-")}</p>
+                    <p class="muted" style="margin:4px 0 0;">Curso: ${escapeHTML(selectedAsignacion?.curso_nombre || selectedAsignacion?.curso || "-")} - Paralelo ${escapeHTML(selectedAsignacion?.paralelo || "-")}${selectedAsignacion?.especialidad ? ` - ${escapeHTML(selectedAsignacion.especialidad)}` : ""}</p>
                     <p class="muted" style="margin:4px 0 0;">Periodo: ${escapeHTML((state.periodosAcademicos.find(p => Number(p.id) === Number(state.selectedAcademicPeriodoId))?.nombre) || selectedAsignacion?.periodo_nombre || state.periodo?.nombre || "-")}</p>
                 </div>
                 <div class="materia-options">
@@ -1211,7 +1212,7 @@ function renderParcialDetail(parcial) {
             <h3 style="margin:0 0 8px;text-align:center">INSUMOS</h3>
             <div class="prof-grid" style="grid-template-columns:repeat(3,minmax(180px,1fr));gap:10px">
                 <div class="form-group"><label>Curso</label><input value="${escapeHTML(selectedAsignacion?.curso || '-')}" disabled></div>
-                <div class="form-group"><label>Especialidad</label><input value="GENERAL" disabled></div>
+                <div class="form-group"><label>Especialidad</label><input value="${escapeHTML(selectedAsignacion?.especialidad || 'GENERAL')}" disabled></div>
                 <div class="form-group"><label>Paralelo</label><input value="${escapeHTML(selectedAsignacion?.paralelo || '-')}" disabled></div>
                 <div class="form-group"><label>Asignatura</label><input value="${escapeHTML(selectedAsignacion?.materia || '-')}" disabled></div>
                 <div class="form-group"><label>Parcial</label><input value="${escapeHTML(parcial.nombre)}" disabled></div>

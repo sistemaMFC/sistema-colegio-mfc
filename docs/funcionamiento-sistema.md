@@ -718,6 +718,22 @@ Pagos queda pendiente de cierre final porque aun hay tablas duplicadas o modelos
 
 Fecha: 2026-06-08
 
+- Se agrego soporte inicial para `1ro Bachillerato` con especialidades.
+- Nueva tabla propuesta/creada por script: `especialidades`.
+- Nuevas columnas opcionales por script:
+  - `matriculas.especialidad_id`
+  - `asignaciones_docente.especialidad_id`
+- Nuevo script: `database/seed-bachillerato-especialidades.sql`.
+- Nuevas materias oficiales:
+  - `PROGRAMACION ESTRUCTURADA`
+  - `BASE DE DATOS`
+- En Matriculas/Distribucion se puede filtrar y mover estudiantes por especialidad.
+- En Cursos/Admin se puede asignar materia/profesor con especialidad.
+- El Portal Profesor muestra especialidad y el backend filtra alumnos por especialidad cuando la asignacion la tiene.
+- Documento nuevo: `docs/14-bachillerato-especialidades.md`.
+
+Fecha: 2026-06-08
+
 - Se agrego apartado `Simulacion` en el portal profesor.
 - La simulacion usa datos locales ficticios y no modifica MySQL.
 - Permite revisar mas de 10 notas por estudiante distribuidas en tareas, lecciones, actividades en clase, actividades grupales y pruebas/aportes.

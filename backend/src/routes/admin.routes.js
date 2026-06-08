@@ -30,6 +30,8 @@ const MATERIAS_OFICIALES = [
   { codigo: "LEX", nombre: "LENGUA EXTRANJERA" },
   { codigo: "ECF", nombre: "EDUCACIÓN CULTURAL Y FÍSICA" },
   { codigo: "FCV", nombre: "FORMACIÓN CRISTIANA Y VALORES" },
+  { codigo: "PGE", nombre: "PROGRAMACIÓN ESTRUCTURADA" },
+  { codigo: "BDD", nombre: "BASE DE DATOS" },
 ];
 
 function normalizarTextoMayuscula(value) {
@@ -173,6 +175,7 @@ async function obtenerColumnasTabla(nombreTabla) {
     "paralelos",
     "materias",
     "docentes",
+    "especialidades",
   ]);
   if (!tablasPermitidas.has(nombreTabla)) {
     throw new Error("Tabla no permitida para inspeccion");
@@ -698,7 +701,7 @@ router.get("/docentes-candidatos", authRequired, onlyAdmin, async (req, res) => 
  */
 router.get("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) => {
   try {
-    const { curso_id, paralelo_id, periodo_id } = req.query;
+    const { curso_id, paralelo_id, periodo_id, especialidad_id } = req.query;
     const [adCols, cursosCols] = await Promise.all([
       obtenerColumnasTabla("asignaciones_docente"),
       obtenerColumnasTabla("cursos"),
@@ -709,12 +712,17 @@ router.get("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) =>
     let where = "WHERE 1=1";
     const tienePeriodo = adCols.has("periodo_id");
     const tieneEstado = adCols.has("estado");
+    const tieneEspecialidad = adCols.has("especialidad_id");
     const selectPeriodo = tienePeriodo ? "ad.periodo_id" : "NULL";
     const selectEstado = tieneEstado ? "ad.estado" : "'ACTIVO'";
+    const selectEspecialidad = tieneEspecialidad ? "ad.especialidad_id" : "NULL";
+    const selectEspecialidadNombre = tieneEspecialidad ? "esp.nombre" : "NULL";
+    const joinEspecialidad = tieneEspecialidad ? "LEFT JOIN especialidades esp ON esp.id = ad.especialidad_id" : "";
     const orderCurso = cursosCols.has("orden") ? "c.orden ASC, c.nombre ASC" : "c.nombre ASC";
 
     if (curso_id) { where += " AND ad.curso_id = ?"; params.push(curso_id); }
     if (paralelo_id) { where += " AND ad.paralelo_id = ?"; params.push(paralelo_id); }
+    if (especialidad_id && tieneEspecialidad) { where += " AND ad.especialidad_id = ?"; params.push(especialidad_id); }
     if (periodo_id && tienePeriodo) { where += " AND ad.periodo_id = ?"; params.push(periodo_id); }
     if (tieneEstado) { where += " AND ad.estado = 'ACTIVO'"; }
 
@@ -726,6 +734,7 @@ router.get("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) =>
 
     const [rows] = await db.query(
       `SELECT ad.id, ad.${profConfig.col} AS docente_id, ad.materia_id, ad.curso_id, ad.paralelo_id,
+              ${selectEspecialidad} AS especialidad_id, ${selectEspecialidadNombre} AS especialidad,
               ${selectPeriodo} AS periodo_id, ${selectEstado} AS estado,
               m.codigo AS materia_codigo, m.nombre AS materia,
               c.nombre AS curso, p.nombre AS paralelo,
@@ -734,6 +743,7 @@ router.get("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) =>
        JOIN materias m ON m.id = ad.materia_id
        JOIN cursos c ON c.id = ad.curso_id
        JOIN paralelos p ON p.id = ad.paralelo_id
+       ${joinEspecialidad}
        ${joinProfesor}
        ${where}
        ORDER BY ${orderCurso}, p.nombre ASC, m.nombre ASC`,
@@ -761,6 +771,7 @@ router.post("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) =
       materia_id,
       curso_id,
       paralelo_id,
+      especialidad_id,
       periodo_id,
     } = req.body;
 
@@ -785,6 +796,7 @@ router.post("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) =
     const profConfig = await obtenerConfigProfesorAsignacion();
     const tienePeriodo = adCols.has("periodo_id");
     const tieneEstado = adCols.has("estado");
+    const tieneEspecialidad = adCols.has("especialidad_id");
     const docenteId = await asegurarDocenteDesdeUsuario(usuario_id);
     const profesorValor = profConfig.tipo === "docente" ? docenteId : usuario_id;
     const estadoFiltro = tieneEstado ? " AND ad.estado = 'ACTIVO'" : "";
@@ -795,9 +807,12 @@ router.post("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) =
       `SELECT ad.id
        FROM asignaciones_docente ad
        WHERE ad.materia_id = ? AND ad.curso_id = ? AND ad.paralelo_id = ?
+         ${tieneEspecialidad ? "AND COALESCE(ad.especialidad_id, 0) = COALESCE(?, 0)" : ""}
          ${periodoFiltro}${estadoFiltro}
        LIMIT 1`,
-      [materia_id, curso_id, paralelo_id, ...periodoParams]
+      tieneEspecialidad
+        ? [materia_id, curso_id, paralelo_id, especialidad_id || null, ...periodoParams]
+        : [materia_id, curso_id, paralelo_id, ...periodoParams]
     );
 
     if (duplicadaActiva.length) {
@@ -818,9 +833,13 @@ router.post("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) =
     const [inactiva] = await db.query(
       `SELECT id
        FROM asignaciones_docente
-       WHERE materia_id = ? AND curso_id = ? AND paralelo_id = ?${tienePeriodo ? " AND periodo_id = ?" : ""}
+       WHERE materia_id = ? AND curso_id = ? AND paralelo_id = ?
+         ${tieneEspecialidad ? "AND COALESCE(especialidad_id, 0) = COALESCE(?, 0)" : ""}
+         ${tienePeriodo ? " AND periodo_id = ?" : ""}
        LIMIT 1`,
-      [materia_id, curso_id, paralelo_id, ...periodoParams]
+      tieneEspecialidad
+        ? [materia_id, curso_id, paralelo_id, especialidad_id || null, ...periodoParams]
+        : [materia_id, curso_id, paralelo_id, ...periodoParams]
     );
 
     if (inactiva.length) {
@@ -839,6 +858,10 @@ router.post("/asignaciones-docente", authRequired, onlyAdmin, async (req, res) =
 
     const columnas = [profConfig.col, "materia_id", "curso_id", "paralelo_id"];
     const valores = [profesorValor, materia_id, curso_id, paralelo_id];
+    if (tieneEspecialidad) {
+      columnas.push("especialidad_id");
+      valores.push(especialidad_id || null);
+    }
     if (tienePeriodo) {
       columnas.push("periodo_id");
       valores.push(periodoFinal);

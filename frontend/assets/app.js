@@ -769,6 +769,7 @@ let docentesAdminCache = [];
 let asignacionesAdminCache = [];
 let tutoriasAdminCache = [];
 let periodoAdminActivo = null;
+let especialidadesAdminCache = [];
 
 function llenarSelect(select, rows, getValue, getLabel, emptyLabel = "Seleccione") {
     if (!select) return;
@@ -881,6 +882,7 @@ function llenarFormularioAsignacionCurso() {
     if (form) {
         llenarSelect(form.curso_id, cursosActivos, c => c.id, c => c.nombre, "Seleccione curso");
         llenarSelect(form.paralelo_id, paralelosAdminCache, p => p.id, p => `Paralelo ${p.nombre}`, "Seleccione paralelo");
+        llenarSelect(form.especialidad_id, especialidadesAdminCache, e => e.id, e => e.nombre, "Sin especialidad");
         llenarSelect(form.materia_id, materiasAdminCache, m => m.id, m => `${m.codigo} - ${m.nombre}`, "Seleccione materia");
         llenarSelect(form.usuario_id, docentesAdminCache, d => d.usuario_id, d => `${d.apellidos} ${d.nombres} (${d.rol})`, "Seleccione profesor");
     }
@@ -890,6 +892,23 @@ function llenarFormularioAsignacionCurso() {
         llenarSelect(formTutoria.paralelo_id, paralelosAdminCache, p => p.id, p => `Paralelo ${p.nombre}`, "Seleccione paralelo");
         llenarSelect(formTutoria.usuario_id, docentesAdminCache, d => d.usuario_id, d => `${d.apellidos} ${d.nombres} (${d.rol})`, "Seleccione tutor");
     }
+}
+
+async function cargarEspecialidadesAsignacionCurso(cursoId) {
+    const form = $("#formAsignacionCurso");
+    if (!form?.especialidad_id) return;
+    if (!cursoId) {
+        especialidadesAdminCache = [];
+        llenarSelect(form.especialidad_id, [], e => e.id, e => e.nombre, "Sin especialidad");
+        return;
+    }
+
+    try {
+        especialidadesAdminCache = await api(`/api/enrollments/especialidades?curso_id=${cursoId}`);
+    } catch (err) {
+        especialidadesAdminCache = [];
+    }
+    llenarSelect(form.especialidad_id, especialidadesAdminCache, e => e.id, e => e.nombre, "Sin especialidad");
 }
 
 function renderAsignacionesCurso() {
@@ -907,7 +926,7 @@ function renderAsignacionesCurso() {
         const docente = `${asig.docente_apellidos || ""} ${asig.docente_nombres || ""}`.trim();
         tbody.innerHTML += `
             <tr>
-                <td>${escapeHTML(asig.curso)} / ${escapeHTML(asig.paralelo)}</td>
+                <td>${escapeHTML(asig.curso)} / ${escapeHTML(asig.paralelo)}${asig.especialidad ? `<br><small class="muted">${escapeHTML(asig.especialidad)}</small>` : ""}</td>
                 <td><strong>${escapeHTML(asig.materia_codigo)}</strong><br>${escapeHTML(asig.materia)}</td>
                 <td>${escapeHTML(docente || "-")}</td>
                 <td><span class="badge ${activo ? "ok" : "warn"}">${escapeHTML(asig.estado)}</span></td>
@@ -960,6 +979,7 @@ async function guardarAsignacionCurso(form) {
     const payload = {
         curso_id: form.curso_id.value,
         paralelo_id: form.paralelo_id.value,
+        especialidad_id: form.especialidad_id?.value || null,
         materia_id: form.materia_id.value,
         usuario_id: form.usuario_id.value,
         periodo_id: periodoAdminActivo?.id,
@@ -1066,6 +1086,9 @@ function setupInteractions() {
 
     const formAsignacionCurso = $("#formAsignacionCurso");
     if (formAsignacionCurso) {
+        formAsignacionCurso.curso_id?.addEventListener("change", (e) => {
+            cargarEspecialidadesAsignacionCurso(e.target.value);
+        });
         formAsignacionCurso.addEventListener("submit", (e) => {
             e.preventDefault();
             guardarAsignacionCurso(e.target);

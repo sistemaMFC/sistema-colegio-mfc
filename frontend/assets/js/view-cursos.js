@@ -10,6 +10,8 @@ let bsSelectorModal = null; // Instancia del modal de Bootstrap
 let paralelosMatriculaCache = [];
 let periodoMatriculaActivo = null;
 let paraleloAsignacionActual = "";
+let especialidadesMatriculaCache = [];
+let especialidadDistribucionActual = "";
 let alumnosCursoCache = [];  // Caché para búsqueda rápida y filtrado local
 
 // --- ORDEN LÓGICO PARA VALIDACIÓN ---
@@ -71,7 +73,24 @@ function normalizarNombreCurso(nombre) {
         "DECIMO EGB": "Décimo de Educación General Básica"
     };
 
+    if (canon.includes("BACHILLERATO") && (canon.startsWith("1") || canon.includes("PRIMERO"))) {
+        return "1ro Bachillerato";
+    }
+
     return mapaDirecto[canon] || raw;
+}
+
+async function cargarEspecialidadesCursoActual() {
+    try {
+        especialidadesMatriculaCache = await api(`/api/enrollments/especialidades?curso_id=${cursoActualId}`);
+    } catch (err) {
+        especialidadesMatriculaCache = [];
+    }
+    return especialidadesMatriculaCache;
+}
+
+function renderEspecialidadTexto(row) {
+    return row.especialidad ? `<br><small class="muted">Especialidad: ${row.especialidad}</small>` : "";
 }
 
 /**
@@ -411,6 +430,7 @@ async function procesarMatricula(e) {
 function abrirSelectorMatricula(id, nombre) {
     cursoActualId = id;
     cursoActualNombre = nombre;
+    especialidadDistribucionActual = "";
     const titulo = document.getElementById('tituloCursoSeleccionado');
     if (titulo) titulo.textContent = `Curso: ${nombre}`;
 
@@ -662,7 +682,7 @@ listarMatriculadosActuales = async function listarMatriculadosActualesManual() {
                 <tr>
                     <td>${est.cedula}</td>
                     <td style="font-weight:bold;text-transform:uppercase;">${est.estudiante}</td>
-                    <td>${est.curso}<br><small class="muted">Paralelo ${est.paralelo}</small></td>
+                    <td>${est.curso}<br><small class="muted">Paralelo ${est.paralelo}</small>${renderEspecialidadTexto(est)}</td>
                     <td><span class="badge ok">${est.estado}</span></td>
                     <td>
                         <div class="dropdown">
@@ -779,6 +799,8 @@ async function abrirDistribucion() {
     const tbody = document.getElementById('listaDistribucionEstudiantes');
     const titulo = document.getElementById('txtCursoDistribucion');
     const select = document.getElementById('selectParaleloDistribucion');
+    const selectEspecialidad = document.getElementById('selectEspecialidadDistribucion');
+    const grupoEspecialidad = document.getElementById('grupoEspecialidadDistribucion');
     const checkTodos = document.getElementById('checkDistribucionTodos');
     if (!contenedor || !tbody || !select) return;
 
@@ -794,12 +816,25 @@ async function abrirDistribucion() {
         ]);
         paralelosMatriculaCache = cp.paralelos || [];
         periodoMatriculaActivo = periodo;
+        await cargarEspecialidadesCursoActual();
 
         select.innerHTML = paralelosMatriculaCache.map(p => `
             <option value="${p.id}">Paralelo ${p.nombre}</option>
         `).join('');
 
-        const estudiantes = await api(`/api/enrollments?periodo_id=${periodo.id}&curso_id=${cursoActualId}`);
+        if (grupoEspecialidad && selectEspecialidad) {
+            grupoEspecialidad.hidden = !especialidadesMatriculaCache.length;
+            selectEspecialidad.innerHTML = `<option value="">Sin especialidad</option>` + especialidadesMatriculaCache.map(e => `
+                <option value="${e.id}" ${String(e.id) === String(especialidadDistribucionActual) ? 'selected' : ''}>${e.nombre}</option>
+            `).join('');
+            selectEspecialidad.onchange = async (event) => {
+                especialidadDistribucionActual = event.target.value;
+                await abrirDistribucion();
+            };
+        }
+
+        const filtroEspecialidad = especialidadDistribucionActual ? `&especialidad_id=${especialidadDistribucionActual}` : "";
+        const estudiantes = await api(`/api/enrollments?periodo_id=${periodo.id}&curso_id=${cursoActualId}${filtroEspecialidad}`);
         renderDistribucion(estudiantes || []);
         contenedor.scrollIntoView({ behavior: 'smooth' });
     } catch (err) {
@@ -823,7 +858,7 @@ function renderDistribucion(rows) {
                 <td><input type="checkbox" class="check-distribucion" value="${row.id}"></td>
                 <td style="font-weight:800;text-transform:uppercase;">${row.estudiante}</td>
                 <td>${row.cedula}</td>
-                <td>Paralelo ${row.paralelo}</td>
+                <td>Paralelo ${row.paralelo}${renderEspecialidadTexto(row)}</td>
                 <td><span class="badge ok">${row.estado}</span></td>
             </tr>
         `;
@@ -860,7 +895,7 @@ listarMatriculadosActuales = async function listarMatriculadosActualesPorCurso()
                 <tr>
                     <td>${est.cedula}</td>
                     <td style="font-weight:bold;text-transform:uppercase;">${est.estudiante}</td>
-                    <td>${est.curso}<br><small class="muted">Paralelo ${est.paralelo}</small></td>
+                    <td>${est.curso}<br><small class="muted">Paralelo ${est.paralelo}</small>${renderEspecialidadTexto(est)}</td>
                     <td><span class="badge ok">${est.estado}</span></td>
                     <td>
                         <div class="dropdown">
@@ -891,6 +926,7 @@ function toggleDistribucionTodos(input) {
 async function distribuirSeleccionados() {
     const ids = Array.from(document.querySelectorAll('.check-distribucion:checked')).map(input => Number(input.value));
     const paraleloId = document.getElementById('selectParaleloDistribucion')?.value;
+    const especialidadId = document.getElementById('selectEspecialidadDistribucion')?.value || "";
     if (!ids.length) {
         alert("Seleccione al menos un estudiante.");
         return;
@@ -912,6 +948,7 @@ async function distribuirSeleccionados() {
                 matricula_ids: ids,
                 curso_id: cursoActualId,
                 paralelo_id: paraleloId,
+                especialidad_id: especialidadId || null,
                 periodo_id: periodo.id
             }
         });

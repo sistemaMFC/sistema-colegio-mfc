@@ -45,6 +45,9 @@ Este índice organiza la documentación funcional, técnica y estratégica del s
 13. `13-simulacion-notas-libretas.md`
     Simulacion de notas, parciales, examen trimestral separado y libreta imprimible/PDF.
 
+14. `14-bachillerato-especialidades.md`
+    Bachillerato, especialidades, estudiantes iniciales y proteccion academica por especialidad.
+
 ## Documentos existentes relacionados
 
 - `funcionamiento-sistema.md`

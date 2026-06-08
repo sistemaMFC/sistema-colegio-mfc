@@ -40,7 +40,9 @@ INSERT INTO tmp_materias_oficiales (codigo, nombre) VALUES
   ('ECO', 'EXPRESIÓN CORPORAL'),
   ('LEX', 'LENGUA EXTRANJERA'),
   ('ECF', 'EDUCACIÓN CULTURAL Y FÍSICA'),
-  ('FCV', 'FORMACIÓN CRISTIANA Y VALORES');
+  ('FCV', 'FORMACIÓN CRISTIANA Y VALORES'),
+  ('PGE', 'PROGRAMACIÓN ESTRUCTURADA'),
+  ('BDD', 'BASE DE DATOS');
 
 -- Si ya existe el codigo, se actualiza el nombre y se reactiva.
 UPDATE materias m

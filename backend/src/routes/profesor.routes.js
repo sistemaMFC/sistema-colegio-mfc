@@ -16,7 +16,7 @@ const soloDocente = (req, res, next) => {
 };
 
 async function obtenerColumnasTabla(nombreTabla) {
-    const permitidas = new Set(['asignaciones_docente']);
+    const permitidas = new Set(['asignaciones_docente', 'matriculas']);
     if (!permitidas.has(nombreTabla)) throw new Error('Tabla no permitida');
     const [cols] = await pool.query(`SHOW COLUMNS FROM ${nombreTabla}`);
     return new Set(cols.map(col => col.Field));
@@ -134,6 +134,18 @@ router.get('/materias', authRequired, soloDocente, async (req, res) => {
                LEFT JOIN usuarios u ON u.id = d.usuario_id`
             : `LEFT JOIN usuarios u ON u.id = ad.${cfg.col}
                LEFT JOIN docentes d ON d.usuario_id = u.id`;
+        const [adCols, matCols] = await Promise.all([
+            obtenerColumnasTabla('asignaciones_docente'),
+            obtenerColumnasTabla('matriculas')
+        ]);
+        const tieneEspecialidad = adCols.has('especialidad_id');
+        const filtrarEspecialidad = tieneEspecialidad && matCols.has('especialidad_id');
+        const selectEspecialidad = tieneEspecialidad ? 'ad.especialidad_id' : 'NULL AS especialidad_id';
+        const joinEspecialidad = tieneEspecialidad ? 'LEFT JOIN especialidades esp ON esp.id = ad.especialidad_id' : '';
+        const selectEspecialidadNombre = tieneEspecialidad ? 'esp.nombre AS especialidad' : 'NULL AS especialidad';
+        const filtroEspecialidadMatricula = filtrarEspecialidad
+            ? 'AND (ad.especialidad_id IS NULL OR mt.especialidad_id = ad.especialidad_id)'
+            : '';
 
         const [rows] = await pool.query(
             `SELECT
@@ -148,6 +160,8 @@ router.get('/materias', authRequired, soloDocente, async (req, res) => {
                 c.nombre AS curso,
                 ad.paralelo_id,
                 p.nombre AS paralelo,
+                ${selectEspecialidad},
+                ${selectEspecialidadNombre},
                 ad.periodo_id,
                 pl.nombre AS periodo_nombre,
                 u.nombres AS docente_nombres,
@@ -158,18 +172,20 @@ router.get('/materias', authRequired, soloDocente, async (req, res) => {
              JOIN cursos c ON c.id = ad.curso_id
              JOIN paralelos p ON p.id = ad.paralelo_id
              JOIN periodos_lectivos pl ON pl.id = ad.periodo_id
+             ${joinEspecialidad}
              ${joinProfesor}
              LEFT JOIN matriculas mt
                     ON mt.curso_id = ad.curso_id
                    AND mt.paralelo_id = ad.paralelo_id
                    AND mt.periodo_id = ad.periodo_id
                    AND mt.estado IN ('ACTIVO','MATRICULADO')
+                   ${filtroEspecialidadMatricula}
              WHERE ${filtroProfesor}
                AND ad.periodo_id = ?
                AND ad.estado = 'ACTIVO'
              GROUP BY ad.id, ad.materia_id, m.nombre, m.codigo, ad.curso_id,
-                      c.nombre, ad.paralelo_id, p.nombre, ad.periodo_id,
-                      pl.nombre, u.nombres, u.apellidos
+                      c.nombre, ad.paralelo_id, p.nombre, ${tieneEspecialidad ? 'ad.especialidad_id, esp.nombre,' : ''}
+                      ad.periodo_id, pl.nombre, u.nombres, u.apellidos
              ORDER BY c.nombre ASC, p.nombre ASC, m.nombre ASC`,
             params
         );
