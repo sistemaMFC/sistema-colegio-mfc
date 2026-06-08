@@ -1,13 +1,14 @@
-# TODO - Ver/Eliminar insumos (Profesor/Admin)
+# TODO - Auditoría completa de base de datos
 
 ## Estado
-- [x] 1. Backend: agregar `DELETE /api/academico/insumos/:id` con validación de permisos y estado del parcial.
-- [x] 2. Frontend Profesor: sección "Ver insumos" (lista de creados) + botón eliminar con confirmación.
-- [x] 3. Frontend Admin: sección equivalente "Ver insumos" + eliminar con confirmación.
-- [x] 4. Documentación: registrar cambios con fecha en `docs/funcionamiento-sistema.md`.
-- [ ] 5. Prueba rápida: eliminar insumo y refrescar vista sin romper libro de notas.
+- [ ] 1. Inventariar tablas reales (fuente: SQLs del repo + referencias en código backend).
+- [ ] 2. Mapear tablas usadas por el programa (endpoint/archivo + lectura/escritura).
+- [ ] 3. Clasificar tablas: uso correcto, uso riesgoso/mix, legado/no usadas.
+- [ ] 4. Recomendar por tabla: mantener, migrar/archivar, eliminar (con motivo).
+- [ ] 5. Crear documento formal en `docs/` con plan por fases y checklist de respaldo.
+- [ ] 6. Actualizar `docs/funcionamiento-sistema.md` con fecha y resumen de la auditoría.
 
 ## Notas de implementación
-- La eliminación debe bloquearse si el parcial está cerrado.
-- Se deben eliminar primero notas hijas (`academico_notas_insumos`) y luego el insumo.
-- Solo ADMIN/SECRETARIA o profesor dueño de la asignación pueden eliminar.
+- No eliminar tablas directamente desde código ni SQL sin respaldo previo.
+- Marcar claramente qué recomendaciones requieren validación de datos históricos.
+- Incluir matriz tabla ↔ endpoint para que el equipo sepa impacto real.
