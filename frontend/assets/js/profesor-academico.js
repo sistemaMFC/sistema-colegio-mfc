@@ -625,6 +625,7 @@ function renderProfesorCardsMenu() {
 
 function setupProfesorTabs() {
     renderProfesorCardsMenu();
+    ensureSimulacionSection();
     const tabsWrap = document.querySelector(".prof-tabs");
     if (tabsWrap) {
         tabsWrap.innerHTML = `
@@ -635,6 +636,10 @@ function setupProfesorTabs() {
             <button class="prof-assignment" data-prof-section="asistencia">
                 <strong>Asistencia</strong>
                 <span>Control diario del curso</span>
+            </button>
+            <button class="prof-assignment" data-prof-section="simulacion">
+                <strong>Simulacion</strong>
+                <span>Vista de prueba de notas y libreta PDF</span>
             </button>
             <button class="prof-assignment" data-prof-section="documentacion">
                 <strong>Documentacion</strong>
@@ -662,6 +667,11 @@ function setupProfesorTabs() {
             if (secInsumos) secInsumos.hidden = section !== "materias";
             const secAsistencia = document.getElementById("profSectionAsistencia");
             if (secAsistencia) secAsistencia.hidden = section !== "asistencia";
+            const secSimulacion = document.getElementById("profSectionSimulacion");
+            if (secSimulacion) {
+                secSimulacion.hidden = section !== "simulacion";
+                if (section === "simulacion") renderSimulacionAcademica();
+            }
             const secDocumentacion = document.getElementById("profSectionDocumentacion");
             if (secDocumentacion) secDocumentacion.hidden = section !== "documentacion";
             const secMsg = document.getElementById("profSectionMensajes");
@@ -672,6 +682,199 @@ function setupProfesorTabs() {
             if (secTutorias) secTutorias.hidden = true;
         });
     });
+}
+
+function ensureSimulacionSection() {
+    if (document.getElementById("profSectionSimulacion")) return;
+    const main = document.querySelector(".prof-content");
+    const before = document.getElementById("profSectionDocumentacion");
+    if (!main) return;
+    const section = document.createElement("section");
+    section.className = "card";
+    section.id = "profSectionSimulacion";
+    section.hidden = true;
+    section.style.marginTop = "16px";
+    section.innerHTML = `
+        <div class="card-head">
+            <h3>Simulacion academica</h3>
+        </div>
+        <div id="simulacionAcademicaPanel">
+            <div class="prof-empty">Cargando simulacion...</div>
+        </div>
+    `;
+    main.insertBefore(section, before || null);
+}
+
+function getSimulacionAcademicaData() {
+    const estudiantes = [
+        { nombre: "ALVAREZ PEREZ, SOFIA", cedula: "SIM-001" },
+        { nombre: "BRAVO MORA, MATEO", cedula: "SIM-002" },
+        { nombre: "CEVALLOS RUIZ, EMILIA", cedula: "SIM-003" },
+        { nombre: "DELGADO VERA, NICOLAS", cedula: "SIM-004" },
+    ];
+    const parciales = [
+        {
+            nombre: "PARCIAL 1",
+            insumos: [
+                { tipo: "Tareas", color: "tarea", notas: [9.5, 8.8, 10, 9.1] },
+                { tipo: "Tareas", color: "tarea", notas: [8.9, 9.2, 9.8, 8.7] },
+                { tipo: "Actividad en clase", color: "individual", notas: [9.1, 8.4, 9.5, 8.9] },
+                { tipo: "Actividad grupal", color: "taller", notas: [10, 9.3, 9.7, 9.0] },
+                { tipo: "Prueba", color: "aporte", notas: [8.7, 8.1, 9.0, 8.5] },
+                { tipo: "Leccion", color: "leccion", notas: [9.2, 8.6, 9.4, 8.8] },
+            ],
+        },
+        {
+            nombre: "PARCIAL 2",
+            insumos: [
+                { tipo: "Tareas", color: "tarea", notas: [9.8, 9.1, 10, 9.3] },
+                { tipo: "Tareas", color: "tarea", notas: [9.4, 8.9, 9.6, 9.0] },
+                { tipo: "Actividad en clase", color: "individual", notas: [9.0, 8.5, 9.3, 8.6] },
+                { tipo: "Actividad grupal", color: "taller", notas: [9.7, 9.0, 9.8, 8.9] },
+                { tipo: "Prueba", color: "aporte", notas: [8.9, 8.2, 9.1, 8.4] },
+                { tipo: "Leccion", color: "leccion", notas: [9.3, 8.8, 9.5, 8.7] },
+            ],
+        },
+    ];
+    const examenes = [8.8, 8.4, 9.2, 8.6];
+    return { estudiantes, parciales, examenes };
+}
+
+function promedioSim(values) {
+    const nums = values.map(Number).filter(Number.isFinite);
+    if (!nums.length) return null;
+    return Number((nums.reduce((s, n) => s + n, 0) / nums.length).toFixed(2));
+}
+
+function calcularSimulacion() {
+    const data = getSimulacionAcademicaData();
+    const estudiantes = data.estudiantes.map((est, index) => {
+        const parciales = data.parciales.map(parcial => {
+            const notas = parcial.insumos.map(i => i.notas[index]);
+            return { nombre: parcial.nombre, promedio: promedioSim(notas) };
+        });
+        const promedioParciales = promedioSim(parciales.map(p => p.promedio));
+        const examen = data.examenes[index];
+        const finalTrimestre = Number(((promedioParciales * 0.70) + (examen * 0.30)).toFixed(2));
+        return { ...est, parciales, promedioParciales, examen, finalTrimestre };
+    });
+    return { ...data, estudiantes };
+}
+
+function renderSimulacionAcademica() {
+    const panel = document.getElementById("simulacionAcademicaPanel");
+    if (!panel) return;
+    const data = calcularSimulacion();
+    const primerEstudiante = data.estudiantes[0];
+    panel.innerHTML = `
+        <div class="academic-shell">
+            <div class="materia-header">
+                <div>
+                    <h3>Simulacion de notas - Primer trimestre</h3>
+                    <p class="muted" style="margin:4px 0 0;">Datos ficticios para revisar distribucion de insumos, parciales, examen y libreta.</p>
+                </div>
+                <div class="actions-inline">
+                    <button class="btn" type="button" onclick="renderSimulacionAcademica()">Reiniciar simulacion</button>
+                    <button class="btn" type="button" onclick="imprimirLibretaSimulacion()">Ver / imprimir PDF</button>
+                </div>
+            </div>
+            <div class="prof-summary">
+                <div class="prof-stat"><span>Estudiantes simulados</span><strong>${data.estudiantes.length}</strong></div>
+                <div class="prof-stat"><span>Parciales</span><strong>${data.parciales.length}</strong></div>
+                <div class="prof-stat"><span>Notas por estudiante</span><strong>13</strong></div>
+                <div class="prof-stat"><span>Formula</span><strong>70/30</strong></div>
+            </div>
+            <div class="grade-table-wrap">
+                <table class="grade-table">
+                    <thead>
+                        <tr>
+                            <th>Estudiante</th>
+                            ${data.parciales.map(parcial => parcial.insumos.map((i, idx) => `
+                                <th>${parcial.nombre}<br><span class="sim-chip ${i.color}">${escapeHTML(i.tipo)} ${idx + 1}</span></th>
+                            `).join("")).join("")}
+                            <th>Prom. parciales</th>
+                            <th>Examen trimestral</th>
+                            <th>Final trimestre</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.estudiantes.map((est, estIndex) => `
+                            <tr>
+                                <td><strong>${escapeHTML(est.nombre)}</strong><br><small class="muted">${escapeHTML(est.cedula)}</small></td>
+                                ${data.parciales.map(parcial => parcial.insumos.map(insumo => `
+                                    <td><span class="calc-chip ${chipForNota(insumo.notas[estIndex])}">${notaTxt(insumo.notas[estIndex])}</span></td>
+                                `).join("")).join("")}
+                                <td><span class="calc-chip ${chipForNota(est.promedioParciales)}">${notaTxt(est.promedioParciales)}</span></td>
+                                <td><span class="calc-chip ${chipForNota(est.examen)}">${notaTxt(est.examen)}</span></td>
+                                <td><span class="calc-chip ${chipForNota(est.finalTrimestre)}">${notaTxt(est.finalTrimestre)}</span></td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            </div>
+            <div id="libretaSimulacionPreview">
+                ${renderLibretaSimulacionHTML(primerEstudiante)}
+            </div>
+        </div>
+    `;
+}
+
+function renderLibretaSimulacionHTML(estudiante) {
+    return `
+        <div class="card" style="margin-top:14px;padding:18px;" id="libretaSimulacion">
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid var(--stroke);padding-bottom:12px;">
+                <div>
+                    <h3 style="margin:0;">Libreta de calificaciones - Simulacion</h3>
+                    <p class="muted" style="margin:4px 0 0;">Primer trimestre / Materia simulada</p>
+                </div>
+                <img src="./LOGO.jpeg" alt="MFC" style="width:58px;height:58px;object-fit:cover;border-radius:12px;border:1px solid var(--stroke);">
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0;">
+                <div><strong>Estudiante:</strong> ${escapeHTML(estudiante.nombre)}</div>
+                <div><strong>Cedula:</strong> ${escapeHTML(estudiante.cedula)}</div>
+                <div><strong>Curso:</strong> Simulacion 8vo Basica A</div>
+                <div><strong>Periodo:</strong> 2026-2027</div>
+            </div>
+            <table class="grade-table" style="min-width:0;">
+                <thead>
+                    <tr><th>Componente</th><th>Promedio</th><th>Peso</th><th>Aporte</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Promedio de parciales</td><td>${notaTxt(estudiante.promedioParciales)}</td><td>70%</td><td>${notaTxt(estudiante.promedioParciales * 0.70)}</td></tr>
+                    <tr><td>Examen trimestral</td><td>${notaTxt(estudiante.examen)}</td><td>30%</td><td>${notaTxt(estudiante.examen * 0.30)}</td></tr>
+                    <tr><td><strong>Nota final trimestre</strong></td><td colspan="3"><strong>${notaTxt(estudiante.finalTrimestre)}</strong></td></tr>
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function imprimirLibretaSimulacion() {
+    const content = document.getElementById("libretaSimulacion")?.outerHTML;
+    if (!content) return;
+    const win = window.open("", "_blank", "width=900,height=700");
+    if (!win) {
+        showAlert("bad", "El navegador bloqueo la ventana de impresion. Permite ventanas emergentes para generar la libreta.");
+        return;
+    }
+    win.document.write(`
+        <html>
+        <head>
+            <title>Libreta simulacion MFC</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 24px; color:#111827; }
+                table { width:100%; border-collapse:collapse; margin-top:12px; }
+                th, td { border:1px solid #d1d5db; padding:8px; text-align:left; }
+                th { background:#f3f4f6; }
+                .card { border:1px solid #d1d5db; border-radius:12px; padding:18px; }
+                .muted { color:#64748b; }
+                @media print { button { display:none; } }
+            </style>
+        </head>
+        <body>${content}<script>window.onload=()=>window.print();<\/script></body>
+        </html>
+    `);
+    win.document.close();
 }
 
 function injectAcademicProfesorStyles() {
@@ -717,6 +920,12 @@ function injectAcademicProfesorStyles() {
         .calc-chip.ok { background:rgba(16,185,129,.12); color:#065f46; }
         .calc-chip.warn { background:rgba(245,158,11,.14); color:#92400e; }
         .calc-chip.bad { background:rgba(239,68,68,.12); color:#991b1b; }
+        .sim-chip { display:inline-flex; border-radius:999px; padding:3px 7px; font-size:10px; font-weight:800; border:1px solid var(--stroke); }
+        .sim-chip.tarea { background:rgba(37,99,235,.10); color:#1d4ed8; }
+        .sim-chip.leccion { background:rgba(245,158,11,.14); color:#92400e; }
+        .sim-chip.taller { background:rgba(16,185,129,.14); color:#065f46; }
+        .sim-chip.individual { background:rgba(6,182,212,.14); color:#0e7490; }
+        .sim-chip.aporte { background:rgba(124,58,237,.12); color:#6d28d9; }
         .academic-empty { padding:20px; text-align:center; color:var(--muted); }
         #academicBookPanel { width:100%; }
         #partialDetailPanel { width:100%; }
@@ -1524,3 +1733,5 @@ window.cargarInsumosPorMateria = cargarInsumosPorMateria;
 window.cargarNotasPorMateria = cargarNotasPorMateria;
 window.cargarExamenPorMateria = cargarExamenPorMateria;
 window.seleccionarParcial = seleccionarParcial;
+window.renderSimulacionAcademica = renderSimulacionAcademica;
+window.imprimirLibretaSimulacion = imprimirLibretaSimulacion;

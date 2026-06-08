@@ -716,6 +716,15 @@ Pagos queda pendiente de cierre final porque aun hay tablas duplicadas o modelos
 
 ## Bitacora de cambios recientes
 
+Fecha: 2026-06-08
+
+- Se agrego apartado `Simulacion` en el portal profesor.
+- La simulacion usa datos locales ficticios y no modifica MySQL.
+- Permite revisar mas de 10 notas por estudiante distribuidas en tareas, lecciones, actividades en clase, actividades grupales y pruebas/aportes.
+- El examen trimestral se mantiene separado de los parciales.
+- Se agrego libreta simulada imprimible para guardar como PDF desde el navegador.
+- Documento nuevo: `docs/13-simulacion-notas-libretas.md`.
+
 Fecha: 2026-06-07
 
 - Se reorganizo el flujo academico del portal profesor para empezar por `Materias`.

@@ -42,6 +42,9 @@ Este índice organiza la documentación funcional, técnica y estratégica del s
 12. `12-guia-contexto-para-otras-ias.md`  
     Documento de onboarding técnico para IA: contexto, reglas, rutas clave y tareas sugeridas.
 
+13. `13-simulacion-notas-libretas.md`
+    Simulacion de notas, parciales, examen trimestral separado y libreta imprimible/PDF.
+
 ## Documentos existentes relacionados
 
 - `funcionamiento-sistema.md`
