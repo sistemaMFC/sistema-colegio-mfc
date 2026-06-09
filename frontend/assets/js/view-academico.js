@@ -215,6 +215,32 @@
     }
     .admin-acad-section { padding:0; overflow:hidden; }
     .academic-shell { padding:12px; display:grid; gap:12px; }
+    .materias-grid {
+        display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+        gap:12px;padding:12px;
+    }
+    .materia-card {
+        border:1px solid var(--stroke);border-radius:14px;background:var(--panel2);
+        padding:12px;display:grid;gap:8px;min-height:170px;
+    }
+    .materia-card h4 { margin:0;font-size:16px;line-height:1.2; }
+    .materia-card-meta { display:grid;gap:4px;color:var(--muted);font-size:12px; }
+    .materia-card-kpi {
+        display:flex;align-items:center;justify-content:space-between;gap:8px;
+        border:1px solid var(--stroke);border-radius:10px;padding:8px 10px;background:var(--panel);
+    }
+    .materia-card-kpi strong { color:#2563eb;font-size:15px; }
+    .materia-card-actions { margin-top:auto; }
+    .materia-header {
+        display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;
+        padding:12px;border-bottom:1px solid var(--stroke);background:var(--panel2);
+    }
+    .materia-header h3 { margin:0;font-size:18px; }
+    .materia-options { display:flex;gap:6px;flex-wrap:wrap; }
+    .materia-option {
+        border:1px solid var(--stroke);border-radius:999px;padding:6px 9px;
+        background:var(--panel);color:var(--txt);font-weight:700;font-size:11px;
+    }
     .acad-prof-summary {
         display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
         gap:10px;
@@ -288,9 +314,9 @@ async function mostrarModuloAcademico() {
         _ac.trimestre  = trims[0] || null;
 
         _ac.asignaciones = await api(`/api/academico/asignaciones?periodo_id=${periodo.id}`);
-        _ac.asignacionNueva = _ac.asignaciones[0] || null;
+        _ac.asignacionNueva = null;
         _acadRenderAdminShell();
-        await _acadCargarLibroNuevo();
+        _acadRenderMateriasAdmin();
     } catch (err) {
         cont.innerHTML = `<div class="acad-empty">⚠️ Error al inicializar el módulo académico.<br><small>${err.message}</small></div>`;
     }
@@ -421,10 +447,69 @@ function _acadAdminMensajesHTML() {
     `;
 }
 
+function _acadRenderMateriasAdmin() {
+    const panel = document.getElementById('adminAcadMateriasPanel') || document.getElementById('contenedor-academico');
+    if (!panel) return;
+
+    if (!_ac.asignaciones.length) {
+        panel.innerHTML = `
+            <div class="card-head"><h3>Materias</h3></div>
+            <div class="academic-empty">No hay materias asignadas todavia para el periodo activo.</div>
+        `;
+        return;
+    }
+
+    panel.innerHTML = `
+        <div class="card-head">
+            <h3>Materias</h3>
+        </div>
+        <div class="materias-grid">
+            ${_ac.asignaciones.map(asig => {
+                const docente = `${asig.docente_nombres || ""} ${asig.docente_apellidos || ""}`.trim();
+                return `
+                    <article class="materia-card">
+                        <div>
+                            <h4>${asig.materia || "-"}</h4>
+                            <div class="materia-card-meta">
+                                <span>${asig.curso || "-"} - Paralelo ${asig.paralelo || "-"}</span>
+                                ${asig.especialidad ? `<span>Especialidad: ${asig.especialidad}</span>` : ""}
+                                <span>Periodo: ${_ac.periodo?.nombre || "-"}</span>
+                                <span>Docente: ${docente || "-"}</span>
+                            </div>
+                        </div>
+                        <div class="materia-card-kpi">
+                            <span>Permiso</span>
+                            <strong>GLOBAL</strong>
+                        </div>
+                        <div class="materia-card-actions">
+                            <button class="acad-btn prim" type="button" onclick="_acadGestionarMateriaAdmin(${Number(asig.id)})">Gestionar materia</button>
+                        </div>
+                    </article>
+                `;
+            }).join("")}
+        </div>
+    `;
+}
+
+async function _acadGestionarMateriaAdmin(id) {
+    _ac.asignacionNueva = _ac.asignaciones.find(a => Number(a.id) === Number(id)) || null;
+    if (!_ac.asignacionNueva) {
+        showAlert('bad', 'Asignacion no encontrada.');
+        return;
+    }
+    await _acadCargarLibroNuevo();
+}
+
+function _acadVolverMateriasAdmin() {
+    _ac.asignacionNueva = null;
+    _ac.libroNuevo = null;
+    _acadRenderMateriasAdmin();
+}
+
 async function _acadCargarLibroNuevo() {
     const cont = document.getElementById('adminAcadMateriasPanel') || document.getElementById('contenedor-academico');
     if (!_ac.asignacionNueva || !_ac.trimestre) {
-        cont.innerHTML = '<div class="acad-empty">No hay asignaciones academicas activas para el periodo.</div>';
+        _acadRenderMateriasAdmin();
         return;
     }
     try {
@@ -439,26 +524,37 @@ function _acadRenderLibroNuevo() {
     const cont = document.getElementById('adminAcadMateriasPanel') || document.getElementById('contenedor-academico');
     const libro = _ac.libroNuevo || {};
     const parcial = (libro.parciales || [])[0] || null;
+    const selected = _ac.asignacionNueva || {};
+    const docente = `${selected.docente_nombres || ""} ${selected.docente_apellidos || ""}`.trim();
     cont.innerHTML = `
         <div class="acad-topbar">
+            <h3>Gestion academica de materia</h3>
+            <button class="acad-btn" type="button" onclick="_acadVolverMateriasAdmin()">Volver a materias</button>
+        </div>
+        <div class="materia-header">
             <div>
-                <h3>Academico</h3>
-                <p class="muted" style="margin:4px 0 0;">Administrador: acceso a todos los cursos, paralelos y profesores.</p>
+                <h3>Materia: ${selected.materia || "-"}</h3>
+                <p class="muted" style="margin:4px 0 0;">Curso: ${selected.curso || "-"} - Paralelo ${selected.paralelo || "-"}${selected.especialidad ? ` - ${selected.especialidad}` : ""}</p>
+                <p class="muted" style="margin:4px 0 0;">Periodo: ${_ac.periodo?.nombre || "-"}${docente ? ` - Docente: ${docente}` : ""}</p>
+            </div>
+            <div class="materia-options">
+                <span class="materia-option">Insumos</span>
+                <span class="materia-option">Parciales</span>
+                <span class="materia-option">Examen trimestral</span>
+                <span class="materia-option">Promedios</span>
+                <span class="materia-option">Asistencia</span>
+            </div>
+        </div>
+        <div class="academic-shell">
+        <div class="acad-topbar">
+            <div>
+                <h3>Libro academico</h3>
+                <p class="muted" style="margin:4px 0 0;">Administrador: acceso total para corregir esta materia.</p>
             </div>
             <button class="acad-btn prim" onclick="_acadCrearParcialNuevo()">+ Crear parcial</button>
         </div>
         <div class="card" style="padding:14px;margin-bottom:14px;">
             <div class="acad-grid-sel">
-                <label>
-                    <strong>Curso / materia / profesor</strong>
-                    <select class="nota-inp" style="width:100%;margin-top:6px;text-align:left;" onchange="_acadCambiarAsignacionNueva(this.value)">
-                        ${_ac.asignaciones.map(a => `
-                            <option value="${a.id}" ${Number(a.id) === Number(_ac.asignacionNueva?.id) ? 'selected' : ''}>
-                                ${a.curso} ${a.paralelo} - ${a.materia} - ${a.docente_nombres || ''} ${a.docente_apellidos || ''}
-                            </option>
-                        `).join('')}
-                    </select>
-                </label>
                 <label>
                     <strong>Trimestre</strong>
                     <select class="nota-inp" style="width:100%;margin-top:6px;text-align:left;" onchange="_acadCambiarTrimestreNuevo(this.value)">
@@ -525,6 +621,7 @@ function _acadRenderLibroNuevo() {
             </div>
             ${parcial ? _acadRenderTablaParcialNuevo(parcial) : '<div class="acad-empty">Crea un parcial para empezar a registrar insumos.</div>'}
         `}
+        </div>
     `;
 }
 
@@ -1347,6 +1444,8 @@ window._acadEliminarNota      = _acadEliminarNota;
 window._acadVerReporteAnual   = _acadVerReporteAnual;
 window._acadCambiarSeccion    = _acadCambiarSeccion;
 window._acadCambiarAsignacionNueva = _acadCambiarAsignacionNueva;
+window._acadGestionarMateriaAdmin = _acadGestionarMateriaAdmin;
+window._acadVolverMateriasAdmin = _acadVolverMateriasAdmin;
 window._acadCambiarTrimestreNuevo = _acadCambiarTrimestreNuevo;
 window._acadCrearParcialNuevo = _acadCrearParcialNuevo;
 window._acadCrearInsumoNuevo = _acadCrearInsumoNuevo;

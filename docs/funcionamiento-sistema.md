@@ -725,7 +725,12 @@ Fecha: 2026-06-09
   - Simulacion
   - Documentacion
   - Mensajes
-- La pestana `Materias` conserva el libro academico global del administrador.
+- La pestana `Materias` ahora funciona igual que el portal profesor:
+  - primero muestra tarjetas de materias,
+  - cada tarjeta tiene `Gestionar materia`,
+  - al entrar se abre el libro academico de esa materia,
+  - existe boton `Volver a materias`.
+- La gestion conserva el libro academico global del administrador.
 - El administrador mantiene permisos globales; el profesor sigue limitado a sus asignaciones.
 - Archivo principal ajustado: `frontend/assets/js/view-academico.js`.
 
