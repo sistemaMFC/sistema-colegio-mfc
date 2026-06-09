@@ -187,6 +187,49 @@
         text-align:center;padding:2.5rem;
         color:var(--muted);font-size:14px;
     }
+    .acad-admin-shell { display:grid; gap:14px; }
+    .acad-prof-hero {
+        display:flex;align-items:center;justify-content:space-between;
+        gap:12px;flex-wrap:wrap;padding:14px 16px;
+        border:1px solid var(--stroke);border-radius:16px;
+        background:var(--panel);
+    }
+    .acad-prof-hero h2 { margin:0;font-size:24px; }
+    .acad-prof-role {
+        border:1px solid var(--stroke);border-radius:999px;
+        padding:8px 14px;font-size:12px;font-weight:800;
+        background:var(--panel2);color:var(--txt);
+    }
+    .acad-prof-tabs {
+        display:flex;gap:8px;flex-wrap:wrap;
+        padding:8px;border:1px solid var(--stroke);
+        border-radius:16px;background:var(--panel);
+    }
+    .acad-prof-tab {
+        border:1px solid transparent;border-radius:12px;
+        padding:10px 14px;background:transparent;color:var(--muted);
+        font-weight:800;cursor:pointer;
+    }
+    .acad-prof-tab.active {
+        background:var(--panel2);border-color:#2563eb;color:#1d4ed8;
+    }
+    .admin-acad-section { padding:0; overflow:hidden; }
+    .academic-shell { padding:12px; display:grid; gap:12px; }
+    .acad-prof-summary {
+        display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+        gap:10px;
+    }
+    .prof-stat {
+        border:1px solid var(--stroke);border-radius:12px;
+        padding:10px;background:var(--panel2);display:grid;gap:4px;
+    }
+    .prof-stat span { color:var(--muted);font-size:12px;font-weight:700; }
+    .prof-stat strong { color:var(--txt);font-size:18px; }
+    @media (max-width: 720px) {
+        .acad-prof-hero { align-items:flex-start; }
+        .acad-prof-tabs { overflow-x:auto; flex-wrap:nowrap; }
+        .acad-prof-tab { white-space:nowrap; }
+    }
     `;
     document.head.appendChild(s);
 })();
@@ -219,7 +262,7 @@ let _ac = {
    ---------------------------------------------------------- */
 async function mostrarModuloAcademico() {
     document.getElementById('pageTitle').textContent    = 'Académico';
-    document.getElementById('pageSubtitle').textContent = 'Calificaciones · Trimestres · Materias';
+    document.getElementById('pageSubtitle').textContent = 'Insumos, asistencia, documentacion y mensajes';
     document.querySelectorAll('.view').forEach(v => v.hidden = true);
     document.getElementById('view-academico').hidden = false;
 
@@ -246,6 +289,7 @@ async function mostrarModuloAcademico() {
 
         _ac.asignaciones = await api(`/api/academico/asignaciones?periodo_id=${periodo.id}`);
         _ac.asignacionNueva = _ac.asignaciones[0] || null;
+        _acadRenderAdminShell();
         await _acadCargarLibroNuevo();
     } catch (err) {
         cont.innerHTML = `<div class="acad-empty">⚠️ Error al inicializar el módulo académico.<br><small>${err.message}</small></div>`;
@@ -276,8 +320,109 @@ function _acadChipClass(value) {
     return 'b';
 }
 
-async function _acadCargarLibroNuevo() {
+function _acadRenderAdminShell() {
     const cont = document.getElementById('contenedor-academico');
+    if (!cont) return;
+    cont.innerHTML = `
+        <div class="acad-admin-shell">
+            <div class="acad-prof-hero">
+                <div>
+                    <h2>Academico</h2>
+                    <p class="muted">Misma estructura del portal profesor, con permisos globales de administrador.</p>
+                </div>
+                <div class="acad-prof-role">ADMIN</div>
+            </div>
+            <div class="acad-prof-tabs">
+                <button class="acad-prof-tab active" data-admin-acad-section="materias">Materias</button>
+                <button class="acad-prof-tab" data-admin-acad-section="asistencia">Asistencia</button>
+                <button class="acad-prof-tab" data-admin-acad-section="simulacion">Simulacion</button>
+                <button class="acad-prof-tab" data-admin-acad-section="documentacion">Documentacion</button>
+                <button class="acad-prof-tab" data-admin-acad-section="mensajes">Mensajes</button>
+            </div>
+            <section class="card admin-acad-section" id="adminAcadMateriasPanel"></section>
+            <section class="card admin-acad-section" id="adminAcadAsistenciaPanel" hidden>${_acadAdminAsistenciaHTML()}</section>
+            <section class="card admin-acad-section" id="adminAcadSimulacionPanel" hidden>${_acadAdminSimulacionHTML()}</section>
+            <section class="card admin-acad-section" id="adminAcadDocumentacionPanel" hidden>${_acadAdminDocumentacionHTML()}</section>
+            <section class="card admin-acad-section" id="adminAcadMensajesPanel" hidden>${_acadAdminMensajesHTML()}</section>
+        </div>
+    `;
+
+    cont.querySelectorAll("[data-admin-acad-section]").forEach(btn => {
+        btn.addEventListener("click", () => _acadCambiarPanelAdmin(btn.dataset.adminAcadSection));
+    });
+}
+
+function _acadCambiarPanelAdmin(section) {
+    document.querySelectorAll("[data-admin-acad-section]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.adminAcadSection === section);
+    });
+    const panels = {
+        materias: "adminAcadMateriasPanel",
+        asistencia: "adminAcadAsistenciaPanel",
+        simulacion: "adminAcadSimulacionPanel",
+        documentacion: "adminAcadDocumentacionPanel",
+        mensajes: "adminAcadMensajesPanel",
+    };
+    Object.entries(panels).forEach(([key, id]) => {
+        const panel = document.getElementById(id);
+        if (panel) panel.hidden = key !== section;
+    });
+}
+
+function _acadAdminAsistenciaHTML() {
+    return `
+        <div class="card-head"><h3>Asistencia</h3></div>
+        <div class="academic-shell">
+            <div class="acad-prof-summary">
+                <div class="prof-stat"><span>Alcance</span><strong>Todos</strong></div>
+                <div class="prof-stat"><span>Cursos</span><strong>${_ac.cursos?.length || 0}</strong></div>
+                <div class="prof-stat"><span>Paralelos</span><strong>${_ac.paralelos?.length || 0}</strong></div>
+                <div class="prof-stat"><span>Periodo</span><strong>${_ac.periodo?.nombre || '-'}</strong></div>
+            </div>
+            <div class="acad-empty">El administrador conserva acceso global. La nomina por curso/paralelo se conecta desde el flujo de asistencia del modulo profesor y se puede ampliar aqui como siguiente fase.</div>
+        </div>
+    `;
+}
+
+function _acadAdminSimulacionHTML() {
+    return `
+        <div class="card-head"><h3>Simulacion academica</h3></div>
+        <div class="academic-shell">
+            <div class="acad-prof-summary">
+                <div class="prof-stat"><span>Formula</span><strong>70/30</strong></div>
+                <div class="prof-stat"><span>Parciales</span><strong>Dinamicos</strong></div>
+                <div class="prof-stat"><span>Examen</span><strong>Separado</strong></div>
+                <div class="prof-stat"><span>Vista</span><strong>Admin</strong></div>
+            </div>
+            <div class="acad-empty">La simulacion completa vive en el portal profesor. Esta pestana mantiene la misma estructura visual para el administrador.</div>
+        </div>
+    `;
+}
+
+function _acadAdminDocumentacionHTML() {
+    return `
+        <div class="card-head"><h3>Documentacion</h3></div>
+        <div class="academic-shell">
+            <div class="acad-reporte-grid">
+                <div class="acad-mat-card"><h4>Modelo academico</h4><p class="muted">Periodo, trimestre, parciales dinamicos, insumos y examen trimestral separado.</p></div>
+                <div class="acad-mat-card"><h4>Permisos</h4><p class="muted">Admin puede ver y corregir todo. Profesor solo gestiona sus asignaciones.</p></div>
+                <div class="acad-mat-card"><h4>Especialidades</h4><p class="muted">Bachillerato puede filtrar estudiantes y asignaciones por especialidad.</p></div>
+            </div>
+        </div>
+    `;
+}
+
+function _acadAdminMensajesHTML() {
+    return `
+        <div class="card-head"><h3>Mensajes</h3></div>
+        <div class="academic-shell">
+            <div class="acad-empty">Bandeja academica pendiente. Se deja igualada visualmente con el portal profesor para integrarla luego.</div>
+        </div>
+    `;
+}
+
+async function _acadCargarLibroNuevo() {
+    const cont = document.getElementById('adminAcadMateriasPanel') || document.getElementById('contenedor-academico');
     if (!_ac.asignacionNueva || !_ac.trimestre) {
         cont.innerHTML = '<div class="acad-empty">No hay asignaciones academicas activas para el periodo.</div>';
         return;
@@ -291,7 +436,7 @@ async function _acadCargarLibroNuevo() {
 }
 
 function _acadRenderLibroNuevo() {
-    const cont = document.getElementById('contenedor-academico');
+    const cont = document.getElementById('adminAcadMateriasPanel') || document.getElementById('contenedor-academico');
     const libro = _ac.libroNuevo || {};
     const parcial = (libro.parciales || [])[0] || null;
     cont.innerHTML = `

@@ -716,6 +716,19 @@ Pagos queda pendiente de cierre final porque aun hay tablas duplicadas o modelos
 
 ## Bitacora de cambios recientes
 
+Fecha: 2026-06-09
+
+- Se igualo la estructura visual de `Academico` del administrador con el portal profesor.
+- Admin ahora ve pestañas equivalentes:
+  - Materias
+  - Asistencia
+  - Simulacion
+  - Documentacion
+  - Mensajes
+- La pestana `Materias` conserva el libro academico global del administrador.
+- El administrador mantiene permisos globales; el profesor sigue limitado a sus asignaciones.
+- Archivo principal ajustado: `frontend/assets/js/view-academico.js`.
+
 Fecha: 2026-06-08
 
 - Se agrego soporte inicial para `1ro Bachillerato` con especialidades.

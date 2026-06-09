@@ -83,6 +83,7 @@ Integra autenticación por roles, gestión de estudiantes, matrículas, asignaci
 
 ## Bitácora
 
+- 2026-06-09: se igualo visualmente Academico Admin con Portal Profesor mediante pestanas de Materias, Asistencia, Simulacion, Documentacion y Mensajes, conservando permisos globales de ADMIN.
 - 2026-06-08: se agrego soporte inicial para Bachillerato con especialidades, estudiantes semilla, materias tecnicas y filtro academico por especialidad.
 - 2026-06-08: se agrego apartado de Simulacion en portal profesor para probar mas de 10 notas por estudiante, insumos, examen trimestral separado y libreta imprimible/PDF sin tocar datos reales.
 - 2026-06-07: creación de resumen general consolidado para uso humano e integración con otras IA.
