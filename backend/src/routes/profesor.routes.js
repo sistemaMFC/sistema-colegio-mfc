@@ -67,13 +67,7 @@ router.get('/mi-docente', authRequired, soloDocente, async (req, res) => {
             const periodoId = periodo[0]?.id;
 
             if (periodoId) {
-                const filtroProfesor = req.user.rol === 'ADMIN'
-                    ? '1=1'
-                    : `ad.${cfg.col} = ?`;
                 const profesorValor = cfg.tipo === 'docente' ? docente.id : usuarioId;
-                const paramsAsignaciones = req.user.rol === 'ADMIN'
-                    ? [periodoId]
-                    : [profesorValor, periodoId];
                 const [asig] = await pool.query(
                     `SELECT ad.id, ad.materia_id, ad.curso_id, ad.paralelo_id,
                             m.nombre AS materia, m.codigo AS materia_codigo,
@@ -86,9 +80,11 @@ router.get('/mi-docente', authRequired, soloDocente, async (req, res) => {
                      ${cfg.tipo === 'docente'
                         ? `LEFT JOIN docentes d ON d.id = ad.${cfg.col} LEFT JOIN usuarios u ON u.id = d.usuario_id`
                         : `LEFT JOIN usuarios u ON u.id = ad.${cfg.col}`}
-                     WHERE ${filtroProfesor} AND ad.periodo_id = ? AND ad.estado = 'ACTIVO'
+                     WHERE ad.${cfg.col} = ?
+                       AND ad.periodo_id = ?
+                       AND ad.estado = 'ACTIVO'
                      ORDER BY c.nombre, m.nombre`,
-                    paramsAsignaciones
+                    [profesorValor, periodoId]
                 );
                 asignaciones = asig;
 
@@ -120,14 +116,10 @@ router.get('/materias', authRequired, soloDocente, async (req, res) => {
         const periodo = await obtenerPeriodoActivo();
         if (!periodo?.id) return res.json([]);
 
-        const filtroProfesor = req.user.rol === 'ADMIN'
-            ? '1=1'
-            : cfg.tipo === 'docente'
-                ? 'd.usuario_id = ?'
-                : `ad.${cfg.col} = ?`;
-        const params = req.user.rol === 'ADMIN'
-            ? [periodo.id]
-            : [usuarioId, periodo.id];
+        const filtroProfesor = cfg.tipo === 'docente'
+            ? 'd.usuario_id = ?'
+            : `ad.${cfg.col} = ?`;
+        const params = [usuarioId, periodo.id];
 
         const joinProfesor = cfg.tipo === 'docente'
             ? `LEFT JOIN docentes d ON d.id = ad.${cfg.col}
