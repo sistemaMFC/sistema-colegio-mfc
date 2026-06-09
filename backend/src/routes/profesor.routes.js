@@ -136,7 +136,7 @@ router.get('/materias', authRequired, soloDocente, async (req, res) => {
         const joinEspecialidad = tieneEspecialidad ? 'LEFT JOIN especialidades esp ON esp.id = ad.especialidad_id' : '';
         const selectEspecialidadNombre = tieneEspecialidad ? 'esp.nombre AS especialidad' : 'NULL AS especialidad';
         const filtroEspecialidadMatricula = filtrarEspecialidad
-            ? 'AND (ad.especialidad_id IS NULL OR mt.especialidad_id IS NULL OR mt.especialidad_id = ad.especialidad_id)'
+            ? 'AND (ad.especialidad_id IS NULL OR mt.especialidad_id = ad.especialidad_id)'
             : '';
 
         const [rows] = await pool.query(
