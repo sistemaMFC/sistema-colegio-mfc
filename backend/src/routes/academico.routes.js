@@ -300,6 +300,24 @@ router.get('/tipos-evaluacion', authRequired, async (req, res) => {
 // GET /api/academico/materias
 router.get('/materias', authRequired, async (req, res) => {
     try {
+        if (req.user.rol === 'PROFESOR') {
+            const cfg = await obtenerConfigProfesorAsignacion();
+            const joinProfesor = cfg.tipo === 'docente' ? `JOIN docentes d ON d.id = ad.${cfg.col}` : '';
+            const whereProfesor = cfg.tipo === 'docente' ? 'd.usuario_id = ?' : `ad.${cfg.col} = ?`;
+            const [rows] = await pool.query(
+                `SELECT DISTINCT m.id, m.codigo, m.nombre
+                 FROM asignaciones_docente ad
+                 JOIN materias m ON m.id = ad.materia_id
+                 ${joinProfesor}
+                 WHERE ad.estado = 'ACTIVO'
+                   AND m.estado = 'ACTIVO'
+                   AND ${whereProfesor}
+                 ORDER BY m.nombre`,
+                [req.user.id]
+            );
+            return res.json(rows);
+        }
+
         const [rows] = await pool.query(
             `SELECT id, codigo, nombre FROM materias WHERE estado = 'ACTIVO' ORDER BY nombre`
         );
@@ -312,6 +330,36 @@ router.get('/materias', authRequired, async (req, res) => {
 // GET /api/academico/cursos-paralelos
 router.get('/cursos-paralelos', authRequired, async (req, res) => {
     try {
+        if (req.user.rol === 'PROFESOR') {
+            const cfg = await obtenerConfigProfesorAsignacion();
+            const joinProfesor = cfg.tipo === 'docente' ? `JOIN docentes d ON d.id = ad.${cfg.col}` : '';
+            const whereProfesor = cfg.tipo === 'docente' ? 'd.usuario_id = ?' : `ad.${cfg.col} = ?`;
+
+            const [cursos] = await pool.query(
+                `SELECT DISTINCT c.id, c.codigo, c.nombre, c.nivel, c.orden
+                 FROM asignaciones_docente ad
+                 JOIN cursos c ON c.id = ad.curso_id
+                 ${joinProfesor}
+                 WHERE ad.estado = 'ACTIVO'
+                   AND c.estado = 'ACTIVO'
+                   AND ${whereProfesor}
+                 ORDER BY c.orden, c.nombre`,
+                [req.user.id]
+            );
+            const [paralelos] = await pool.query(
+                `SELECT DISTINCT p.id, p.nombre
+                 FROM asignaciones_docente ad
+                 JOIN paralelos p ON p.id = ad.paralelo_id
+                 ${joinProfesor}
+                 WHERE ad.estado = 'ACTIVO'
+                   AND p.estado = 'ACTIVO'
+                   AND ${whereProfesor}
+                 ORDER BY p.nombre`,
+                [req.user.id]
+            );
+            return res.json({ cursos, paralelos });
+        }
+
         const [cursos] = await pool.query(
             `SELECT id, codigo, nombre, nivel FROM cursos WHERE estado = 'ACTIVO' ORDER BY orden`
         );

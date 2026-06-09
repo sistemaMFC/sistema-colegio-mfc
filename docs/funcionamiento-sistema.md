@@ -732,6 +732,11 @@ Fecha: 2026-06-09
   - existe boton `Volver a materias`.
 - La gestion conserva el libro academico global del administrador.
 - El administrador mantiene permisos globales; el profesor sigue limitado a sus asignaciones.
+- Se reforzo el backend academico:
+  - `ADMIN` conserva acceso a todas las materias, cursos, paralelos, libros academicos y acciones de correccion.
+  - `PROFESOR` solo recibe materias desde sus asignaciones activas en `asignaciones_docente`.
+  - `PROFESOR` solo recibe cursos/paralelos donde tiene asignacion activa.
+  - Las rutas de guardado de notas, insumos, examen trimestral y nota unica mantienen validacion por asignacion.
 - Archivo principal ajustado: `frontend/assets/js/view-academico.js`.
 
 Fecha: 2026-06-08
