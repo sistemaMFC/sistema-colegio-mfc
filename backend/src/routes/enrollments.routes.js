@@ -340,7 +340,7 @@ router.post("/distribuir", authRequired, onlyAdmin, async (req, res) => {
     const placeholdersElegibles = elegiblesIds.map(() => "?").join(",");
     const [result] = await pool.query(
       `UPDATE matriculas
-       SET paralelo_id = ?${debeActualizarEspecialidad ? ", especialidad_id = ?" : ""}, estado = 'MATRICULADO'
+       SET paralelo_id = ?${debeActualizarEspecialidad ? ", especialidad_id = ?" : ""}, estado = 'ACTIVO'
        WHERE id IN (${placeholdersElegibles})`,
       debeActualizarEspecialidad
         ? [paralelo_id, especialidadNormalizada, ...elegiblesIds]
