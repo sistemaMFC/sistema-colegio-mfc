@@ -310,8 +310,10 @@ router.post("/distribuir", authRequired, onlyAdmin, async (req, res) => {
     if (!paralelo.length) return res.status(400).json({ error: "El paralelo no esta activo" });
 
     const tieneEspecialidad = await matriculasTieneEspecialidad();
-    if (tieneEspecialidad && especialidad_id) {
-      const okEspecialidad = await validarEspecialidadActiva(especialidad_id, curso_id);
+    const especialidadNormalizada = (especialidad_id === "" || especialidad_id === undefined) ? null : especialidad_id;
+    const debeActualizarEspecialidad = tieneEspecialidad && especialidadNormalizada !== null;
+    if (debeActualizarEspecialidad) {
+      const okEspecialidad = await validarEspecialidadActiva(especialidadNormalizada, curso_id);
       if (!okEspecialidad) return res.status(400).json({ error: "La especialidad no esta activa para este curso" });
     }
 
@@ -338,10 +340,10 @@ router.post("/distribuir", authRequired, onlyAdmin, async (req, res) => {
     const placeholdersElegibles = elegiblesIds.map(() => "?").join(",");
     const [result] = await pool.query(
       `UPDATE matriculas
-       SET paralelo_id = ?${tieneEspecialidad ? ", especialidad_id = ?" : ""}, estado = 'MATRICULADO'
+       SET paralelo_id = ?${debeActualizarEspecialidad ? ", especialidad_id = ?" : ""}, estado = 'MATRICULADO'
        WHERE id IN (${placeholdersElegibles})`,
-      tieneEspecialidad
-        ? [paralelo_id, especialidad_id || null, ...elegiblesIds]
+      debeActualizarEspecialidad
+        ? [paralelo_id, especialidadNormalizada, ...elegiblesIds]
         : [paralelo_id, ...elegiblesIds]
     );
 

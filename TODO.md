@@ -1,10 +1,9 @@
 # TODO - Ajustes finales Bachillerato + Especialidades + Académico Admin/Profesor
 
 ## En progreso
-- [ ] Reforzar permisos backend académico (403 por pertenencia de asignación para PROFESOR).
-- [ ] Ajustar rutas profesor para filtrar por especialidad y asignaciones propias.
-- [ ] Ajustar rutas admin para soportar `especialidad_id` consistente en asignaciones.
-- [ ] Revisar enrollments para filtros/listados robustos por especialidad.
+- [ ] Corregir error 500 en `POST /api/enrollments/distribuir` cuando `especialidad_id` llega null/vacío.
+- [ ] Ajustar frontend de distribución para evitar warning `aria-hidden` por foco retenido al cerrar modal.
+- [ ] Validar distribución en paralelo destino con y sin especialidad.
 
 ## Frontend
 - [ ] Homologar estructura visual de Académico Admin con Profesor (manteniendo permisos diferentes).
@@ -12,8 +11,8 @@
 - [ ] Limitar acciones de Profesor a su alcance.
 
 ## Documentación
-- [ ] Actualizar `docs/funcionamiento-sistema.md` con fecha y resumen técnico de cambios.
-- [ ] Dejar registro final de archivos/rutas/tablas ajustadas.
+- [ ] Actualizar `docs/funcionamiento-sistema.md` con fecha y resumen técnico de la corrección de distribución.
+- [ ] Dejar registro final de archivos/rutas ajustadas (`enrollments.routes.js`, `view-cursos.js`).
 
 ## Validación pendiente
 - [ ] Checklist de pruebas Admin.

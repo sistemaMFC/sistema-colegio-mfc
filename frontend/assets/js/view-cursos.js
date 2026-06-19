@@ -791,6 +791,9 @@ function cerrarDistribucion() {
 }
 
 async function abrirDistribucion() {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+    }
     if (bsSelectorModal) bsSelectorModal.hide();
     cerrarListaPre();
     cerrarListaActual();
