@@ -83,6 +83,7 @@ Integra autenticación por roles, gestión de estudiantes, matrículas, asignaci
 
 ## Bitácora
 
+- 2026-07-04: se estabilizo Matriculas/Distribucion para bases donde `matriculas.estado` puede usar `ACTIVO` o `MATRICULADO`; el backend ahora detecta el enum real y el frontend usa `estado=OPERATIVO` en listados vigentes.
 - 2026-06-09: se igualo visualmente Academico Admin con Portal Profesor mediante pestanas de Materias, Asistencia, Simulacion, Documentacion y Mensajes, conservando permisos globales de ADMIN.
 - 2026-06-09: se reforzo la seguridad academica: ADMIN ve y modifica todo; PROFESOR solo recibe materias, cursos y paralelos asociados a sus asignaciones activas.
 - 2026-06-08: se agrego soporte inicial para Bachillerato con especialidades, estudiantes semilla, materias tecnicas y filtro academico por especialidad.

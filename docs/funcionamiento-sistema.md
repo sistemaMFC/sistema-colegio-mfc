@@ -928,3 +928,16 @@ Fecha: 2026-06-01
     - `TALLER` → Actividad Grupal
     - `LECCION` → Leccion
     - `APORTE` → Prueba
+
+- Fecha: 2026-07-04
+- Modulo: Matriculas / Enrollments
+- Cambios aplicados:
+  - `backend/src/routes/enrollments.routes.js` ahora inspecciona el enum real de `matriculas.estado`.
+  - Al crear, asignar o distribuir matriculas, el backend usa `MATRICULADO` si la base lo permite; si no, usa `ACTIVO`.
+  - `GET /api/enrollments` acepta el filtro semantico `estado=OPERATIVO`, que traduce a los estados vigentes permitidos por la base.
+  - `PUT /api/enrollments/:id/estado` valida el estado solicitado contra el enum real antes de actualizar.
+  - `frontend/assets/js/view-cursos.js` usa `estado=OPERATIVO` para listados de matriculados y distribucion.
+- Resultado esperado:
+  - Evitar errores SQL `WARN_DATA_TRUNCATED` por diferencias entre bases que aceptan `ACTIVO` o `MATRICULADO`.
+  - Evitar listados vacios cuando la base real guarda matriculas vigentes como `ACTIVO`.
+  - Mantener fuera de los listados operativos a matriculas retiradas, transferidas o graduadas.

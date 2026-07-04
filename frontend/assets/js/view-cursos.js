@@ -557,7 +557,7 @@ async function prepararAsignacionManualParalelo() {
     });
 }
 
-listarPreMatriculados = async function listarPreMatriculadosManual() {
+async function listarPreMatriculadosParaAsignar() {
     if (bsSelectorModal) bsSelectorModal.hide();
     cerrarListaActual();
 
@@ -574,20 +574,23 @@ listarPreMatriculados = async function listarPreMatriculadosManual() {
         await prepararAsignacionManualParalelo();
         const periodo = periodoMatriculaActivo || await api('/api/academico/periodo-activo');
         periodoMatriculaActivo = periodo;
+
         const [alumnos, matriculas] = await Promise.all([
             api('/api/students'),
             api(`/api/enrollments?periodo_id=${periodo.id}`)
         ]);
+
         const idsMatriculados = new Set((matriculas || []).map(m => Number(m.estudiante_id)));
         alumnosCursoCache = (alumnos || []).filter(a => !idsMatriculados.has(Number(a.id)));
-        renderizarTablaFiltrada(alumnosCursoCache);
+
+        renderizarTablaFiltradaParaAsignar(alumnosCursoCache);
         contenedor.scrollIntoView({ behavior: 'smooth' });
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="4" class="text-danger">No se pudo cargar estudiantes.</td></tr>`;
     }
-};
+}
 
-renderizarTablaFiltrada = function renderizarTablaFiltradaManual(lista) {
+function renderizarTablaFiltradaParaAsignar(lista) {
     const tbody = document.getElementById('listaAlumnosFiltrados');
     if (!tbody) return;
     tbody.innerHTML = "";
@@ -613,7 +616,7 @@ renderizarTablaFiltrada = function renderizarTablaFiltradaManual(lista) {
             </tr>
         `;
     });
-};
+}
 
 async function asignarAlumnoAParalelo(id, apellidos, nombres) {
     const paraleloId = document.getElementById('selectParaleloAsignacion')?.value || paraleloAsignacionActual;
@@ -669,7 +672,7 @@ listarMatriculadosActuales = async function listarMatriculadosActualesManual() {
         periodoMatriculaActivo = periodo;
         txtTitulo.textContent = `Matriculados: ${cursoActualNombre} - Paralelo ${paraleloNombre}`;
 
-        const inscritos = await api(`/api/enrollments?periodo_id=${periodo.id}&curso_id=${cursoActualId}&paralelo_id=${paraleloId}&estado=MATRICULADO`);
+        const inscritos = await api(`/api/enrollments?periodo_id=${periodo.id}&curso_id=${cursoActualId}&paralelo_id=${paraleloId}&estado=OPERATIVO`);
         tbody.innerHTML = "";
 
         if (!inscritos.length) {
@@ -837,7 +840,7 @@ async function abrirDistribucion() {
         }
 
         const filtroEspecialidad = especialidadDistribucionActual ? `&especialidad_id=${especialidadDistribucionActual}` : "";
-        const estudiantes = await api(`/api/enrollments?periodo_id=${periodo.id}&curso_id=${cursoActualId}${filtroEspecialidad}`);
+        const estudiantes = await api(`/api/enrollments?periodo_id=${periodo.id}&curso_id=${cursoActualId}${filtroEspecialidad}&estado=OPERATIVO`);
         renderDistribucion(estudiantes || []);
         contenedor.scrollIntoView({ behavior: 'smooth' });
     } catch (err) {
@@ -885,7 +888,7 @@ listarMatriculadosActuales = async function listarMatriculadosActualesPorCurso()
     try {
         const periodo = periodoMatriculaActivo || await api('/api/academico/periodo-activo');
         periodoMatriculaActivo = periodo;
-        const inscritos = await api(`/api/enrollments?periodo_id=${periodo.id}&curso_id=${cursoActualId}`);
+        const inscritos = await api(`/api/enrollments?periodo_id=${periodo.id}&curso_id=${cursoActualId}&estado=OPERATIVO`);
         tbody.innerHTML = "";
 
         if (!inscritos.length) {

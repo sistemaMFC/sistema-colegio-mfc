@@ -38,6 +38,45 @@ async function matriculasTieneEspecialidad() {
   }
 }
 
+function parseEnumValues(columnType = "") {
+  const match = String(columnType).match(/^enum\((.*)\)$/i);
+  if (!match) return null;
+  return Array.from(match[1].matchAll(/'((?:''|[^'])*)'/g))
+    .map(item => item[1].replace(/''/g, "'").toUpperCase());
+}
+
+async function obtenerEstadosMatriculaPermitidos(db = pool) {
+  const [cols] = await db.query("SHOW COLUMNS FROM matriculas LIKE 'estado'");
+  return parseEnumValues(cols[0]?.Type);
+}
+
+function elegirEstadoMatriculaOperativo(estadosPermitidos) {
+  if (!Array.isArray(estadosPermitidos) || !estadosPermitidos.length) return "MATRICULADO";
+  if (estadosPermitidos.includes("MATRICULADO")) return "MATRICULADO";
+  if (estadosPermitidos.includes("ACTIVO")) return "ACTIVO";
+  if (estadosPermitidos.includes("PENDIENTE")) return "PENDIENTE";
+  return estadosPermitidos[0];
+}
+
+function obtenerEstadosMatriculaOperativos(estadosPermitidos) {
+  const candidatos = ["ACTIVO", "MATRICULADO"];
+  if (!Array.isArray(estadosPermitidos) || !estadosPermitidos.length) return candidatos;
+  const encontrados = candidatos.filter(estado => estadosPermitidos.includes(estado));
+  return encontrados.length ? encontrados : [elegirEstadoMatriculaOperativo(estadosPermitidos)];
+}
+
+async function obtenerEstadoMatriculaOperativo(db = pool) {
+  const estadosPermitidos = await obtenerEstadosMatriculaPermitidos(db);
+  return elegirEstadoMatriculaOperativo(estadosPermitidos);
+}
+
+async function normalizarEstadoMatriculaSolicitado(estado, db = pool) {
+  const solicitado = String(estado || "").trim().toUpperCase();
+  if (!solicitado) return null;
+  if (solicitado === "MATRICULADO") return obtenerEstadoMatriculaOperativo(db);
+  return solicitado;
+}
+
 async function validarEspecialidadActiva(especialidadId, cursoId) {
   if (!especialidadId) return true;
   const existe = await tablaExiste("especialidades");
@@ -128,8 +167,9 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
       }
     }
 
+    const estadoMatricula = await obtenerEstadoMatriculaOperativo(connection);
     const columnasMatricula = ["estudiante_id", "periodo_id", "curso_id", "paralelo_id", "fecha_registro", "estado"];
-    const valoresMatricula = [estudiante_id, periodo_id, curso_id, paralelo_id, fechaRegistro, "MATRICULADO"];
+    const valoresMatricula = [estudiante_id, periodo_id, curso_id, paralelo_id, fechaRegistro, estadoMatricula];
     if (tieneEspecialidad) {
       columnasMatricula.splice(4, 0, "especialidad_id");
       valoresMatricula.splice(4, 0, especialidad_id || null);
@@ -242,17 +282,19 @@ router.post("/asignar-manual", authRequired, onlyAdmin, async (req, res) => {
     let matriculaId;
     if (exist.length) {
       matriculaId = exist[0].id;
+      const estadoMatricula = await obtenerEstadoMatriculaOperativo(connection);
       await connection.query(
         `UPDATE matriculas
-         SET curso_id = ?, paralelo_id = ?${tieneEspecialidad ? ", especialidad_id = ?" : ""}, estado = 'MATRICULADO'
+         SET curso_id = ?, paralelo_id = ?${tieneEspecialidad ? ", especialidad_id = ?" : ""}, estado = ?
          WHERE id = ?`,
         tieneEspecialidad
-          ? [curso_id, paralelo_id, especialidad_id || null, matriculaId]
-          : [curso_id, paralelo_id, matriculaId]
+          ? [curso_id, paralelo_id, especialidad_id || null, estadoMatricula, matriculaId]
+          : [curso_id, paralelo_id, estadoMatricula, matriculaId]
       );
     } else {
+      const estadoMatricula = await obtenerEstadoMatriculaOperativo(connection);
       const columnasMatricula = ["estudiante_id", "periodo_id", "curso_id", "paralelo_id", "fecha_registro", "estado"];
-      const valoresMatricula = [estudiante_id, periodoFinal, curso_id, paralelo_id, fechaFinal, "MATRICULADO"];
+      const valoresMatricula = [estudiante_id, periodoFinal, curso_id, paralelo_id, fechaFinal, estadoMatricula];
       if (tieneEspecialidad) {
         columnasMatricula.splice(4, 0, "especialidad_id");
         valoresMatricula.splice(4, 0, especialidad_id || null);
@@ -337,14 +379,15 @@ router.post("/distribuir", authRequired, onlyAdmin, async (req, res) => {
       });
     }
 
+    const estadoMatricula = await obtenerEstadoMatriculaOperativo();
     const placeholdersElegibles = elegiblesIds.map(() => "?").join(",");
     const [result] = await pool.query(
       `UPDATE matriculas
-       SET paralelo_id = ?${debeActualizarEspecialidad ? ", especialidad_id = ?" : ""}, estado = 'ACTIVO'
+       SET paralelo_id = ?${debeActualizarEspecialidad ? ", especialidad_id = ?" : ""}, estado = ?
        WHERE id IN (${placeholdersElegibles})`,
       debeActualizarEspecialidad
-        ? [paralelo_id, especialidadNormalizada, ...elegiblesIds]
-        : [paralelo_id, ...elegiblesIds]
+        ? [paralelo_id, especialidadNormalizada, estadoMatricula, ...elegiblesIds]
+        : [paralelo_id, estadoMatricula, ...elegiblesIds]
     );
 
     return res.json({
@@ -395,7 +438,15 @@ router.get("/", authRequired, async (req, res) => {
     if (curso_id) { sql += " AND m.curso_id=?"; params.push(curso_id); }
     if (paralelo_id) { sql += " AND m.paralelo_id=?"; params.push(paralelo_id); }
     if (especialidad_id && tieneEspecialidad) { sql += " AND m.especialidad_id=?"; params.push(especialidad_id); }
-    if (estado) { sql += " AND m.estado=?"; params.push(estado); }
+    const estadoSolicitado = String(estado || "").trim().toUpperCase();
+    if (["OPERATIVO", "VIGENTE"].includes(estadoSolicitado)) {
+      const estadosOperativos = obtenerEstadosMatriculaOperativos(await obtenerEstadosMatriculaPermitidos());
+      sql += ` AND m.estado IN (${estadosOperativos.map(() => "?").join(",")})`;
+      params.push(...estadosOperativos);
+    } else {
+      const estadoFinal = await normalizarEstadoMatriculaSolicitado(estado);
+      if (estadoFinal) { sql += " AND m.estado=?"; params.push(estadoFinal); }
+    }
 
     sql += " ORDER BY e.apellidos_est ASC";
     const [rows] = await pool.query(sql, params);
@@ -411,12 +462,18 @@ router.get("/", authRequired, async (req, res) => {
 router.put("/:id/estado", authRequired, onlyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { estado } = req.body;
-    const allowed = ["MATRICULADO", "RETIRADO", "TRANSFERIDO", "GRADUADO"];
-    if (!allowed.includes(estado)) return res.status(400).json({ error: "Estado inválido" });
+    const estadoSolicitado = String(req.body.estado || "").trim().toUpperCase();
+    const allowed = ["ACTIVO", "MATRICULADO", "RETIRADO", "TRANSFERIDO", "GRADUADO", "INACTIVO"];
+    if (!allowed.includes(estadoSolicitado)) return res.status(400).json({ error: "Estado invalido" });
 
-    await pool.query("UPDATE matriculas SET estado=? WHERE id=?", [estado, id]);
-    return res.json({ message: "Estado actualizado ✅" });
+    const estadosPermitidos = await obtenerEstadosMatriculaPermitidos();
+    const estadoFinal = await normalizarEstadoMatriculaSolicitado(estadoSolicitado);
+    if (Array.isArray(estadosPermitidos) && !estadosPermitidos.includes(estadoFinal)) {
+      return res.status(400).json({ error: `Estado no permitido por la base actual: ${estadoSolicitado}` });
+    }
+
+    await pool.query("UPDATE matriculas SET estado=? WHERE id=?", [estadoFinal, id]);
+    return res.json({ message: "Estado actualizado" });
   } catch (err) {
     return res.status(500).json({ error: "Error actualizando estado" });
   }
