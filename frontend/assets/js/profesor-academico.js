@@ -177,6 +177,23 @@ function requireSession() {
     return decoded;
 }
 
+async function validateSession() {
+    const token = getToken();
+    if (!token) {
+        logout();
+        return;
+    }
+
+    try {
+        const perfil = await api("/auth/me");
+        localStorage.setItem("mfc_user", JSON.stringify(perfil));
+        return perfil;
+    } catch (err) {
+        console.error("Validación de sesión fallida:", err);
+        logout();
+    }
+}
+
 function fillUserUI(decoded, profile) {
     const stored = getStoredUser() || {};
     const nombres = profile?.nombres || stored.nombres || "Profesor";
@@ -1663,7 +1680,11 @@ async function init() {
     }
 }
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", async () => {
+    const sessionOk = await validateSession();
+    if (!sessionOk) return;
+    init();
+});
 window.cerrarModalProfesor = cerrarModalProfesor;
 window.guardarPerfilProfesor = guardarPerfilProfesor;
 window.guardarPasswordProfesor = guardarPasswordProfesor;

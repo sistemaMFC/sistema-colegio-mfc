@@ -17,6 +17,26 @@ if(document.getElementById("year")) {
 const API_BASE = window.MFC_API_BASE || window.location.origin;
 const API_URL = `${API_BASE}/auth/login`;
 
+function getToken() {
+    return localStorage.getItem("mfc_token");
+}
+
+function getStoredUser() {
+    try {
+        return JSON.parse(localStorage.getItem("mfc_user") || "null");
+    } catch (err) {
+        return null;
+    }
+}
+
+function redirectIfAuthenticated() {
+    const token = getToken();
+    const user = getStoredUser();
+    if (token && user?.rol) {
+        window.location.href = getHomeByRole(user.rol);
+    }
+}
+
 function getHomeByRole(role) {
     const rol = String(role || "").toUpperCase();
     if (rol === "PROFESOR") return "./profesor-academico.html";
@@ -54,6 +74,7 @@ const form = document.getElementById("loginForm");
 const statusEl = document.getElementById("status");
 
 if (form) {
+    redirectIfAuthenticated();
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
         statusEl.className = "status";

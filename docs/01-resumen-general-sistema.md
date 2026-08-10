@@ -32,10 +32,12 @@ Integra autenticación por roles, gestión de estudiantes, matrículas, asignaci
 ## 5) Flujos principales actuales
 
 1. Login (`/auth/login`) con JWT.
-2. Redirección por rol:
+2. Almacena `mfc_token` y `mfc_user` en `localStorage`.
+3. Redirección por rol:
    - Profesor → `profesor-academico.html`
    - Admin/Secretaría/Colector → `app.html`
-3. Módulos operativos:
+4. Páginas protegidas validan sesión con `GET /auth/me`.
+5. Módulos operativos:
    - Estudiantes
    - Matrículas/Enrollments
    - Académico (trimestres, parciales, insumos, notas)
@@ -80,6 +82,14 @@ Integra autenticación por roles, gestión de estudiantes, matrículas, asignaci
 - Sistema desplegado y conectando a MySQL en producción.
 - Funcional en escenarios principales.
 - Requiere cierre de brechas de UX, consistencia y pruebas para mayor robustez.
+- Login y sesión ahora están validados en el frontend con token JWT y `/auth/me`.
+- Se agregó soporte para API dinámico con `window.MFC_API_BASE || window.location.origin`.
+
+## 11) Nota de avance reciente
+
+- 2026-08-10: Se documentaron los cambios de login, sesión y redirección por rol en el frontend.
+- 2026-08-10: Se validó que `app.html` y `profesor-academico.html` cargan correctamente los scripts protegidos.
+- 2026-08-10: Se añadió guardia de sesión en el dashboard admin y en el portal profesor para logout en 401/403.
 
 ## Bitácora
 

@@ -134,18 +134,36 @@ async function api(path, options = {}) {
     }
 
     const res = await fetch(`${API_BASE}${path}`, requestOptions);
-    
-    if (res.status === 401 || res.status === 403) {
-        console.warn("Sesión inválida o permisos insuficientes");
-    }
-
     const data = await res.json().catch(() => ({}));
+
+    if (res.status === 401 || res.status === 403) {
+        logout();
+        throw new Error(data?.error || "Sesión inválida o expirada");
+    }
 
     if (!res.ok) {
         const msg = data?.error || `Error ${res.status}`;
         throw new Error(msg);
     }
     return data;
+}
+
+async function validateSession() {
+    const token = getToken();
+    if (!token) {
+        logout();
+        return false;
+    }
+
+    try {
+        const perfil = await api("/auth/me");
+        localStorage.setItem("mfc_user", JSON.stringify(perfil));
+        return perfil;
+    } catch (err) {
+        console.error("Validación de sesión fallida:", err);
+        logout();
+        return false;
+    }
 }
 
 /* =========================
@@ -1130,7 +1148,10 @@ window.cambiarEstadoCurso = cambiarEstadoCurso;
 window.quitarAsignacionCurso = quitarAsignacionCurso;
 window.quitarTutoriaCurso = quitarTutoriaCurso;
 
-(function init() {
+(async function init() {
+    const sessionOk = await validateSession();
+    if (!sessionOk) return;
+
     fillUserUI();
     initThemeV2();
     setupInteractions();

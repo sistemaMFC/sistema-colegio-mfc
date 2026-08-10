@@ -33,6 +33,10 @@ Funcionamiento:
 - Guarda `mfc_token` y `mfc_user` en `localStorage`.
 - Si el rol es `PROFESOR`, redirige a `profesor-academico.html`.
 - Si el rol es `ADMIN`, `SECRETARIA` o `COLECTOR`, redirige a `app.html`.
+- Las páginas protegidas validan la sesión usando `GET /auth/me`.
+- Si la sesión expira o `/auth/me` falla con 401/403, el frontend ejecuta logout y vuelve a `index.html`.
+- El login ahora puede auto-redirigir si ya existe sesión activa (`mfc_token` + `mfc_user`).
+- `frontend/assets/login.js` existe como script legacy, pero no se usa actualmente en los HTML.
 - Cualquier usuario autenticado puede consultar y editar su perfil con `GET /auth/me` y `PUT /auth/me`.
 - Cualquier usuario autenticado puede cambiar su propia contrasena con `PUT /auth/me/password`.
 

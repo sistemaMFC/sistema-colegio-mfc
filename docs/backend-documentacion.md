@@ -117,6 +117,16 @@ Resumen:
 - Profesor: perfil, tutorías, asistencia, contexto docente.
 - Admin: usuarios, cursos, materias, asignaciones y tutorías.
 
+## 4.6 Setup y registro de rutas
+Archivo:
+- `backend/src/server.js`
+
+Cambios recientes:
+- Se agregó la ruta de inicialización `/setup` con `backend/src/routes/setup.routes.js`.
+- Se registraron rutas faltantes como `/api/enrollments` y `/api/profesor`.
+- El servidor sirve el frontend estático desde `frontend/` y valida CORS según el origen en producción.
+- El backend usa variables de entorno para CORS permitido (`CORS_ORIGIN` o `FRONTEND_URL`).
+
 ## 5) Rutas registradas en servidor
 
 Archivo:
