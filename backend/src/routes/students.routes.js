@@ -135,15 +135,38 @@ router.put("/:id", authRequired, onlyAdmin, async (req, res) => {
     } = req.body;
 
     // --- CASO A: ACTUALIZACIÓN RÁPIDA (Solo estado y/o curso) ---
-    if (!cedula_est && (estado || curso_id)) {
+    if (!cedula_est && (estado || curso_id !== undefined)) {
       console.log(`🔄 Acción rápida ID ${id}: Estado=${estado}, Curso=${curso_id}`);
-      
+
+      const cursoIdNormalizado = curso_id === '' ? null : curso_id;
+
+      if (cursoIdNormalizado !== null) {
+        const [cursoActivo] = await pool.query(
+          "SELECT id FROM cursos WHERE id = ? AND estado = 'ACTIVO' LIMIT 1",
+          [cursoIdNormalizado]
+        );
+        if (!cursoActivo.length) {
+          return res.status(400).json({ error: "Curso inválido o inactivo" });
+        }
+      }
+
+      if (estado === 'ACTIVO' && cursoIdNormalizado === null) {
+        const [estudianteExistente] = await pool.query(
+          "SELECT curso_id FROM estudiantes WHERE id = ? LIMIT 1",
+          [id]
+        );
+        if (!estudianteExistente.length) return res.status(404).json({ error: "Estudiante no encontrado" });
+        if (!estudianteExistente[0].curso_id) {
+          return res.status(400).json({ error: "Debe asignar un curso antes de activar al estudiante" });
+        }
+      }
+
       let sqlRapid = "UPDATE estudiantes SET estado = COALESCE(?, estado), curso_id = COALESCE(?, curso_id) WHERE id = ?";
-      let paramsRapid = [estado, curso_id, id];
+      let paramsRapid = [estado, cursoIdNormalizado, id];
 
       if (estado === 'ACTIVO') {
           sqlRapid = "UPDATE estudiantes SET estado = ?, curso_id = COALESCE(?, curso_id), fecha_matricula = NOW() WHERE id = ?";
-          paramsRapid = [estado, curso_id, id];
+          paramsRapid = [estado, cursoIdNormalizado, id];
       }
 
       const [resRapid] = await pool.query(sqlRapid, paramsRapid);

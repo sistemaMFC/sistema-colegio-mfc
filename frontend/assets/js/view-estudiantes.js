@@ -427,7 +427,7 @@ async function mostrarModuloEstudiantes() {
                         </div>
                         <div class="est-form-group">
                             <label>Curso</label>
-                            <select id="ef_curso_id">
+                            <select id="ef_curso_id" required>
                                 <option value="">— Seleccionar —</option>
                             </select>
                         </div>
