@@ -93,6 +93,45 @@ function renderEspecialidadTexto(row) {
     return row.especialidad ? `<br><small class="muted">Especialidad: ${row.especialidad}</small>` : "";
 }
 
+async function seleccionarParaleloActivo() {
+    try {
+        if (!paralelosMatriculaCache.length) {
+            const cp = await api('/api/academico/cursos-paralelos');
+            paralelosMatriculaCache = cp.paralelos || [];
+        }
+
+        if (!paralelosMatriculaCache.length) {
+            throw new Error('No hay paralelos activos disponibles');
+        }
+
+        if (paralelosMatriculaCache.length === 1) {
+            return paralelosMatriculaCache[0].id;
+        }
+
+        let mensaje = 'Seleccione el paralelo destino:\n\n';
+        paralelosMatriculaCache.forEach((p, idx) => {
+            mensaje += `${idx + 1}. Paralelo ${p.nombre}\n`;
+        });
+
+        const seleccion = prompt(mensaje + '\nEscriba el NÚMERO del paralelo:');
+        if (!seleccion) return null;
+
+        const indice = parseInt(seleccion, 10) - 1;
+        const paralelo = paralelosMatriculaCache[indice];
+        if (!paralelo) {
+            alert('Selección de paralelo inválida.');
+            return null;
+        }
+
+        paraleloAsignacionActual = paralelo.id;
+        return paralelo.id;
+    } catch (err) {
+        console.error('Error cargando paralelos:', err);
+        alert('No se pudo obtener la lista de paralelos.');
+        return null;
+    }
+}
+
 /**
  * 1. RENDERIZAR TARJETAS DE CURSOS
  */
@@ -192,19 +231,19 @@ function renderizarTablaFiltrada(lista) {
 async function confirmarMatriculaPre(id, apellidos, nombres) {
     try {
         const cursosBase = await api('/api/admin/cursos/estadisticas');
-        
+        const paraleloData = await api('/api/academico/cursos-paralelos');
+        const periodo = await api('/api/academico/periodo-activo');
+
         let mensajeListado = `Seleccione el curso destino para:\n${apellidos} ${nombres}\n\n`;
         cursosBase.forEach((c, index) => {
             mensajeListado += `${index + 1}. ${normalizarNombreCurso(c.nombre)}\n`;
         });
 
-        const seleccion = prompt(mensajeListado + "\nEscriba el NÚMERO del curso:");
+        const cursoSeleccion = prompt(mensajeListado + "\nEscriba el NÚMERO del curso:");
+        if (!cursoSeleccion) return;
 
-        if (!seleccion) return;
-
-        const indice = parseInt(seleccion) - 1;
+        const indice = parseInt(cursoSeleccion, 10) - 1;
         const cursoDestino = cursosBase[indice];
-
         if (!cursoDestino) {
             alert("❌ Selección inválida.");
             return;
@@ -212,7 +251,6 @@ async function confirmarMatriculaPre(id, apellidos, nombres) {
 
         const idxActual = ORDEN_CURSOS.indexOf(cursoActualNombre);
         const idxDestino = ORDEN_CURSOS.indexOf(normalizarNombreCurso(cursoDestino.nombre));
-
         if (idxDestino > idxActual + 1) {
             const pass = prompt("⚠️ SALTO DE CURSO: Ingrese la CLAVE DE SEGURIDAD para autorizar curso superior:");
             if (pass !== "SistemaMFC") {
@@ -221,21 +259,45 @@ async function confirmarMatriculaPre(id, apellidos, nombres) {
             }
         }
 
-        await api(`/api/students/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify({ 
-                estado: 'ACTIVO',
-                curso_id: cursoDestino.id 
-            })
+        const paralelos = paraleloData.paralelos || [];
+        if (!paralelos.length) {
+            alert('No se encontraron paralelos activos para asignar.');
+            return;
+        }
+
+        let mensajeParalelos = `Seleccione el paralelo destino para ${normalizarNombreCurso(cursoDestino.nombre)}:\n\n`;
+        paralelos.forEach((p, index) => {
+            mensajeParalelos += `${index + 1}. Paralelo ${p.nombre}\n`;
         });
 
-        alert(`✨ Estudiante matriculado en ${normalizarNombreCurso(cursoDestino.nombre)}`);
-        listarPreMatriculados(); 
-        renderizarCursos();     
-        if(window.actualizarDashboard) window.actualizarDashboard();
+        const paraleloSeleccion = prompt(mensajeParalelos + "\nEscriba el NÚMERO del paralelo:");
+        if (!paraleloSeleccion) return;
+
+        const paraleloIndice = parseInt(paraleloSeleccion, 10) - 1;
+        const paraleloDestino = paralelos[paraleloIndice];
+        if (!paraleloDestino) {
+            alert("❌ Selección de paralelo inválida.");
+            return;
+        }
+
+        await api('/api/enrollments/asignar-manual', {
+            method: 'POST',
+            body: {
+                estudiante_id: id,
+                periodo_id: periodo.id,
+                curso_id: cursoDestino.id,
+                paralelo_id: paraleloDestino.id,
+                fecha_matricula: new Date().toISOString().slice(0, 10)
+            }
+        });
+
+        alert(`✨ Estudiante matriculado en ${normalizarNombreCurso(cursoDestino.nombre)} - Paralelo ${paraleloDestino.nombre}`);
+        await listarPreMatriculados();
+        await renderizarCursos();
+        if (window.actualizarDashboard) window.actualizarDashboard();
 
     } catch (err) {
-        alert("❌ Error: " + err.message);
+        alert("❌ Error: " + (err.message || "Revise los datos."));
     }
 }
 
@@ -308,22 +370,25 @@ async function listarMatriculadosActuales() {
  */
 async function anularMatricula(id, nombreCompleto) {
     if (!id) return;
-    if (!confirm(`⚠️ ¡ATENCIÓN! ¿Está seguro de ANULAR a ${nombreCompleto}?\nEsta acción lo ELIMINARÁ definitivamente de la base de datos.`)) return;
+    if (!confirm(`⚠️ ¡ATENCIÓN! ¿Está seguro de anular la matrícula de ${nombreCompleto}?\nSe mantendrá el registro del estudiante para historial.`)) return;
 
-    const password = prompt("🔐 Ingrese la CLAVE DE SEGURIDAD para confirmar la eliminación:");
+    const password = prompt("🔐 Ingrese la CLAVE DE SEGURIDAD para confirmar la anulación:");
     if (password !== "SistemaMFC") {
         alert("❌ Clave incorrecta. Acción cancelada.");
         return;
     }
 
     try {
-        await api(`/api/students/${id}`, { method: 'DELETE' });
-        alert("🗑️ Estudiante eliminado correctamente.");
+        await api(`/api/students/${id}`, {
+            method: 'PUT',
+            body: { estado: 'RETIRADO' }
+        });
+        alert("✅ Matrícula anulada correctamente. El estudiante se conserva en histórico.");
         await renderizarCursos();
-        if(window.actualizarDashboard) window.actualizarDashboard();
+        if (window.actualizarDashboard) window.actualizarDashboard();
         cerrarListaActual();
     } catch (err) {
-        alert("❌ Error: No se pudo eliminar el registro.");
+        alert("❌ Error: " + (err.message || "No se pudo anular la matrícula."));
     }
 }
 
