@@ -742,6 +742,11 @@ async function guardarMatricula() {
         return;
     }
 
+    if (!_editandoId && !curso_id) {
+        showAlert('bad', 'Debe seleccionar un curso para poder matricular al estudiante.');
+        return;
+    }
+
     const payload = {
         cedula_est:     cedula,
         nombres_est:    nombres,

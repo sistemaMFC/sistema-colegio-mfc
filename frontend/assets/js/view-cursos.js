@@ -507,6 +507,11 @@ function abrirSelectorMatricula(id, nombre) {
 }
 
 function abrirFormularioMatriculaNueva() {
+    if (!cursoActualId) {
+        alert('Seleccione primero un curso antes de registrar al estudiante.');
+        return;
+    }
+
     if (bsSelectorModal) bsSelectorModal.hide();
     const form = document.getElementById('formNuevaMatricula');
     if (form) form.reset();
@@ -793,65 +798,6 @@ window.listarPreMatriculados = listarPreMatriculados;
 window.listarMatriculadosActuales = listarMatriculadosActuales;
 window.asignarAlumnoAParalelo = asignarAlumnoAParalelo;
 window.retirarMatricula = retirarMatricula;
-
-/* ========================================================
-   CORRECCION FINAL: PREMATRICULA NO ES DISTRIBUCION
-   Distribucion vive en su propio boton y trabaja con matriculas.
-   ======================================================== */
-
-listarPreMatriculados = async function listarPreMatriculadosOriginal() {
-    if (bsSelectorModal) bsSelectorModal.hide();
-    cerrarListaActual();
-    cerrarDistribucion();
-
-    const contenedor = document.getElementById('contenedor-pre-matriculados');
-    const tbody = document.getElementById('listaAlumnosFiltrados');
-    const txtTitulo = document.getElementById('txtCursoLista');
-    const panel = document.getElementById('panelAsignacionParalelo');
-    if (panel) panel.remove();
-
-    if (!contenedor || !tbody) return;
-    contenedor.style.display = 'block';
-    txtTitulo.textContent = `Listado Oficial: ${cursoActualNombre}`;
-    tbody.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Sincronizando...</td></tr>";
-
-    try {
-        const alumnos = await api('/api/students');
-        alumnosCursoCache = alumnos.filter(a => a.curso_id == cursoActualId && a.estado !== 'ACTIVO');
-        renderizarTablaFiltrada(alumnosCursoCache);
-        contenedor.scrollIntoView({ behavior: 'smooth' });
-    } catch (err) {
-        alert("No se pudo cargar el listado oficial.");
-    }
-};
-
-renderizarTablaFiltrada = function renderizarTablaFiltradaPrematricula(lista) {
-    const tbody = document.getElementById('listaAlumnosFiltrados');
-    if (!tbody) return;
-    tbody.innerHTML = "";
-
-    if (!lista.length) {
-        tbody.innerHTML = "<tr><td colspan='4' class='muted' style='text-align:center;'>No hay estudiantes pendientes.</td></tr>";
-        return;
-    }
-
-    lista.forEach(est => {
-        tbody.innerHTML += `
-            <tr>
-                <td>${est.cedula_est}</td>
-                <td style="font-weight:bold;text-transform:uppercase;color:var(--green);">
-                    ${est.apellidos_est}, ${est.nombres_est}
-                </td>
-                <td><span class="badge warn">${est.estado}</span></td>
-                <td>
-                    <button class="btn btn-sm btn-success" onclick="confirmarMatriculaPre('${est.id}', '${String(est.apellidos_est).replace(/'/g, "\\'")}', '${String(est.nombres_est).replace(/'/g, "\\'")}')">
-                        Matricular
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
-};
 
 function cerrarDistribucion() {
     const el = document.getElementById('contenedor-distribucion');

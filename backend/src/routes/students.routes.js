@@ -21,6 +21,10 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
       return res.status(400).json({ error: "Faltan datos obligatorios (Cédula, Nombres, Apellidos)" });
     }
 
+    if (!curso_id) {
+      return res.status(400).json({ error: "Debe seleccionar un curso para matricular al estudiante" });
+    }
+
     const cedulaEst = String(cedula_est).trim();
     if (!/^\d{10}$/.test(cedulaEst)) {
       return res.status(400).json({ error: "Cédula del estudiante inválida (debe tener 10 dígitos)" });
@@ -45,6 +49,15 @@ router.post("/", authRequired, onlyAdmin, async (req, res) => {
 
     if (exist.length > 0) {
       return res.status(409).json({ error: "Ya existe un estudiante registrado con esa cédula" });
+    }
+
+    const [cursoActivo] = await pool.query(
+      "SELECT id FROM cursos WHERE id = ? AND estado = 'ACTIVO' LIMIT 1",
+      [curso_id]
+    );
+
+    if (!cursoActivo.length) {
+      return res.status(400).json({ error: "Curso inválido o inactivo" });
     }
 
     const [result] = await pool.query(
