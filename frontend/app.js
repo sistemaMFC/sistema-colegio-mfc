@@ -11,7 +11,10 @@ if(document.getElementById("year")) {
 /* =========================
     CONFIGURACIÓN DE API
    ========================= */
-const API_BASE = window.MFC_API_BASE || "https://sistema-colegio-mfc.onrender.com";
+// Usamos window.MFC_API_BASE si está definido externamente.
+// En caso contrario, se toma el origen actual de la página,
+// lo que permite ejecutar el frontend en local o en el mismo host.
+const API_BASE = window.MFC_API_BASE || window.location.origin;
 const API_URL = `${API_BASE}/auth/login`;
 
 function getHomeByRole(role) {

@@ -1,4 +1,5 @@
-const API_BASE = window.MFC_API_BASE || "https://sistema-colegio-mfc.onrender.com";
+// Base de la API: usa window.MFC_API_BASE si se define, o el origen actual.
+const API_BASE = window.MFC_API_BASE || window.location.origin;
 const NOTAS_ACTIVAS = false;
 
 const state = {

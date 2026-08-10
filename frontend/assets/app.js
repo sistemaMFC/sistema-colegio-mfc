@@ -3,8 +3,6 @@
     VERSIÓN INTEGRADA: DASHBOARD, USUARIOS Y MÓDULOS
    ======================================================== */
 
-const API_BASE = "https://sistema-colegio-mfc.onrender.com";
-
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
@@ -94,6 +92,10 @@ function initTheme() {
 /* =========================
     COMUNICACIÓN CON API
 ========================= */
+
+// Base de la API: se puede definir externamente como window.MFC_API_BASE.
+// Si no se define, usa el origen actual para funcionar localmente.
+const API_BASE = window.MFC_API_BASE || window.location.origin;
 
 function initThemeV2() {
     const btnTheme = $("#btnThemeToggle");

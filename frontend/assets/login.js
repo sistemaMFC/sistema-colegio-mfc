@@ -12,7 +12,7 @@ const msg         = document.getElementById("msg");
 const cedulaInput = document.getElementById("cedula");
 const passInput   = document.getElementById("password");
 
-const API = "https://sistema-colegio-mfc.onrender.com";
+const API = window.MFC_API_BASE || window.location.origin;
 
 function setMsg(text, ok = false) {
     msg.textContent = text || "";

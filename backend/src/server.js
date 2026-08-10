@@ -38,7 +38,8 @@ const studentRoutes     = require('./routes/students.routes');
 const academicoRoutes   = require('./routes/academico.routes');
 const pagosRoutes       = require('./routes/pagos.routes');
 const enrollmentsRoutes = require('./routes/enrollments.routes');
-const profesorRoutes = require('./routes/profesor.routes');
+const profesorRoutes    = require('./routes/profesor.routes');
+const setupRoutes       = require('./routes/setup.routes');
 
 app.use('/auth',            authRoutes);
 app.use('/api/admin',       adminRoutes);
@@ -46,7 +47,8 @@ app.use('/api/students',    studentRoutes);
 app.use('/api/academico',   academicoRoutes);
 app.use('/api/pagos',       pagosRoutes);         // ✅ protegido internamente con authRequired
 app.use('/api/enrollments', enrollmentsRoutes);   // ✅ ya no estaba registrado
-app.use('/api/profesor', profesorRoutes);      // ✅ portal del profesor
+app.use('/api/profesor',    profesorRoutes);      // ✅ portal del profesor
+app.use('/setup',           setupRoutes);        // ✅ Registrar ruta de configuración inicial
 
 /* ── Estáticos ── */
 app.use(express.static(path.join(__dirname, '../../frontend')));
