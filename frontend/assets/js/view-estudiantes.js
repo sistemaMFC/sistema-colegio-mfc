@@ -573,6 +573,9 @@ function _renderGrid(lista) {
                 <button class="est-btn-ic"
                         onclick="event.stopPropagation();abrirFormEditar(${est.id})"
                         title="Editar" aria-label="Editar">✏️</button>
+                <button class="est-btn-ic"
+                        onclick="event.stopPropagation();eliminarEstudiante(${est.id}, '${apellidoSeguro} ${nombreSeguro}')"
+                        title="Eliminar" aria-label="Eliminar">🗑️</button>
                 <button class="est-btn-ic pdf"
                         onclick="event.stopPropagation();generarCertificadoMatricula(${est.id},'${est.nombre_curso || ''}')"
                         ${!activo ? 'disabled title="Solo alumnos activos"' : 'title="Certificado PDF"'}
@@ -580,6 +583,29 @@ function _renderGrid(lista) {
             </div>
         </div>`;
     }).join('');
+}
+
+async function eliminarEstudiante(id, nombre) {
+    if (!confirm(`¿Deseas eliminar permanentemente a ${nombre}?`)) return;
+
+    const password = prompt('Ingrese su contraseña para confirmar la eliminación:');
+    if (!password) {
+        showAlert('bad', 'Contraseña requerida para confirmar la eliminación.');
+        return;
+    }
+
+    try {
+        await api(`/api/students/${id}`, {
+            method: 'DELETE',
+            body: { current_password: password }
+        });
+
+        showAlert('ok', 'Estudiante eliminado correctamente.');
+        _todosLosAlumnos = _todosLosAlumnos.filter(est => Number(est.id) !== Number(id));
+        _renderGrid(_todosLosAlumnos);
+    } catch (err) {
+        showAlert('bad', err.message || 'No se pudo eliminar el estudiante.');
+    }
 }
 
 /* ----------------------------------------------------------
@@ -782,6 +808,28 @@ async function guardarMatricula() {
             if (_fotoCarnetBase64 && res.id && typeof guardarFotoEstudiante === 'function') {
                 guardarFotoEstudiante(res.id, _fotoCarnetBase64);
             }
+
+            if (res.id && curso_id) {
+                const periodo = await api('/api/academico/periodo-activo');
+                const cp = await api('/api/academico/cursos-paralelos');
+                const paraleloId = (cp.paralelos && cp.paralelos[0] && cp.paralelos[0].id) || null;
+
+                if (!paraleloId) {
+                    throw new Error('El alumno se creó, pero no se pudo asignar a ningún paralelo activo.');
+                }
+
+                await api('/api/enrollments/asignar-manual', {
+                    method: 'POST',
+                    body: {
+                        estudiante_id: res.id,
+                        periodo_id: periodo.id,
+                        curso_id,
+                        paralelo_id: paraleloId,
+                        fecha_matricula: new Date().toISOString().slice(0, 10)
+                    }
+                });
+            }
+
             showAlert('ok', '¡Matrícula registrada con éxito! ✅');
         }
         cerrarEstModal('estModalForm');
@@ -875,6 +923,7 @@ window.abrirFormNuevo           = abrirFormNuevo;
 window.abrirFormEditar          = abrirFormEditar;
 window.guardarMatricula         = guardarMatricula;
 window.verFichaEstudiante       = verFichaEstudiante;
+window.eliminarEstudiante       = eliminarEstudiante;
 window.estProcesarFoto          = estProcesarFoto;
 window.cerrarEstModal           = cerrarEstModal;
 

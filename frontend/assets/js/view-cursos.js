@@ -475,6 +475,28 @@ async function procesarMatricula(e) {
                 method: 'POST',
                 body: JSON.stringify(datos)
             });
+
+            if (cursoActualId) {
+                const periodo = await api('/api/academico/periodo-activo');
+                const cp = await api('/api/academico/cursos-paralelos');
+                const paraleloId = paraleloAsignacionActual || (cp.paralelos && cp.paralelos[0] && cp.paralelos[0].id);
+
+                if (!paraleloId) {
+                    throw new Error('No hay paralelos activos para completar la matrícula.');
+                }
+
+                await api('/api/enrollments/asignar-manual', {
+                    method: 'POST',
+                    body: {
+                        estudiante_id: res.id,
+                        periodo_id: periodo.id,
+                        curso_id: cursoActualId,
+                        paralelo_id: paraleloId,
+                        fecha_matricula: new Date().toISOString().slice(0, 10)
+                    }
+                });
+            }
+
             alert("✨ " + res.message);
         }
 
