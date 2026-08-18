@@ -1,6 +1,7 @@
 // Base de la API: usa window.MFC_API_BASE si se define, o el origen actual.
 const API_BASE = window.MFC_API_BASE || window.location.origin;
-const NOTAS_ACTIVAS = false;
+// Fase 1: habilitar el flujo académico real en el portal del docente.
+const NOTAS_ACTIVAS = true;
 
 const state = {
     user: null,
