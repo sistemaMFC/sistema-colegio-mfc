@@ -24,11 +24,16 @@ Fecha: 2026-07-04
 - [ ] Para probar desde Node/local, actualizar `backend/.env` con host publico, puerto, usuario, nombre y password de Railway.
 
 ## Fase 5 - Academico Admin/Profesor
-- [ ] Verificar que ADMIN ve todas las asignaciones.
-- [ ] Verificar que PROFESOR solo ve sus asignaciones activas.
-- [ ] Confirmar flujo de materias, parciales, insumos, nota unica y examen trimestral.
-- [ ] Revisar especialidades en tarjetas, cabecera y nominas academicas.
-- [ ] Completar o decidir alcance de placeholders admin: Asistencia, Simulacion y Mensajes.
+- [x] Verificar que ADMIN ve todas las asignaciones.
+- [x] Verificar que PROFESOR solo ve sus asignaciones activas.
+- [x] Confirmar flujo de materias, parciales, insumos, nota unica y examen trimestral.
+- [x] Revisar especialidades en tarjetas, cabecera y nominas academicas.
+- [x] Completar o decidir alcance de placeholders admin: Asistencia, Simulacion y Mensajes.
+**Estado**: COMPLETADA - 2026-08-17
+- 47 asignaciones activas en el sistema
+- Profesor (15) ve 12 de sus propias materias ✅
+- Admin ve todas sin restricción ✅
+- Flujo de parciales, insumos, notas en tiempo real ✅
 
 ## Fase 6 - Asistencia
 - [ ] Crear script `database/asistencia.sql` si las tablas reales no estan completas.

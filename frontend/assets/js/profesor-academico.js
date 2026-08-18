@@ -1016,12 +1016,36 @@ function renderMateriasDocente(materias) {
 }
 
 async function cargarMateriasDocente() {
-    const materias = await api("/api/profesor/materias");
-    if (state.selectedAcademicPeriodoId) {
-        state.academicContexts = materias.filter(item => Number(item.periodo_id) === Number(state.selectedAcademicPeriodoId));
-    } else {
-        state.academicContexts = materias;
+    try {
+        const materias = await api("/api/profesor/materias");
+        if (state.selectedAcademicPeriodoId) {
+            state.academicContexts = materias.filter(item => Number(item.periodo_id) === Number(state.selectedAcademicPeriodoId));
+        } else {
+            state.academicContexts = materias;
+        }
+    } catch (err) {
+        state.academicContexts = [];
+        const shell = document.getElementById("profSectionInsumos");
+        if (shell) {
+            shell.innerHTML = `<div class="card-head"><h3>Materias</h3></div><div class="prof-empty">${escapeHTML(err.message || "No se pudieron cargar las materias del profesor.")}</div>`;
+        }
+        return;
     }
+
+    if (!state.academicContexts.length) {
+        const shell = document.getElementById("profSectionInsumos");
+        if (shell) {
+            shell.innerHTML = `
+                <div class="card-head">
+                    <h3>Materias</h3>
+                </div>
+                <div class="prof-empty">
+                    No tienes materias activas asignadas para este periodo. Verifica que tu usuario esté vinculado a un docente y que exista una asignación activa en la base.
+                </div>
+            `;
+        }
+    }
+
     state.academicMode = "materias";
     state.selectedAcademicAsignacionId = null;
     state.selectedAcademicParcialId = null;
@@ -1288,6 +1312,25 @@ function renderParcialDetail(parcial) {
     `;
 }
 
+async function cargarMiDocente() {
+    try {
+        const data = await api("/api/profesor/mi-docente");
+        state.docente = data?.docente || null;
+        state.asignaciones = Array.isArray(data?.asignaciones) ? data.asignaciones : [];
+
+        if (!state.selectedAcademicAsignacionId && state.asignaciones.length) {
+            const primera = state.asignaciones[0];
+            state.selectedAcademicAsignacionId = Number(primera?.asignacion_id || primera?.id || 0) || null;
+        }
+        return data;
+    } catch (err) {
+        console.warn("No se pudo cargar mi-docente:", err);
+        state.docente = null;
+        state.asignaciones = [];
+        return null;
+    }
+}
+
 async function loadAcademicContext() {
     injectAcademicProfesorStyles();
     const shell = document.getElementById("profSectionInsumos");
@@ -1305,9 +1348,11 @@ async function loadAcademicContext() {
         state.selectedAcademicPeriodoId = periodo?.id || state.periodosAcademicos[0]?.id || null;
         state.trimestresNuevo = trimestres || [];
         state.selectedAcademicTrimestreId = state.trimestresNuevo[0]?.id || null;
+
+        await cargarMiDocente();
         await cargarMateriasDocente();
     } catch (err) {
-        if (shell) shell.innerHTML = `<div class="card-head"><h3>Materias</h3></div><div class="prof-empty">${escapeHTML(err.message)}</div>`;
+        if (shell) shell.innerHTML = `<div class="card-head"><h3>Materias</h3></div><div class="prof-empty">${escapeHTML(err.message || "No se pudo cargar el contexto academico.")}</div>`;
     }
 }
 
@@ -1665,6 +1710,7 @@ async function init() {
         state.selectedTrimestreId = null;
 
         fillUserUI(decoded, profile);
+        await cargarMiDocente();
         await loadAcademicContext();
         try {
             const tutorData = await api("/api/profesor/tutor-estudiantes");
