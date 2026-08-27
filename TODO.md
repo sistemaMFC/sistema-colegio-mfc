@@ -36,9 +36,10 @@ Fecha: 2026-07-04
 - Flujo de parciales, insumos, notas en tiempo real ✅
 
 ## Fase 6 - Asistencia
-- [ ] Crear script `database/asistencia.sql` si las tablas reales no estan completas.
+- [x] Crear script `database/asistencia.sql` si las tablas reales no estan completas.
 - [ ] Probar guardado y recarga de asistencia por profesor tutor.
 - [ ] Luego ampliar consulta/correccion desde ADMIN.
+**Estado**: EN CURSO - estructura base preparada; pendiente validacion real de DB y flujo del profesor.
 
 ## Fase 7 - Pagos
 - [ ] Congelar nuevas funciones de pagos hasta definir modelo unico.

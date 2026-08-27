@@ -263,12 +263,27 @@ router.get('/tutor-estudiantes', authRequired, soloDocente, async (req, res) => 
     }
 });
 
-/* ── ASISTENCIA TUTOR (MVP) ─────────────────────────────────────
-   Requiere tablas:
-     asistencias (id, curso_id, paralelo_id, periodo_id, fecha, tutor_usuario_id, estado)
-     asistencia_detalle (id, asistencia_id, matricula_id, estado, observacion)
-   Si no existen, responde 501 con instruccion de setup.
-   ──────────────────────────────────────────────────────────── */
+/* ── ASISTENCIA TUTOR (SCHEMA REAL) ─────────────────────────────
+   La tabla real en la base es `asistencia`, no `asistencias`.
+   La tabla guarda una fila por matricula y fecha, con estos campos:
+     asistencia (id, matricula_id, fecha, estado, observacion, registrado_por, created_at)
+   ──────────────────────────────────────────────────────────────── */
+const MAPA_ESTADO_ASISTENCIA = {
+    PRESENTE: 'P',
+    AUSENTE: 'A',
+    ATRASO: 'T',
+    JUSTIFICADO: 'J',
+    P: 'P',
+    A: 'A',
+    T: 'T',
+    J: 'J',
+};
+
+function normalizarEstadoAsistencia(valor) {
+    const v = String(valor || '').trim().toUpperCase();
+    return MAPA_ESTADO_ASISTENCIA[v] || null;
+}
+
 router.get('/asistencia', authRequired, soloDocente, async (req, res) => {
     try {
         const { curso_id, paralelo_id, fecha } = req.query;
@@ -282,33 +297,53 @@ router.get('/asistencia', authRequired, soloDocente, async (req, res) => {
             `SELECT id FROM periodos_lectivos WHERE estado = 'ACTIVO' LIMIT 1`
         );
         const periodoId = periodoRows[0]?.id;
-        if (!periodoId) return res.json({ asistencia_id: null, fecha: fechaFinal, detalles: [] });
-
-        const [asistenciaRows] = await pool.query(
-            `SELECT id
-             FROM asistencias
-             WHERE curso_id = ? AND paralelo_id = ? AND periodo_id = ? AND fecha = ?
-             LIMIT 1`,
-            [curso_id, paralelo_id, periodoId, fechaFinal]
-        );
-
-        if (!asistenciaRows.length) {
+        if (!periodoId) {
             return res.json({ asistencia_id: null, fecha: fechaFinal, detalles: [] });
         }
 
-        const asistenciaId = asistenciaRows[0].id;
-        const [detalles] = await pool.query(
-            `SELECT matricula_id, estado, observacion
-             FROM asistencia_detalle
-             WHERE asistencia_id = ?`,
-            [asistenciaId]
+        const [matriculas] = await pool.query(
+            `SELECT id
+             FROM matriculas
+             WHERE curso_id = ?
+               AND paralelo_id = ?
+               AND periodo_id = ?
+               AND estado IN ('ACTIVO', 'MATRICULADO')
+             ORDER BY id ASC`,
+            [curso_id, paralelo_id, periodoId]
         );
 
-        return res.json({ asistencia_id: asistenciaId, fecha: fechaFinal, detalles: detalles || [] });
+        if (!matriculas.length) {
+            return res.json({ asistencia_id: null, fecha: fechaFinal, detalles: [] });
+        }
+
+        const ids = matriculas.map(m => m.id);
+        const placeholders = ids.map(() => '?').join(',');
+        const [rows] = await pool.query(
+            `SELECT a.id AS asistencia_id, a.matricula_id, a.estado, a.observacion
+             FROM asistencia a
+             WHERE a.fecha = ?
+               AND a.matricula_id IN (${placeholders})
+             ORDER BY a.matricula_id ASC`,
+            [fechaFinal, ...ids]
+        );
+
+        const map = new Map(rows.map(row => [row.matricula_id, row]));
+        const detalles = matriculas.map(m => {
+            const row = map.get(m.id);
+            return row
+                ? { matricula_id: row.matricula_id, estado: row.estado, observacion: row.observacion }
+                : { matricula_id: m.id, estado: null, observacion: null };
+        });
+
+        return res.json({
+            asistencia_id: rows[0]?.asistencia_id || null,
+            fecha: fechaFinal,
+            detalles,
+        });
     } catch (err) {
         if (String(err.code || '').includes('ER_NO_SUCH_TABLE')) {
             return res.status(501).json({
-                error: 'Falta estructura de asistencia. Crear tablas asistencias y asistencia_detalle.'
+                error: 'Falta la tabla real de asistencia. Debe existir la tabla `asistencia`.'
             });
         }
         console.error('Error listar asistencia tutor:', err);
@@ -319,13 +354,7 @@ router.get('/asistencia', authRequired, soloDocente, async (req, res) => {
 router.post('/asistencia', authRequired, soloDocente, async (req, res) => {
     const connection = await pool.getConnection();
     try {
-        const {
-            curso_id,
-            paralelo_id,
-            fecha,
-            registros,
-        } = req.body;
-
+        const { curso_id, paralelo_id, fecha, registros } = req.body;
         const fechaFinal = fecha || new Date().toISOString().slice(0, 10);
 
         if (!curso_id || !paralelo_id || !Array.isArray(registros) || !registros.length) {
@@ -353,44 +382,56 @@ router.post('/asistencia', authRequired, soloDocente, async (req, res) => {
         }
 
         await connection.beginTransaction();
-
-        const [asistenciaRows] = await connection.query(
-            `SELECT id
-             FROM asistencias
-             WHERE curso_id = ? AND paralelo_id = ? AND periodo_id = ? AND fecha = ?
-             LIMIT 1`,
-            [curso_id, paralelo_id, periodoId, fechaFinal]
-        );
-
-        let asistenciaId;
-        if (asistenciaRows.length) {
-            asistenciaId = asistenciaRows[0].id;
-        } else {
-            const [insertAsistencia] = await connection.query(
-                `INSERT INTO asistencias
-                 (curso_id, paralelo_id, periodo_id, fecha, tutor_usuario_id, estado)
-                 VALUES (?, ?, ?, ?, ?, 'ABIERTA')`,
-                [curso_id, paralelo_id, periodoId, fechaFinal, req.user.id]
-            );
-            asistenciaId = insertAsistencia.insertId;
-        }
+        let asistenciaId = null;
 
         for (const item of registros) {
             const matriculaId = Number(item.matricula_id);
-            const estado = String(item.estado || '').toUpperCase();
+            const estado = normalizarEstadoAsistencia(item.estado);
 
-            if (!matriculaId || !['PRESENTE', 'AUSENTE', 'ATRASO', 'JUSTIFICADO'].includes(estado)) {
+            if (!matriculaId || !estado) {
                 continue;
             }
 
-            await connection.query(
-                `INSERT INTO asistencia_detalle (asistencia_id, matricula_id, estado, observacion)
-                 VALUES (?, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE
-                   estado = VALUES(estado),
-                   observacion = VALUES(observacion)`,
-                [asistenciaId, matriculaId, estado, item.observacion || null]
+            const [matriculaValida] = await connection.query(
+                `SELECT id
+                 FROM matriculas
+                 WHERE id = ?
+                   AND curso_id = ?
+                   AND paralelo_id = ?
+                   AND periodo_id = ?
+                   AND estado IN ('ACTIVO', 'MATRICULADO')
+                 LIMIT 1`,
+                [matriculaId, curso_id, paralelo_id, periodoId]
             );
+
+            if (!matriculaValida.length) {
+                continue;
+            }
+
+            const [existente] = await connection.query(
+                `SELECT id
+                 FROM asistencia
+                 WHERE matricula_id = ? AND fecha = ?
+                 LIMIT 1`,
+                [matriculaId, fechaFinal]
+            );
+
+            if (existente.length) {
+                await connection.query(
+                    `UPDATE asistencia
+                     SET estado = ?, observacion = ?, registrado_por = ?
+                     WHERE id = ?`,
+                    [estado, item.observacion || null, req.user.id, existente[0].id]
+                );
+                asistenciaId = existente[0].id;
+            } else {
+                const [insertado] = await connection.query(
+                    `INSERT INTO asistencia (matricula_id, fecha, estado, observacion, registrado_por)
+                     VALUES (?, ?, ?, ?, ?)`,
+                    [matriculaId, fechaFinal, estado, item.observacion || null, req.user.id]
+                );
+                asistenciaId = insertado.insertId;
+            }
         }
 
         await connection.commit();
@@ -399,7 +440,7 @@ router.post('/asistencia', authRequired, soloDocente, async (req, res) => {
         await connection.rollback();
         if (String(err.code || '').includes('ER_NO_SUCH_TABLE')) {
             return res.status(501).json({
-                error: 'Falta estructura de asistencia. Crear tablas asistencias y asistencia_detalle.'
+                error: 'Falta la tabla real de asistencia. Debe existir la tabla `asistencia`.'
             });
         }
         console.error('Error guardar asistencia tutor:', err);
