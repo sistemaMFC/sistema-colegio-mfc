@@ -146,27 +146,54 @@ async function renderizarCursos() {
         contenedor.innerHTML = "";
 
         if (cursos.length === 0) {
-            contenedor.innerHTML = `<p class="muted">No hay cursos registrados en el sistema.</p>`;
+            contenedor.innerHTML = `<div class="curso-selector-empty">No hay cursos registrados en el sistema.</div>`;
             return;
         }
 
-        cursos.forEach((c) => {
-            contenedor.innerHTML += `
-                <div class="curso-card-mfc" onclick="abrirSelectorMatricula('${c.id}', '${normalizarNombreCurso(c.nombre)}')">
-                    <div class="curso-numero-wrapper">
-                        ${c.total_matriculados || 0}
-                    </div>
-                    <div class="curso-info-mfc">
-                        <h3 class="curso-nombre-mfc">${normalizarNombreCurso(c.nombre)}</h3>
-                        <span class="curso-detalle-mfc">Click para gestionar estudiantes</span>
-                    </div>
-                </div>
-            `;
+        const cursosOrdenados = [...cursos].sort((a, b) => {
+            const nombreA = normalizarNombreCurso(a.nombre || '');
+            const nombreB = normalizarNombreCurso(b.nombre || '');
+            return nombreA.localeCompare(nombreB, 'es', { sensitivity: 'base' });
         });
+
+        const options = cursosOrdenados.map(c => `
+            <option value="${c.id}">${normalizarNombreCurso(c.nombre)} (${c.total_matriculados || 0} estudiantes)</option>
+        `).join('');
+
+        contenedor.innerHTML = `
+            <div class="curso-selector-panel">
+                <div class="curso-selector-header">
+                    <div>
+                        <span class="curso-selector-label">Gestión rápida</span>
+                        <h4>Selecciona un curso</h4>
+                    </div>
+                    <span class="curso-selector-badge">${cursosOrdenados.length} cursos</span>
+                </div>
+                <label class="curso-selector-field">
+                    <span>Curso / nivel</span>
+                    <select id="cursoSelectorMfc" class="curso-selector-mfc">
+                        <option value="">Elige un curso</option>
+                        ${options}
+                    </select>
+                </label>
+                <div class="curso-selector-hint">Busca, selecciona y gestiona matrículas sin ocupar espacio visual.</div>
+            </div>
+        `;
+
+        const selector = document.getElementById('cursoSelectorMfc');
+        if (selector) {
+            selector.addEventListener('change', function () {
+                const cursoId = this.value;
+                const cursoSeleccionado = cursosOrdenados.find(c => String(c.id) === String(cursoId));
+                if (cursoSeleccionado) {
+                    abrirSelectorMatricula(cursoSeleccionado.id, normalizarNombreCurso(cursoSeleccionado.nombre));
+                }
+            });
+        }
 
     } catch (err) {
         console.error("Error al cargar cursos:", err);
-        contenedor.innerHTML = `<p class="danger">Error de conexión con el servidor.</p>`;
+        contenedor.innerHTML = `<div class="curso-selector-empty error">Error de conexión con el servidor.</div>`;
     }
 }
 

@@ -337,6 +337,188 @@ body.dark-mode .form-group select {
     border-color: var(--stroke) !important;
 }
 
+.curso-selector-panel {
+    position: relative;
+    display: grid;
+    gap: 16px;
+    padding: 20px 18px;
+    border: 1px solid rgba(67, 233, 123, 0.28);
+    border-radius: 22px;
+    background: linear-gradient(135deg, rgba(67, 233, 123, 0.11), rgba(37, 99, 235, 0.08));
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+    overflow: hidden;
+}
+
+.curso-selector-panel::before {
+    content: "";
+    position: absolute;
+    inset: -40% auto auto -10%;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: rgba(67, 233, 123, 0.12);
+    filter: blur(24px);
+}
+
+.curso-selector-header {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.curso-selector-header h4 {
+    margin: 4px 0 0;
+    font-size: clamp(1.1rem, 2vw, 1.5rem);
+    font-weight: 800;
+    color: var(--texto-card);
+}
+
+.curso-selector-label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(67, 233, 123, 0.9);
+}
+
+.curso-selector-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.12);
+    border: 1px solid rgba(67, 233, 123, 0.28);
+    color: var(--texto-card);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.curso-selector-field {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 8px;
+    color: var(--texto-card);
+    font-weight: 700;
+}
+
+.curso-selector-field span {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--texto-detalle);
+}
+
+.curso-selector-mfc {
+    width: 100%;
+    min-height: 52px;
+    padding: 14px 16px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    border-radius: 16px;
+    background: rgba(15, 23, 42, 0.46);
+    color: var(--texto-card);
+    font-size: 1rem;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, rgba(67, 233, 123, 0.9) 50%),
+        linear-gradient(135deg, rgba(67, 233, 123, 0.9) 50%, transparent 50%),
+        linear-gradient(to right, rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.2));
+    background-position: calc(100% - 22px) calc(1.2em + 2px), calc(100% - 16px) calc(1.2em + 2px), 100% 0;
+    background-size: 6px 6px, 6px 6px, 2.5em 3.1em;
+    background-repeat: no-repeat;
+}
+
+.curso-selector-mfc:focus {
+    border-color: rgba(67, 233, 123, 0.9);
+    box-shadow: 0 0 0 4px rgba(67, 233, 123, 0.12);
+}
+
+.curso-selector-hint {
+    position: relative;
+    z-index: 1;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.12);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    color: var(--texto-detalle);
+    font-size: 0.86rem;
+}
+
+.curso-selector-empty {
+    padding: 22px 18px;
+    border: 1px dashed rgba(148, 163, 184, 0.35);
+    border-radius: 18px;
+    background: rgba(15, 23, 42, 0.08);
+    text-align: center;
+    color: var(--texto-card);
+}
+
+.curso-selector-empty.error {
+    border-color: rgba(239, 68, 68, 0.45);
+    color: #fca5a5;
+}
+
+body.light-mode .curso-selector-panel,
+body.light-mode .curso-selector-empty {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(37, 99, 235, 0.04));
+}
+
+body.light-mode .curso-selector-badge,
+body.light-mode .curso-selector-hint,
+body.light-mode .curso-selector-empty {
+    background: rgba(255, 255, 255, 0.42);
+}
+
+body.light-mode .curso-selector-mfc {
+    background-color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(15, 23, 42, 0.12);
+    color: #0f172a;
+}
+
+@media (max-width: 768px) {
+    .grid-cursos-mfc {
+        padding-top: 4px;
+    }
+
+    .curso-selector-panel {
+        padding: 16px 14px;
+    }
+
+    .curso-selector-header {
+        align-items: flex-start;
+    }
+
+    .curso-selector-badge {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 480px) {
+    .curso-selector-panel {
+        gap: 12px;
+        border-radius: 18px;
+    }
+
+    .curso-selector-mfc {
+        min-height: 48px;
+        padding: 12px 14px;
+        font-size: 0.96rem;
+    }
+
+    .curso-selector-hint {
+        font-size: 0.8rem;
+    }
+}
+
 @media (max-width: 640px) {
     .grid-cursos-mfc {
         grid-template-columns: 1fr;
