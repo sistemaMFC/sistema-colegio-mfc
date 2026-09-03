@@ -989,28 +989,32 @@ function renderMateriasDocente(materias) {
         return `<div class="academic-empty">No tienes materias asignadas todavia.</div>`;
     }
 
+    const selectValue = state.selectedAcademicAsignacionId || "";
+
     return `
-        <div class="materias-grid">
-            ${materias.map(materia => `
-                <article class="materia-card">
-                    <div>
-                        <h4>${escapeHTML(materia.materia_nombre || materia.materia || "-")}</h4>
-                        <div class="materia-card-meta">
-                            <span>${escapeHTML(materia.curso_nombre || materia.curso || "-")} - Paralelo ${escapeHTML(materia.paralelo || "-")}</span>
-                            ${materia.especialidad ? `<span>Especialidad: ${escapeHTML(materia.especialidad)}</span>` : ""}
-                            <span>Periodo: ${escapeHTML(materia.periodo_nombre || state.periodo?.nombre || "-")}</span>
-                            ${materia.docente_nombres ? `<span>Docente: ${escapeHTML(`${materia.docente_nombres} ${materia.docente_apellidos || ""}`.trim())}</span>` : ""}
+        <div class="prof-compact-panel">
+            <div class="prof-selector-head">
+                <span class="prof-selector-label">Asignaturas activas</span>
+                <span class="prof-selector-badge">${materias.length} materias</span>
+            </div>
+            <div class="prof-compact-grid">
+                ${materias.map(materia => `
+                    <article class="prof-compact-card">
+                        <div class="prof-compact-top">
+                            <span class="prof-compact-key">${escapeHTML((materia.materia_nombre || materia.materia || "-").slice(0, 2).toUpperCase())}</span>
+                            <div>
+                                <strong>${escapeHTML(materia.materia_nombre || materia.materia || "-")}</strong>
+                                <small>${escapeHTML(materia.curso_nombre || materia.curso || "-")} · Paralelo ${escapeHTML(materia.paralelo || "-")}</small>
+                            </div>
                         </div>
-                    </div>
-                    <div class="materia-card-kpi">
-                        <span>Estudiantes</span>
-                        <strong>${escapeHTML(materia.total_estudiantes ?? "-")}</strong>
-                    </div>
-                    <div class="materia-card-actions">
-                        <button class="btn" type="button" onclick="seleccionarMateria(${Number(materia.asignacion_id || materia.id)})">Gestionar materia</button>
-                    </div>
-                </article>
-            `).join("")}
+                        <div class="prof-compact-meta">
+                            <span>${escapeHTML(materia.periodo_nombre || state.periodo?.nombre || "-")}</span>
+                            <span>${escapeHTML(materia.total_estudiantes ?? 0)} estudiantes</span>
+                        </div>
+                        <button class="btn-soft prof-compact-btn" type="button" onclick="seleccionarMateria(${Number(materia.asignacion_id || materia.id)})">Abrir</button>
+                    </article>
+                `).join("")}
+            </div>
         </div>
     `;
 }
@@ -1100,6 +1104,16 @@ function renderAcademicShell() {
             </div>
             ${renderMateriasDocente(state.academicContexts)}
         `;
+
+        const materiaSelect = document.getElementById("profMateriaSelect");
+        if (materiaSelect) {
+            materiaSelect.addEventListener("change", (event) => {
+                const value = Number(event.target.value);
+                if (value) {
+                    seleccionarMateria(value);
+                }
+            });
+        }
         return;
     }
 
