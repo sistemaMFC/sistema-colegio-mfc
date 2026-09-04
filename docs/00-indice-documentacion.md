@@ -48,6 +48,12 @@ Este índice organiza la documentación funcional, técnica y estratégica del s
 14. `14-bachillerato-especialidades.md`
     Bachillerato, especialidades, estudiantes iniciales y proteccion academica por especialidad.
 
+15. `15-documentacion-cambios-portal-profesor.md`
+    Historial del portal del profesor, fases de correccion, mejoras logradas y estado actual del módulo académico docente.
+
+16. `16-evolucion-profesor-y-escalabilidad.md`
+    Evolucion del portal del profesor, comparativa antes/despues, principios de escalabilidad y estrategia para futuras fases.
+
 ## Documentos existentes relacionados
 
 - `funcionamiento-sistema.md`

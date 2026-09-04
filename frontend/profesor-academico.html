@@ -259,6 +259,31 @@
       font-size: 12px;
       font-weight: 700;
     }
+    .prof-overview-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+    }
+    .prof-overview-card {
+      display: grid;
+      gap: 6px;
+      padding: 12px 14px;
+      border: 1px solid rgba(148,163,184,.28);
+      border-radius: 14px;
+      background: rgba(255,255,255,.72);
+    }
+    .prof-overview-card span {
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .prof-overview-card strong {
+      font-size: 18px;
+      color: var(--txt);
+    }
     .prof-selector-field {
       display: grid;
       gap: 8px;
@@ -353,6 +378,27 @@
       flex-wrap: wrap;
       font-size: 12px;
       color: var(--muted);
+    }
+    .prof-materia-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .prof-mini-action {
+      flex: 1;
+      min-width: 90px;
+      border: 1px solid rgba(148,163,184,.35);
+      background: rgba(255,255,255,.78);
+      color: var(--txt);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .prof-mini-action.alt {
+      border-color: rgba(37,99,235,.42);
+      background: rgba(37,99,235,.07);
+      color: #1d4ed8;
     }
     .prof-compact-btn {
       width: 100%;
@@ -576,7 +622,7 @@
         <h3>Materias</h3>
       </div>
       <div class="prof-empty" style="padding-top:18px; padding-bottom:18px;">
-        Las notas, parciales, insumos y examen trimestral se gestionan desde cada materia. Abre la tarjeta de la asignatura para entrar a la vista académica real.
+        El trabajo del profesor se centra en cada materia: asistencia, insumos, parciales, notas y reportes.
       </div>
     </section>
 

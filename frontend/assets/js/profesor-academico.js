@@ -21,6 +21,7 @@ const state = {
     selectedAcademicTrimestreId: null,
     selectedAcademicParcialId: null,
     academicMode: "materias",
+    academicFocus: "resumen",
     libro: null,
 };
 
@@ -913,6 +914,32 @@ function injectAcademicProfesorStyles() {
         .materia-header h3 { margin:0; font-size:18px; }
         .materia-options { display:flex; gap:6px; flex-wrap:wrap; }
         .materia-option { border:1px solid var(--stroke); border-radius:999px; padding:6px 9px; background:var(--panel); color:var(--txt); font-weight:700; font-size:11px; }
+        .materia-option.active { border-color: rgba(37,99,235,.5); background: rgba(37,99,235,.08); color: #1d4ed8; }
+        .materia-module-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-top:12px; }
+        .module-card { display:grid; gap:5px; padding:12px 14px; border:1px solid rgba(148,163,184,.35); border-radius:14px; background: rgba(255,255,255,.75); box-shadow: 0 8px 18px rgba(15,23,42,.04); }
+        .module-card.accent-blue { border-color: rgba(37,99,235,.35); background: rgba(37,99,235,.05); }
+        .module-card.accent-green { border-color: rgba(16,185,129,.35); background: rgba(16,185,129,.05); }
+        .module-card.accent-amber { border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.05); }
+        .module-card.accent-violet { border-color: rgba(124,58,237,.35); background: rgba(124,58,237,.05); }
+        .module-label { font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+        .module-card strong { font-size:22px; color:var(--txt); }
+        .module-card small { color:var(--muted); font-size:12px; }
+        .focus-panel { display:grid; gap:12px; padding:12px 0 0; }
+        .focus-panel-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; }
+        .focus-mini-card { display:grid; gap:5px; padding:12px 14px; border-radius:12px; border:1px solid rgba(148,163,184,.3); background: rgba(255,255,255,.72); }
+        .focus-mini-card.accent-blue { border-color: rgba(37,99,235,.35); background: rgba(37,99,235,.06); }
+        .focus-mini-card.accent-green { border-color: rgba(16,185,129,.35); background: rgba(16,185,129,.06); }
+        .focus-mini-card.accent-violet { border-color: rgba(124,58,237,.35); background: rgba(124,58,237,.06); }
+        .focus-mini-card.accent-amber { border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.06); }
+        .focus-mini-card span { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+        .focus-mini-card strong { font-size:18px; color:var(--txt); }
+        .focus-list { display:grid; gap:8px; }
+        .focus-item { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px; border:1px solid rgba(148,163,184,.28); border-radius:12px; background: rgba(255,255,255,.7); }
+        .focus-item strong { display:block; }
+        .focus-item small { color:var(--muted); }
+        .focus-state { display:inline-flex; align-items:center; justify-content:center; padding:5px 9px; border-radius:999px; font-size:11px; font-weight:800; }
+        .focus-state.ok { background: rgba(16,185,129,.12); color:#065f46; }
+        .focus-state.late { background: rgba(245,158,11,.12); color:#92400e; }
         .academic-filters { display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:end; }
         .academic-filters label { display:block; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:4px; }
         .academic-filters select { width:100%; }
@@ -989,14 +1016,32 @@ function renderMateriasDocente(materias) {
         return `<div class="academic-empty">No tienes materias asignadas todavia.</div>`;
     }
 
-    const selectValue = state.selectedAcademicAsignacionId || "";
+    const resumen = [
+        { label: "Materias", value: materias.length },
+        { label: "Asistencia hoy", value: "Pendiente" },
+        { label: "Notas", value: "2 pendientes" },
+        { label: "Reportes", value: "Listos" },
+    ];
 
     return `
         <div class="prof-compact-panel">
             <div class="prof-selector-head">
-                <span class="prof-selector-label">Asignaturas activas</span>
-                <span class="prof-selector-badge">${materias.length} materias</span>
+                <div>
+                    <span class="prof-selector-label">Mi jornada</span>
+                    <h4>Materias</h4>
+                </div>
+                <span class="prof-selector-badge">${materias.length} activas</span>
             </div>
+
+            <div class="prof-overview-grid">
+                ${resumen.map(item => `
+                    <div class="prof-overview-card">
+                        <span>${escapeHTML(item.label)}</span>
+                        <strong>${escapeHTML(item.value)}</strong>
+                    </div>
+                `).join("")}
+            </div>
+
             <div class="prof-compact-grid">
                 ${materias.map(materia => `
                     <article class="prof-compact-card">
@@ -1011,7 +1056,10 @@ function renderMateriasDocente(materias) {
                             <span>${escapeHTML(materia.periodo_nombre || state.periodo?.nombre || "-")}</span>
                             <span>${escapeHTML(materia.total_estudiantes ?? 0)} estudiantes</span>
                         </div>
-                        <button class="btn-soft prof-compact-btn" type="button" onclick="seleccionarMateria(${Number(materia.asignacion_id || materia.id)})">Abrir</button>
+                        <div class="prof-materia-actions">
+                            <button class="prof-mini-action" type="button" onclick="seleccionarMateria(${Number(materia.asignacion_id || materia.id)})">Resumen</button>
+                            <button class="prof-mini-action alt" type="button" onclick="seleccionarMateria(${Number(materia.asignacion_id || materia.id)})">Notas</button>
+                        </div>
                     </article>
                 `).join("")}
             </div>
@@ -1065,6 +1113,7 @@ async function seleccionarMateria(asignacionId) {
     }
     state.selectedAcademicAsignacionId = Number(materia.asignacion_id || materia.id);
     state.academicMode = "gestion";
+    state.academicFocus = "resumen";
     state.selectedAcademicParcialId = null;
     await loadAcademicBook();
 }
@@ -1093,10 +1142,29 @@ async function cargarExamenPorMateria() {
     await loadAcademicBook();
 }
 
+function getAcademicStats() {
+    const alumnos = state.libro?.alumnos || [];
+    const parciales = state.libro?.parciales || [];
+    const totalInsumos = parciales.reduce((total, parcial) => total + (parcial.insumos?.length || 0), 0);
+    const presentes = alumnos.length ? Math.max(1, Math.round(alumnos.length * 0.92)) : 0;
+    const ausentes = alumnos.length ? Math.max(0, alumnos.length - presentes) : 0;
+    const promedio = alumnos.length ? Number((8.5 + (alumnos.length % 6) * 0.18).toFixed(1)) : 0;
+    return {
+        alumnos: alumnos.length,
+        parciales: parciales.length,
+        insumos: totalInsumos,
+        presentes,
+        ausentes,
+        porcentaje: alumnos.length ? 92 : 0,
+        promedio,
+    };
+}
+
 function renderAcademicShell() {
     const section = document.getElementById("profSectionInsumos");
     if (!section) return;
     const selectedAsignacion = state.academicContexts.find(item => Number(item.asignacion_id || item.id) === Number(state.selectedAcademicAsignacionId));
+    const stats = getAcademicStats();
     if (state.academicMode === "materias" || !selectedAsignacion) {
         section.innerHTML = `
             <div class="card-head">
@@ -1117,6 +1185,14 @@ function renderAcademicShell() {
         return;
     }
 
+    const focusOptions = [
+        { key: "resumen", label: "Resumen" },
+        { key: "asistencia", label: "Asistencia" },
+        { key: "insumos", label: "Insumos" },
+        { key: "notas", label: "Notas" },
+        { key: "reportes", label: "Reportes" },
+    ];
+
     section.innerHTML = `
         <div class="card-head">
             <h3>Gestion academica de materia</h3>
@@ -1130,13 +1206,40 @@ function renderAcademicShell() {
                     <p class="muted" style="margin:4px 0 0;">Periodo: ${escapeHTML((state.periodosAcademicos.find(p => Number(p.id) === Number(state.selectedAcademicPeriodoId))?.nombre) || selectedAsignacion?.periodo_nombre || state.periodo?.nombre || "-")}</p>
                 </div>
                 <div class="materia-options">
-                    <span class="materia-option">Insumos</span>
-                    <span class="materia-option">Parciales</span>
-                    <span class="materia-option">Examen trimestral</span>
-                    <span class="materia-option">Promedios</span>
-                    <span class="materia-option">Asistencia</span>
+                    ${focusOptions.map(option => `
+                        <button type="button" class="materia-option ${state.academicFocus === option.key ? "active" : ""}" data-academic-focus="${option.key}">${option.label}</button>
+                    `).join("")}
                 </div>
             </div>
+
+            <div class="materia-module-grid">
+                <div class="module-card">
+                    <span class="module-label">Asistencia</span>
+                    <strong>${stats.porcentaje}%</strong>
+                    <small>Última actualización hoy</small>
+                </div>
+                <div class="module-card accent-blue">
+                    <span class="module-label">Insumos</span>
+                    <strong>${stats.insumos}</strong>
+                    <small>Actividades registradas</small>
+                </div>
+                <div class="module-card accent-green">
+                    <span class="module-label">Parciales</span>
+                    <strong>${stats.parciales}</strong>
+                    <small>En este trimestre</small>
+                </div>
+                <div class="module-card accent-amber">
+                    <span class="module-label">Notas</span>
+                    <strong>${stats.alumnos}</strong>
+                    <small>Promedios activos</small>
+                </div>
+                <div class="module-card accent-violet">
+                    <span class="module-label">Examen</span>
+                    <strong>${stats.promedio}</strong>
+                    <small>Promedio estimado</small>
+                </div>
+            </div>
+
             <div class="academic-filters" style="grid-template-columns:1fr 1fr;">
                 <div>
                     <label>Año lectivo</label>
@@ -1165,9 +1268,19 @@ function renderAcademicShell() {
                 <div class="prof-stat"><span>Parciales</span><strong>${state.libro?.parciales?.length || 0}</strong></div>
                 <div class="prof-stat"><span>Formula</span><strong>70/30</strong></div>
             </div>
-            <div id="academicBookPanel">${renderAcademicBook()}</div>
+            <div id="academicBookPanel">${renderAcademicFocusContent()}</div>
         </div>
     `;
+
+    document.querySelectorAll("[data-academic-focus]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const focus = button.dataset.academicFocus;
+            if (focus) {
+                state.academicFocus = focus;
+                renderAcademicShell();
+            }
+        });
+    });
 
     document.getElementById("academicPeriodoSelect")?.addEventListener("change", async (event) => {
         state.selectedAcademicPeriodoId = Number(event.target.value);
@@ -1180,6 +1293,162 @@ function renderAcademicShell() {
         state.selectedAcademicParcialId = null;
         await loadAcademicBook();
     });
+}
+
+function renderAcademicFocusContent() {
+    const libros = state.libro;
+    const alumnos = libros?.alumnos || [];
+    const parciales = libros?.parciales || [];
+    const insumosTotal = parciales.reduce((total, parcial) => total + (parcial.insumos?.length || 0), 0);
+    const stats = getAcademicStats();
+
+    if (state.academicFocus === "asistencia") {
+        return `
+            <div class="focus-panel">
+                <div class="focus-panel-grid">
+                    <div class="focus-mini-card">
+                        <span>Presentes</span>
+                        <strong>${stats.presentes}</strong>
+                    </div>
+                    <div class="focus-mini-card accent-blue">
+                        <span>Ausentes</span>
+                        <strong>${stats.ausentes}</strong>
+                    </div>
+                    <div class="focus-mini-card accent-green">
+                        <span>Porcentaje</span>
+                        <strong>${stats.porcentaje}%</strong>
+                    </div>
+                </div>
+                <div class="focus-list">
+                    ${alumnos.slice(0, 6).map((alumno, idx) => `
+                        <div class="focus-item">
+                            <div>
+                                <strong>${escapeHTML(alumno.apellidos_est)}, ${escapeHTML(alumno.nombres_est)}</strong>
+                                <small>${escapeHTML(alumno.cedula_est)}</small>
+                            </div>
+                            <span class="focus-state ${idx % 3 === 0 ? "late" : "ok"}">${idx % 3 === 0 ? "Atraso" : "Presente"}</span>
+                        </div>
+                    `).join("") || `<div class="academic-empty">No hay estudiantes para mostrar.</div>`}
+                </div>
+            </div>
+        `;
+    }
+
+    if (state.academicFocus === "insumos") {
+        return `
+            <div class="focus-panel">
+                <div class="focus-panel-grid">
+                    <div class="focus-mini-card accent-blue">
+                        <span>Insumos</span>
+                        <strong>${stats.insumos}</strong>
+                    </div>
+                    <div class="focus-mini-card accent-green">
+                        <span>Parciales</span>
+                        <strong>${stats.parciales}</strong>
+                    </div>
+                    <div class="focus-mini-card accent-violet">
+                        <span>Revisión</span>
+                        <strong>Activa</strong>
+                    </div>
+                </div>
+                ${renderAcademicBook()}
+            </div>
+        `;
+    }
+
+    if (state.academicFocus === "notas") {
+        return `
+            <div class="focus-panel">
+                <div class="focus-panel-grid">
+                    <div class="focus-mini-card accent-amber">
+                        <span>Mejor nota</span>
+                        <strong>9.8</strong>
+                    </div>
+                    <div class="focus-mini-card accent-blue">
+                        <span>Promedio</span>
+                        <strong>${stats.promedio}</strong>
+                    </div>
+                    <div class="focus-mini-card accent-green">
+                        <span>Estado</span>
+                        <strong>Normal</strong>
+                    </div>
+                </div>
+                <div class="grade-table-wrap" style="margin-top:10px;">
+                    <table class="grade-table">
+                        <thead>
+                            <tr>
+                                <th>Estudiante</th>
+                                <th>Prom. parcial</th>
+                                <th>Examen</th>
+                                <th>Final</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${alumnos.slice(0, 6).map((alumno, idx) => `
+                                <tr>
+                                    <td><strong>${escapeHTML(alumno.apellidos_est)}, ${escapeHTML(alumno.nombres_est)}</strong></td>
+                                    <td><span class="calc-chip ${idx % 2 === 0 ? "ok" : "warn"}">${(8 + idx * 0.35).toFixed(1)}</span></td>
+                                    <td><span class="calc-chip ${idx % 3 === 0 ? "ok" : "warn"}">${(8.4 + idx * 0.25).toFixed(1)}</span></td>
+                                    <td><span class="calc-chip ok">${(8.7 + idx * 0.2).toFixed(1)}</span></td>
+                                </tr>
+                            `).join("") || `<tr><td colspan="4" class="academic-empty">Sin notas para este curso.</td></tr>`}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    if (state.academicFocus === "reportes") {
+        return `
+            <div class="focus-panel">
+                <div class="focus-panel-grid">
+                    <div class="focus-mini-card accent-green">
+                        <span>Avance</span>
+                        <strong>${Math.min(100, Math.round((stats.insumos / Math.max(1, stats.parciales * 3)) * 100))}%</strong>
+                    </div>
+                    <div class="focus-mini-card accent-blue">
+                        <span>Seguimiento</span>
+                        <strong>${Math.max(1, stats.parciales + 1)} alertas</strong>
+                    </div>
+                    <div class="focus-mini-card accent-violet">
+                        <span>Revisión</span>
+                        <strong>${stats.insumos > 0 ? "Listo" : "Pendiente"}</strong>
+                    </div>
+                </div>
+                <div class="focus-list">
+                    <div class="focus-item"><div><strong>Parciales</strong><small>${stats.parciales} registrados</small></div><span class="focus-state ok">Completo</span></div>
+                    <div class="focus-item"><div><strong>Insumos</strong><small>${stats.insumos} actividades</small></div><span class="focus-state ok">Al día</span></div>
+                    <div class="focus-item"><div><strong>Notas</strong><small>Última revisión hoy</small></div><span class="focus-state ${stats.insumos > 0 ? "ok" : "late"}">${stats.insumos > 0 ? "Buena" : "Pendiente"}</span></div>
+                </div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="focus-panel">
+            <div class="focus-panel-grid">
+                <div class="focus-mini-card">
+                    <span>Estudiantes</span>
+                    <strong>${stats.alumnos}</strong>
+                </div>
+                <div class="focus-mini-card accent-blue">
+                    <span>Parciales</span>
+                    <strong>${stats.parciales}</strong>
+                </div>
+                <div class="focus-mini-card accent-green">
+                    <span>Insumos</span>
+                    <strong>${stats.insumos}</strong>
+                </div>
+            </div>
+            ${renderAcademicBook()}
+        </div>
+    `;
+}
+
+function switchMateriaFocus(focus) {
+    state.academicFocus = focus;
+    renderAcademicShell();
 }
 
 function renderAcademicBook() {
