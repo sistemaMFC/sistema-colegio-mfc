@@ -7,10 +7,10 @@
       - CORS restringido en producción
       - Límite de payload 1MB
    ============================================================ */
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const express = require('express');
 const cors    = require('cors');
-const path    = require('path');
 
 const app = express();
 
@@ -39,6 +39,7 @@ const academicoRoutes   = require('./routes/academico.routes');
 const pagosRoutes       = require('./routes/pagos.routes');
 const enrollmentsRoutes = require('./routes/enrollments.routes');
 const profesorRoutes    = require('./routes/profesor.routes');
+const deceRoutes        = require('./routes/dece.routes');
 const setupRoutes       = require('./routes/setup.routes');
 
 app.use('/auth',            authRoutes);
@@ -48,6 +49,7 @@ app.use('/api/academico',   academicoRoutes);
 app.use('/api/pagos',       pagosRoutes);         // ✅ protegido internamente con authRequired
 app.use('/api/enrollments', enrollmentsRoutes);   // ✅ ya no estaba registrado
 app.use('/api/profesor',    profesorRoutes);      // ✅ portal del profesor
+app.use('/api/dece',       deceRoutes);           // ✅ módulo DECE
 app.use('/setup',           setupRoutes);        // ✅ Registrar ruta de configuración inicial
 
 /* ── Estáticos ── */

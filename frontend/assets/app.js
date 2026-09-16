@@ -47,8 +47,29 @@ function getCurrentRole() {
     return parseJWT(getToken())?.rol || getUser()?.rol || "";
 }
 
+function getUserRoleList() {
+    const token = parseJWT(getToken()) || {};
+    const user = getUser() || {};
+    const roles = [
+        ...(Array.isArray(token.roles) ? token.roles : []),
+        ...(Array.isArray(user.roles) ? user.roles : []),
+        ...(user.rol ? [user.rol] : []),
+        ...(token.rol ? [token.rol] : []),
+    ];
+
+    return Array.from(new Set(roles.map(r => String(r || '').toUpperCase()).filter(Boolean)));
+}
+
+function formatRoleLabel(role) {
+    if (!role) return 'ROL';
+    if (role === 'PSICOLOGO') return 'DS';
+    if (role === 'ADMINISTRADOR') return 'Admin';
+    return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
+}
+
 function currentUserIsAdmin() {
-    return getCurrentRole() === "ADMIN";
+    const roles = getUserRoleList();
+    return roles.includes("ADMIN") || roles.includes("ADMINISTRADOR");
 }
 
 function getProfilePhotoKey(userId = getUser()?.id || parseJWT(getToken())?.id) {
@@ -240,7 +261,8 @@ function fillUserUI() {
         return;
     }
 
-    if($("#pillRole")) $("#pillRole").textContent = decoded.rol;
+    const roles = getUserRoleList();
+    if($("#pillRole")) $("#pillRole").textContent = roles.length ? roles.map(formatRoleLabel).join(' • ') : 'ROL';
 
     const user = getUser();
     const nombres = user?.nombres || "Admin";
@@ -250,8 +272,15 @@ function fillUserUI() {
     if($("#userName")) $("#userName").textContent = `${nombres} ${apellidos}`.trim();
     if($("#userCedula")) $("#userCedula").textContent = `Cédula: ${cedula}`;
     setAvatarElement($("#avatar"), nombres, getProfilePhoto(user?.id || decoded.id));
+
+    const btnAdmin = $("#btnAdminTop");
+    if (btnAdmin) btnAdmin.hidden = !(roles.includes("ADMIN") || roles.includes("ADMINISTRADOR"));
+
     const btnProfesor = $("#btnProfesorTop");
-    if (btnProfesor) btnProfesor.hidden = decoded.rol !== "ADMIN";
+    if (btnProfesor) btnProfesor.hidden = !(roles.includes("PROFESOR") || roles.includes("ADMIN") || roles.includes("ADMINISTRADOR"));
+
+    const btnDs = $("#btnDsTop");
+    if (btnDs) btnDs.hidden = !(roles.includes("PSICOLOGO") || roles.includes("ADMIN") || roles.includes("ADMINISTRADOR"));
 }
 
 function setActiveView(view) {
@@ -572,6 +601,7 @@ function abrirModalEditarUsuario(id) {
                         <option value="SECRETARIA" ${u.rol === "SECRETARIA" ? "selected" : ""}>Secretaria</option>
                         <option value="COLECTOR" ${u.rol === "COLECTOR" ? "selected" : ""}>Colector</option>
                         <option value="PROFESOR" ${u.rol === "PROFESOR" ? "selected" : ""}>Profesor</option>
+                        <option value="PSICOLOGO" ${u.rol === "PSICOLOGO" ? "selected" : ""}>Psicólogo</option>
                     </select>
                 </div>
             </div>
@@ -1074,8 +1104,14 @@ function setupInteractions() {
     $("#btnLogoutSide")?.addEventListener("click", logout);
     $("#btnLogoutTop")?.addEventListener("click", logout);
     $("#btnPerfilTop")?.addEventListener("click", abrirModalPerfil);
+    $("#btnAdminTop")?.addEventListener("click", () => {
+        window.location.href = "./app.html";
+    });
     $("#btnProfesorTop")?.addEventListener("click", () => {
         window.location.href = "./profesor-academico.html";
+    });
+    $("#btnDsTop")?.addEventListener("click", () => {
+        window.location.href = "./dece.html";
     });
 
     $$("[data-toggle-pass]").forEach(btn => {

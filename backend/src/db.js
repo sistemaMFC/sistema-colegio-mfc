@@ -2,7 +2,8 @@
    CONEXIÓN BD — COLEGIO MFC
    ✅ CORREGIDO: Credenciales en .env, nunca en el código
    ============================================================ */
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const mysql = require('mysql2/promise');
 
 const pool = mysql.createPool({

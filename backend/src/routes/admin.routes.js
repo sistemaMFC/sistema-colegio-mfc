@@ -4,7 +4,7 @@ const db = require("../db");
 const { authRequired, onlyAdmin } = require("../middlewares/auth");
 
 const router = express.Router();
-const ROLES_PERMITIDOS = ["ADMIN", "SECRETARIA", "COLECTOR", "PROFESOR"];
+const ROLES_PERMITIDOS = ["ADMIN", "SECRETARIA", "COLECTOR", "PROFESOR", "PSICOLOGO"];
 const MATERIAS_OFICIALES = [
   { codigo: "CEL", nombre: "COMPRENSIÓN Y EXPRESIÓN DEL LENGUAJE" },
   { codigo: "RLM", nombre: "RELACIÓN LÓGICO MATEMÁTICO" },

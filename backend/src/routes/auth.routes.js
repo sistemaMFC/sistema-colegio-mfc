@@ -1,8 +1,11 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt'); // <--- NUEVO: Librería para comparar contraseñas encriptadas
+const bcrypt = require('bcrypt');
 const pool = require('../db');
 const { authRequired } = require('../middlewares/auth');
+const { normalizeRoles } = require('../utils/roles');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -49,18 +52,28 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Contraseña incorrecta' });
         }
 
-        // 5. Generar Token JWT (Usando secreto de Render o local)
+        const [roleRows] = await pool.query(
+            `SELECT r.nombre
+             FROM usuario_roles ur
+             JOIN roles r ON r.id = ur.rol_id
+             WHERE ur.usuario_id = ?`,
+            [user.id]
+        );
+
+        const extraRoles = roleRows.map(row => row.nombre);
+        const finalRoles = normalizeRoles(user.rol, extraRoles);
+
         const token = jwt.sign(
-            { 
-                id: user.id, 
-                rol: user.rol, 
-                cedula: user.cedula.trim() 
+            {
+                id: user.id,
+                rol: user.rol,
+                roles: finalRoles,
+                cedula: user.cedula.trim(),
             },
             JWT_SECRET,
             { expiresIn: '8h' }
         );
 
-        // 6. Respuesta exitosa
         return res.json({
             message: 'Login correcto ✅',
             token,
@@ -68,7 +81,8 @@ router.post('/login', async (req, res) => {
                 id: user.id,
                 nombres: user.nombres,
                 apellidos: user.apellidos,
-                rol: user.rol
+                rol: user.rol,
+                roles: finalRoles,
             }
         });
 
@@ -91,7 +105,21 @@ router.get('/me', authRequired, async (req, res) => {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
 
-        return res.json(rows[0]);
+        const [roleRows] = await pool.query(
+            `SELECT r.nombre
+             FROM usuario_roles ur
+             JOIN roles r ON r.id = ur.rol_id
+             WHERE ur.usuario_id = ?`,
+            [req.user.id]
+        );
+
+        const roles = normalizeRoles(rows[0].rol, roleRows.map(r => r.nombre));
+        const user = {
+            ...rows[0],
+            roles,
+        };
+
+        return res.json(user);
     } catch (err) {
         console.error('Error en GET /auth/me:', err);
         return res.status(500).json({ error: 'Error al consultar perfil' });

@@ -29,17 +29,30 @@ function getStoredUser() {
     }
 }
 
+function getUserRoles(user) {
+    const direct = Array.isArray(user?.roles) ? user.roles : [];
+    const legacy = user?.rol ? [user.rol] : [];
+    return Array.from(new Set([...direct, ...legacy].map(r => String(r || "").toUpperCase()))).filter(Boolean);
+}
+
 function redirectIfAuthenticated() {
     const token = getToken();
     const user = getStoredUser();
-    if (token && user?.rol) {
-        window.location.href = getHomeByRole(user.rol);
+    if (token && user) {
+        const roles = getUserRoles(user);
+        if (roles.length) {
+            window.location.href = getHomeByRole(roles);
+        }
     }
 }
 
-function getHomeByRole(role) {
-    const rol = String(role || "").toUpperCase();
-    if (rol === "PROFESOR") return "./profesor-academico.html";
+function getHomeByRole(roles) {
+    const normalized = Array.isArray(roles) ? roles : [roles];
+    const list = normalized.map(r => String(r || "").toUpperCase()).filter(Boolean);
+
+    if (list.includes("ADMIN") || list.includes("ADMINISTRADOR")) return "./app.html";
+    if (list.includes("PROFESOR")) return "./profesor-academico.html";
+    if (list.includes("PSICOLOGO")) return "./dece.html";
     return "./app.html";
 }
 

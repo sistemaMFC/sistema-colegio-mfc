@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS dece_casos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  estudiante VARCHAR(150) NOT NULL,
+  curso VARCHAR(120) NOT NULL,
+  motivo TEXT NOT NULL,
+  prioridad VARCHAR(20) DEFAULT 'MEDIA',
+  estado VARCHAR(40) DEFAULT 'ACTIVO',
+  remitido_por VARCHAR(150) DEFAULT 'Sin remisión',
+  observaciones TEXT,
+  responsable VARCHAR(120) DEFAULT 'DECE',
+  fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS dece_atenciones (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  caso_id INT NOT NULL,
+  estudiante VARCHAR(150) NOT NULL,
+  tipo VARCHAR(30) NOT NULL,
+  resumen TEXT NOT NULL,
+  responsable VARCHAR(120) DEFAULT 'Psicólogo',
+  fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_dece_atenciones_caso FOREIGN KEY (caso_id) REFERENCES dece_casos(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

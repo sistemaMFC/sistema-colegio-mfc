@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seleccionar módulo</title>
+  <link rel="stylesheet" href="./assets/app.css" />
+  <style>
+    body {
+      background: linear-gradient(135deg, #f8fafc, #eef7f4);
+      font-family: Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      color: #0f172a;
+    }
+    .selector-shell {
+      width: min(900px, 90vw);
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 22px;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+      padding: 30px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.8rem, 2vw, 2.4rem);
+    }
+    .subtitle {
+      margin: 0 0 26px;
+      color: #475569;
+    }
+    .module-grid {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    .module-card {
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+      border-radius: 18px;
+      padding: 18px 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      cursor: pointer;
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .module-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(37,99,235,.5);
+      box-shadow: 0 10px 28px rgba(37,99,235,.08);
+    }
+    .module-card .icon {
+      font-size: 2rem;
+    }
+    .module-card h2 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+    .module-card p {
+      margin: 0;
+      color: #475569;
+      font-size: .92rem;
+    }
+    .module-card button {
+      margin-top: auto;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #2563eb, #10b981);
+      color: white;
+      padding: 10px 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <main class="selector-shell">
+    <h1>Seleccione un módulo</h1>
+    <p class="subtitle">Tiene acceso a varios módulos del sistema. Elija el que desea abrir.</p>
+    <div id="moduleGrid" class="module-grid"></div>
+  </main>
+
+  <script src="./assets/js/modulo-selector.js"></script>
+</body>
+</html>

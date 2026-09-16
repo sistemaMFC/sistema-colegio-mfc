@@ -14,6 +14,22 @@ const passInput   = document.getElementById("password");
 
 const API = window.MFC_API_BASE || window.location.origin;
 
+function getUserRoles(user) {
+    const direct = Array.isArray(user?.roles) ? user.roles : [];
+    const legacy = user?.rol ? [user.rol] : [];
+    return Array.from(new Set([...direct, ...legacy].map(r => String(r || "").toUpperCase()))).filter(Boolean);
+}
+
+function getHomeByRole(roles) {
+    const normalized = Array.isArray(roles) ? roles : [roles];
+    const list = normalized.map(r => String(r || "").toUpperCase()).filter(Boolean);
+
+    if (list.includes("ADMIN") || list.includes("ADMINISTRADOR")) return "./app.html";
+    if (list.includes("PROFESOR")) return "./profesor-academico.html";
+    if (list.includes("PSICOLOGO")) return "./dece.html";
+    return "./app.html";
+}
+
 function setMsg(text, ok = false) {
     msg.textContent = text || "";
     msg.className   = ok ? "msg ok" : "msg err";
@@ -49,16 +65,11 @@ form.addEventListener("submit", async (e) => {
 
         setMsg(`¡Bienvenido/a ${data.user.nombres}! Redirigiendo...`, true);
 
-        // ── REDIRECCIÓN POR ROL ──────────────────────────────
+        // ── REDIRECCIÓN POR ROL MÚLTIPLE ──────────────────────────────
         setTimeout(() => {
-            const rol = data.user.rol;
-            if (rol === "PROFESOR") {
-                // El profesor va directo al módulo académico — nada más
-                window.location.href = "./profesor-academico.html";
-            } else {
-                // Admin, Secretaria, Colector → sistema completo
-                window.location.href = "./app.html";
-            }
+            const roles = getUserRoles(data.user);
+            const destination = getHomeByRole(roles);
+            window.location.href = destination;
         }, 900);
 
     } catch (err) {

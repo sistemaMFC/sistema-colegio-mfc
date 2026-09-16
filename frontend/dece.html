@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DECE - MFC</title>
+  <link rel="stylesheet" href="./assets/app.css" />
+  <style>
+    :root {
+      --bg: #e8e4cf;
+      --bg-2: #dfe7d2;
+      --panel: #f5f3ed;
+      --panel-soft: #f0efe8;
+      --sidebar: #e9dac0;
+      --sidebar-soft: #f1e7d0;
+      --green: #2e8d5d;
+      --green-dark: #1a6f48;
+      --green-soft: #dfeee5;
+      --green-bright: #52c67e;
+      --text: #1f2d23;
+      --muted: #5b655f;
+      --white: #ffffff;
+      --line: rgba(31, 44, 34, 0.12);
+      --shadow: 0 16px 36px rgba(20, 29, 24, 0.12);
+      --shadow-soft: 0 10px 24px rgba(20, 29, 24, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--text);
+    }
+
+    body {
+      min-height: 100vh;
+      padding: 0;
+      display: block;
+    }
+
+    .dece-shell {
+      width: 100%;
+      min-height: 100vh;
+      max-width: none;
+      background: var(--panel);
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      overflow: hidden;
+    }
+
+    .sidebar {
+      background: linear-gradient(180deg, var(--sidebar-soft) 0%, var(--sidebar) 100%);
+      border-right: 1px solid var(--line);
+      padding: 18px 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 6px 8px 20px;
+      border-bottom: 1px solid rgba(31, 44, 34, 0.12);
+    }
+
+    .brand-mark {
+      width: 60px;
+      height: 60px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-bright) 100%);
+      position: relative;
+      box-shadow: inset 0 0 0 4px rgba(255,255,255,0.2);
+    }
+
+    .brand-mark::before {
+      content: "DE";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--white);
+      letter-spacing: 0.08em;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+
+    .brand-text small {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .brand-text strong {
+      font-size: clamp(1.7rem, 1.8vw, 2.2rem);
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      color: var(--text);
+    }
+
+    .menu {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .menu-item {
+      border: 1px solid rgba(31,44,34,0.03);
+      background: rgba(255,255,255,0.18);
+      border-radius: 14px;
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      font-size: 0.96rem;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+    }
+
+    .menu-item:hover {
+      transform: translateX(3px);
+      border-color: rgba(31, 44, 34, 0.12);
+      background: rgba(255,255,255,0.28);
+    }
+
+    .menu-item.active {
+      background: linear-gradient(90deg, rgba(47,143,95,0.18), rgba(47,143,95,0.06));
+      border-color: rgba(47,143,95,0.28);
+      box-shadow: inset 0 0 0 1px rgba(47,143,95,0.12);
+    }
+
+    .menu-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,0.5);
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      border: 1px solid rgba(31,44,34,0.08);
+    }
+
+    .sidebar-card {
+      margin-top: auto;
+      background: rgba(255,255,255,0.36);
+      border: 1px solid rgba(31,44,34,0.08);
+      border-radius: 16px;
+      padding: 14px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--green-dark), var(--green));
+      color: var(--white);
+      font-weight: 800;
+    }
+
+    .sidebar-card small {
+      display: block;
+      color: var(--muted);
+      font-size: 0.72rem;
+    }
+
+    .sidebar-card strong {
+      display: block;
+      font-size: 0.95rem;
+    }
+
+    .main {
+      background: linear-gradient(180deg, #faf8f3 0%, #f1efe9 100%);
+      padding: 20px 22px 24px;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      margin: 0 0 18px;
+      padding: 4px 0;
+      flex-wrap: wrap;
+    }
+
+    .eyebrow {
+      margin: 0;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 2.5vw, 2.9rem);
+      line-height: 1.1;
+      color: var(--text);
+    }
+
+    .topbar-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 12px;
+      min-height: 42px;
+      padding: 0 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+      color: var(--white);
+      box-shadow: 0 10px 18px rgba(47, 143, 95, 0.28);
+    }
+
+    .btn-secondary {
+      background: #ffffff;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .stat-card {
+      background: rgba(255,255,255,0.72);
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      padding: 18px 16px 16px;
+      box-shadow: var(--shadow-soft);
+      position: relative;
+      overflow: hidden;
+      min-height: 150px;
+    }
+
+    .stat-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 5px;
+      background: var(--green);
+    }
+
+    .stat-card.green::before { background: var(--green); }
+    .stat-card.soft::before { background: #8fb9b0; }
+    .stat-card.gold::before { background: #d9b96b; }
+    .stat-card.navy::before { background: #5d7e9b; }
+
+    .stat-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+
+    .stat-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: var(--green-soft);
+      font-size: 1.1rem;
+    }
+
+    .stat-value {
+      font-size: clamp(2.5rem, 2.2vw, 3rem);
+      font-weight: 800;
+      line-height: 1;
+      margin: 10px 0 0;
+      color: var(--text);
+    }
+
+    .stat-trend {
+      margin-top: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(47,143,95,0.08);
+      color: var(--green-dark);
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1.45fr 0.95fr;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .panel {
+      background: rgba(255,255,255,0.75);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow-soft);
+      padding: 16px 18px;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(47,143,95,0.1);
+      color: var(--green-dark);
+      font-size: 0.74rem;
+      font-weight: 800;
+    }
+
+    .schedule {
+      display: grid;
+      gap: 10px;
+    }
+
+    .schedule-item {
+      display: grid;
+      grid-template-columns: 76px 1fr auto;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 10px;
+      background: #f7f9f4;
+      border: 1px solid rgba(31,44,34,0.08);
+      border-radius: 14px;
+    }
+
+    .day-box {
+      background: linear-gradient(135deg, var(--green-soft), #edf7f1);
+      border: 1px solid rgba(47,143,95,0.2);
+      border-radius: 12px;
+      min-height: 58px;
+      display: grid;
+      place-items: center;
+      color: var(--green-dark);
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .time {
+      font-size: 0.76rem;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .schedule-item strong {
+      font-size: 0.98rem;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 6px 9px;
+      border-radius: 9px;
+      background: rgba(47,143,95,0.1);
+      color: var(--green-dark);
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .tasks {
+      display: grid;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .task-item {
+      padding: 12px 12px;
+      border: 1px solid rgba(31,44,34,0.08);
+      border-radius: 14px;
+      background: linear-gradient(180deg, #fff, #f8faf5);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      min-height: 72px;
+    }
+
+    .task-item strong {
+      display: block;
+      font-size: 0.96rem;
+      margin-bottom: 4px;
+    }
+
+    .task-item small {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .task-status {
+      min-width: 96px;
+      text-align: center;
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      background: rgba(255, 184, 77, 0.12);
+      color: #a76b00;
+    }
+
+    .dece-form {
+      display: grid;
+      gap: 12px;
+    }
+
+    .dece-form input,
+    .dece-form select,
+    .dece-form textarea {
+      width: 100%;
+      border: 1px solid rgba(31, 44, 34, 0.12);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font: inherit;
+      background: #f8faf5;
+      color: var(--text);
+    }
+
+    .dece-form textarea {
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(150px, 1fr));
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .quick-card {
+      min-height: 170px;
+      border-radius: 18px;
+      padding: 18px 16px;
+      border: 1px solid var(--line);
+      background: linear-gradient(135deg, #ffffff 0%, #f5f7f0 100%);
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .quick-card.green {
+      background: linear-gradient(135deg, rgba(47,143,95,0.14), rgba(47,143,95,0.05));
+    }
+
+    .quick-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+      color: var(--white);
+      font-size: 1.7rem;
+      box-shadow: 0 12px 20px rgba(47,143,95,0.22);
+    }
+
+    .quick-card h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      line-height: 1.15;
+    }
+
+    .quick-card span {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    @media (max-width: 980px) {
+      .dece-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .menu {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
+      }
+
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .quick-grid {
+        grid-template-columns: repeat(2, minmax(150px, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .main {
+        padding: 16px 14px 18px;
+      }
+
+      .dece-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-grid,
+      .quick-grid {
+        gap: 12px;
+      }
+
+      .menu {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-grid,
+      .quick-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .schedule-item {
+        grid-template-columns: 60px 1fr;
+      }
+
+      .schedule-item .tag {
+        grid-column: 2;
+        justify-self: start;
+      }
+
+      .brand {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="dece-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div class="brand-text">
+          <small>Departamentos</small>
+          <strong>DECE</strong>
+        </div>
+      </div>
+
+      <nav class="menu" aria-label="Menú DECE">
+        <button class="menu-item active" type="button"><span class="menu-icon">🏠</span>Dashboard</button>
+        <button class="menu-item" type="button"><span class="menu-icon">🧠</span>Psicología</button>
+        <button class="menu-item" type="button"><span class="menu-icon">🤝</span>Convivencia</button>
+        <button class="menu-item" type="button"><span class="menu-icon">👥</span>Estudiantes</button>
+        <button class="menu-item" type="button"><span class="menu-icon">🎓</span>Orientación</button>
+        <button class="menu-item" type="button"><span class="menu-icon">📈</span>Reportes</button>
+      </nav>
+
+      <div class="sidebar-card">
+        <div class="avatar">AP</div>
+        <div>
+          <small>Coordinación</small>
+          <strong>Asistente DECE</strong>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Departamento de</p>
+          <h1>Consejería Estudiantil</h1>
+        </div>
+
+        <div class="topbar-actions">
+          <button class="btn btn-secondary" id="btnVolverInicio" type="button">Inicio</button>
+          <button class="btn btn-primary" id="btnCerrarSesion" type="button">Cerrar sesión</button>
+        </div>
+      </header>
+
+      <section class="stats-grid">
+        <article class="stat-card green">
+          <div class="stat-label">
+            <span>Atenciones</span>
+            <span class="stat-icon">💬</span>
+          </div>
+          <div class="stat-value" id="countAtenciones">0</div>
+          <div class="stat-trend">hoy</div>
+        </article>
+
+        <article class="stat-card soft">
+          <div class="stat-label">
+            <span>Casos</span>
+            <span class="stat-icon">📌</span>
+          </div>
+          <div class="stat-value" id="countCasos">0</div>
+          <div class="stat-trend">activos</div>
+        </article>
+
+        <article class="stat-card gold">
+          <div class="stat-label">
+            <span>Seguimientos</span>
+            <span class="stat-icon">🗂️</span>
+          </div>
+          <div class="stat-value" id="countSeguimientos">0</div>
+          <div class="stat-trend">pendientes</div>
+        </article>
+
+        <article class="stat-card navy">
+          <div class="stat-label">
+            <span>Remisiones</span>
+            <span class="stat-icon">📩</span>
+          </div>
+          <div class="stat-value" id="countRemisiones">0</div>
+          <div class="stat-trend">docentes</div>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Casos activos</h2>
+            <span class="pill">DECE</span>
+          </div>
+          <div id="casosList" class="schedule"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Nueva atención</h2>
+            <span class="pill">Registrar</span>
+          </div>
+
+          <form id="formAtencion" class="dece-form">
+            <input id="atencionCasoId" type="number" placeholder="ID del caso" required />
+            <input id="atencionEstudiante" type="text" placeholder="Estudiante" required />
+            <select id="atencionTipo">
+              <option value="SEGUIMIENTO">SEGUIMIENTO</option>
+              <option value="EVALUACIÓN">EVALUACIÓN</option>
+              <option value="INTERVENCIÓN">INTERVENCIÓN</option>
+            </select>
+            <textarea id="atencionResumen" placeholder="Resumen de la atención" required></textarea>
+            <button type="submit" class="btn btn-primary">Guardar atención</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-bottom: 18px;">
+        <div class="panel-header">
+          <h2>Historial de atenciones</h2>
+          <span class="pill">Últimas</span>
+        </div>
+        <div id="atencionesList" class="tasks"></div>
+      </section>
+
+      <section class="quick-grid">
+        <article class="quick-card green">
+          <div class="quick-icon">🧠</div>
+          <div>
+            <span>Psicología</span>
+            <h3>Atenciones</h3>
+          </div>
+        </article>
+
+        <article class="quick-card">
+          <div class="quick-icon">🤝</div>
+          <div>
+            <span>Convivencia</span>
+            <h3>Casos</h3>
+          </div>
+        </article>
+
+        <article class="quick-card">
+          <div class="quick-icon">🎓</div>
+          <div>
+            <span>Orientación</span>
+            <h3>Vocacional</h3>
+          </div>
+        </article>
+
+        <article class="quick-card green">
+          <div class="quick-icon">📊</div>
+          <div>
+            <span>Reportes</span>
+            <h3>Indicadores</h3>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script src="./assets/js/dece.js"></script>
+</body>
+</html>
