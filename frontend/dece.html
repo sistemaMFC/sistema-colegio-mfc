@@ -686,6 +686,118 @@
         </article>
       </section>
 
+      <section class="panel" style="margin-bottom: 18px;">
+        <div class="panel-header">
+          <h2>Gestión interna DECE</h2>
+          <span class="pill">Primer requisito</span>
+        </div>
+
+        <div class="stats-grid" style="margin-bottom: 12px;">
+          <article class="stat-card green">
+            <div class="stat-label"><span>Documentos</span><span class="stat-icon">📄</span></div>
+            <div class="stat-value" id="resDocumentos">0</div>
+            <div class="stat-trend">registrados</div>
+          </article>
+          <article class="stat-card soft">
+            <div class="stat-label"><span>Actividades</span><span class="stat-icon">🗓️</span></div>
+            <div class="stat-value" id="resActividades">0</div>
+            <div class="stat-trend">planificadas</div>
+          </article>
+          <article class="stat-card gold">
+            <div class="stat-label"><span>Talleres</span><span class="stat-icon">🎯</span></div>
+            <div class="stat-value" id="resTalleres">0</div>
+            <div class="stat-trend">programados</div>
+          </article>
+          <article class="stat-card navy">
+            <div class="stat-label"><span>Faltas</span><span class="stat-icon">⚠️</span></div>
+            <div class="stat-value" id="resFaltas">0</div>
+            <div class="stat-trend">injustificadas</div>
+          </article>
+        </div>
+
+        <div class="content-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <h2>Registrar documento</h2>
+              <span class="pill">Archivo</span>
+            </div>
+            <form id="formDocumento" class="dece-form">
+              <input id="docTitulo" type="text" placeholder="Título del documento" required />
+              <input id="docTipo" type="text" placeholder="Tipo: informe, resolución, acta..." required />
+              <input id="docResponsable" type="text" placeholder="Responsable" value="DECE" />
+              <textarea id="docDescripcion" placeholder="Descripción del documento" required></textarea>
+              <button type="submit" class="btn btn-primary">Guardar documento</button>
+            </form>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h2>Registrar actividad</h2>
+              <span class="pill">Plan</span>
+            </div>
+            <form id="formActividad" class="dece-form">
+              <input id="actTitulo" type="text" placeholder="Nombre de la actividad" required />
+              <input id="actTipo" type="text" placeholder="Tipo" value="ACTIVIDAD" />
+              <input id="actFecha" type="date" required />
+              <input id="actResponsable" type="text" placeholder="Responsable" value="DECE" />
+              <textarea id="actDescripcion" placeholder="Descripción" required></textarea>
+              <button type="submit" class="btn btn-primary">Guardar actividad</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="content-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <h2>Documentos</h2>
+              <span class="pill">Listado</span>
+            </div>
+            <div id="documentosList" class="tasks"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h2>Actividades</h2>
+              <span class="pill">Cronograma</span>
+            </div>
+            <div id="actividadesList" class="tasks"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Derivaciones externas</h2>
+            <span class="pill">Requisito 2</span>
+          </div>
+          <form id="formDerivacion" class="dece-form">
+            <input id="derivEstudiante" type="text" placeholder="Estudiante" required />
+            <input id="derivCurso" type="text" placeholder="Curso" required />
+            <select id="derivTipo">
+              <option value="ORIENTACIÓN">ORIENTACIÓN</option>
+              <option value="SEGUIMIENTO">SEGUIMIENTO</option>
+              <option value="PSICOLÓGICA">PSICOLÓGICA</option>
+              <option value="PSICOPEDAGÓGICA">PSICOPEDAGÓGICA</option>
+            </select>
+            <select id="derivArea">
+              <option value="PSICOLOGÍA">PSICOLOGÍA</option>
+              <option value="PSICOPEDAGOGÍA">PSICOPEDAGOGÍA</option>
+            </select>
+            <textarea id="derivMotivo" placeholder="Motivo de la derivación" required></textarea>
+            <button type="submit" class="btn btn-primary">Guardar derivación</button>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Listado de derivaciones</h2>
+            <span class="pill">Atención</span>
+          </div>
+          <div id="derivacionesList" class="tasks"></div>
+        </div>
+      </section>
+
       <section class="content-grid">
         <div class="panel">
           <div class="panel-header">

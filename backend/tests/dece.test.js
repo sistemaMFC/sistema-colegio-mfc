@@ -10,10 +10,24 @@ test('DECE routes expose dashboard endpoints for authorized roles', () => {
   const hasDashboardRoute = deceRoutes.stack.some(layer => layer.route && layer.route.path === '/dashboard');
   const hasCasosRoute = deceRoutes.stack.some(layer => layer.route && layer.route.path === '/casos');
   const hasAtencionesRoute = deceRoutes.stack.some(layer => layer.route && layer.route.path === '/atenciones');
+  const hasResumenRoute = deceRoutes.stack.some(layer => layer.route && layer.route.path === '/gestion/resumen');
+  const hasDocumentosRoute = deceRoutes.stack.some(layer => layer.route && layer.route.path === '/documentos');
+  const hasActividadesRoute = deceRoutes.stack.some(layer => layer.route && layer.route.path === '/actividades');
+  const hasTalleresRoute = deceRoutes.stack.some(layer => layer.route && layer.route.path === '/talleres');
+  const hasListasRoute = deceRoutes.stack.some(layer => layer.route && layer.route.path === '/listas');
+  const hasFaltasRoute = deceRoutes.stack.some(layer => layer.route && layer.route.path === '/faltas');
+  const hasDerivacionesRoute = deceRoutes.stack.some(layer => layer.route && layer.route.path === '/derivaciones');
 
   assert.equal(hasDashboardRoute, true);
   assert.equal(hasCasosRoute, true);
   assert.equal(hasAtencionesRoute, true);
+  assert.equal(hasResumenRoute, true);
+  assert.equal(hasDocumentosRoute, true);
+  assert.equal(hasActividadesRoute, true);
+  assert.equal(hasTalleresRoute, true);
+  assert.equal(hasListasRoute, true);
+  assert.equal(hasFaltasRoute, true);
+  assert.equal(hasDerivacionesRoute, true);
 });
 
 test('requireAnyRole allows DECE roles and denies others', () => {

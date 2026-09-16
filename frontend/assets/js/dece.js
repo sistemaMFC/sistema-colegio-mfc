@@ -75,12 +75,72 @@ function renderAtenciones(atenciones) {
   `).join('');
 }
 
+function renderDocumentos(documentos) {
+  const container = document.getElementById('documentosList');
+  if (!container) return;
+  if (!documentos.length) {
+    container.innerHTML = '<p>No hay documentos registrados.</p>';
+    return;
+  }
+
+  container.innerHTML = documentos.map(item => `
+    <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #f8fafc; margin-bottom: 10px;">
+      <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center;">
+        <strong>${item.titulo}</strong>
+        <span style="padding: 4px 8px; border-radius: 999px; background: #dcfce7; color: #166534; font-size: 12px; font-weight: 700;">${item.tipo}</span>
+      </div>
+      <p style="margin: 8px 0; color: #475569;">${item.descripcion || 'Sin descripción'}</p>
+      <small style="color: #64748b;">${item.responsable || 'DECE'} · ${new Date(item.fecha_creacion).toLocaleDateString()}</small>
+    </div>
+  `).join('');
+}
+
+function renderActividades(actividades) {
+  const container = document.getElementById('actividadesList');
+  if (!container) return;
+  if (!actividades.length) {
+    container.innerHTML = '<p>No hay actividades registradas.</p>';
+    return;
+  }
+
+  container.innerHTML = actividades.map(item => `
+    <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #f8fafc; margin-bottom: 10px;">
+      <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center;">
+        <strong>${item.titulo}</strong>
+        <span style="padding: 4px 8px; border-radius: 999px; background: #e0f2fe; color: #075985; font-size: 12px; font-weight: 700;">${item.estado || 'PLANIFICADA'}</span>
+      </div>
+      <p style="margin: 8px 0; color: #475569;">${item.descripcion || 'Sin descripción'}</p>
+      <small style="color: #64748b;">${item.tipo || 'ACTIVIDAD'} · ${item.fecha} · ${item.responsable || 'DECE'}</small>
+    </div>
+  `).join('');
+}
+
+function renderDerivaciones(derivaciones) {
+  const container = document.getElementById('derivacionesList');
+  if (!container) return;
+  if (!derivaciones.length) {
+    container.innerHTML = '<p>No hay derivaciones registradas.</p>';
+    return;
+  }
+
+  container.innerHTML = derivaciones.map(item => `
+    <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #f8fafc; margin-bottom: 10px;">
+      <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center;">
+        <strong>${item.estudiante}</strong>
+        <span style="padding: 4px 8px; border-radius: 999px; background: #fef3c7; color: #92400e; font-size: 12px; font-weight: 700;">${item.estado || 'PENDIENTE'}</span>
+      </div>
+      <p style="margin: 8px 0; color: #475569;">${item.area} · ${item.tipo} · ${item.curso}</p>
+      <p style="margin: 0; color: #334155;">${item.motivo}</p>
+    </div>
+  `).join('');
+}
+
 async function loadDashboard() {
   const token = getToken();
   if (!token) return;
 
   try {
-    const [dashboardRes, casosRes, atencionesRes] = await Promise.all([
+    const [dashboardRes, casosRes, atencionesRes, resumenRes, documentosRes, actividadesRes, derivacionesRes] = await Promise.all([
       fetch(`${window.location.origin}/api/dece/dashboard`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -98,33 +158,76 @@ async function loadDashboard() {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
+      }),
+      fetch(`${window.location.origin}/api/dece/gestion/resumen`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }),
+      fetch(`${window.location.origin}/api/dece/documentos`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }),
+      fetch(`${window.location.origin}/api/dece/actividades`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }),
+      fetch(`${window.location.origin}/api/dece/derivaciones`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       })
     ]);
 
     const dashboardData = await dashboardRes.json();
     const casosData = await casosRes.json();
     const atencionesData = await atencionesRes.json();
+    const resumenData = await resumenRes.json();
+    const documentosData = await documentosRes.json();
+    const actividadesData = await actividadesRes.json();
+    const derivacionesData = await derivacionesRes.json();
 
-    if (!dashboardRes.ok || !casosRes.ok || !atencionesRes.ok) {
-      throw new Error(dashboardData.error || casosData.error || atencionesData.error || 'No se pudo cargar DECE');
+    if (!dashboardRes.ok || !casosRes.ok || !atencionesRes.ok || !resumenRes.ok || !documentosRes.ok || !actividadesRes.ok || !derivacionesRes.ok) {
+      throw new Error(dashboardData.error || casosData.error || atencionesData.error || resumenData.error || documentosData.error || actividadesData.error || derivacionesData.error || 'No se pudo cargar DECE');
     }
 
     const stats = dashboardData.stats || {};
+    const resumen = resumenData.resumen || {};
     document.getElementById('countAtenciones').textContent = stats.atencionesHoy ?? '0';
     document.getElementById('countCasos').textContent = stats.casosActivos ?? '0';
     document.getElementById('countSeguimientos').textContent = stats.seguimientosPendientes ?? '0';
     document.getElementById('countRemisiones').textContent = stats.remisionesDocentes ?? '0';
+    document.getElementById('resDocumentos').textContent = resumen.documentos ?? '0';
+    document.getElementById('resActividades').textContent = resumen.actividades ?? '0';
+    document.getElementById('resTalleres').textContent = resumen.talleres ?? '0';
+    document.getElementById('resFaltas').textContent = resumen.faltas ?? '0';
 
     renderCaseList(Array.isArray(casosData.casos) ? casosData.casos : []);
     renderAtenciones(Array.isArray(atencionesData.atenciones) ? atencionesData.atenciones : []);
+    renderDocumentos(Array.isArray(documentosData.documentos) ? documentosData.documentos : []);
+    renderActividades(Array.isArray(actividadesData.actividades) ? actividadesData.actividades : []);
+    renderDerivaciones(Array.isArray(derivacionesData.derivaciones) ? derivacionesData.derivaciones : []);
   } catch (error) {
     console.error('DECE loadDashboard error:', error);
     document.getElementById('countAtenciones').textContent = '0';
     document.getElementById('countCasos').textContent = '0';
     document.getElementById('countSeguimientos').textContent = '0';
     document.getElementById('countRemisiones').textContent = '0';
+    document.getElementById('resDocumentos').textContent = '0';
+    document.getElementById('resActividades').textContent = '0';
+    document.getElementById('resTalleres').textContent = '0';
+    document.getElementById('resFaltas').textContent = '0';
     renderCaseList([]);
     renderAtenciones([]);
+    renderDocumentos([]);
+    renderActividades([]);
+    renderDerivaciones([]);
   }
 }
 
@@ -150,6 +253,130 @@ document.getElementById('btnCerrarSesion').addEventListener('click', () => {
   localStorage.removeItem('mfc_user');
   window.location.href = './index.html';
 });
+
+const formDocumento = document.getElementById('formDocumento');
+if (formDocumento) {
+  formDocumento.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const token = getToken();
+    if (!token) {
+      window.location.href = './index.html';
+      return;
+    }
+
+    const payload = {
+      titulo: document.getElementById('docTitulo').value,
+      tipo: document.getElementById('docTipo').value,
+      responsable: document.getElementById('docResponsable').value,
+      descripcion: document.getElementById('docDescripcion').value
+    };
+
+    try {
+      const response = await fetch(`${window.location.origin}/api/dece/documentos`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'No se pudo registrar el documento');
+      formDocumento.reset();
+      document.getElementById('docResponsable').value = 'DECE';
+      await loadDashboard();
+      alert('Documento registrado correctamente');
+    } catch (error) {
+      console.error(error);
+      alert(error.message || 'No se pudo registrar el documento');
+    }
+  });
+}
+
+const formActividad = document.getElementById('formActividad');
+if (formActividad) {
+  formActividad.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const token = getToken();
+    if (!token) {
+      window.location.href = './index.html';
+      return;
+    }
+
+    const payload = {
+      titulo: document.getElementById('actTitulo').value,
+      tipo: document.getElementById('actTipo').value,
+      fecha: document.getElementById('actFecha').value,
+      responsable: document.getElementById('actResponsable').value,
+      descripcion: document.getElementById('actDescripcion').value,
+      estado: 'PLANIFICADA'
+    };
+
+    try {
+      const response = await fetch(`${window.location.origin}/api/dece/actividades`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'No se pudo registrar la actividad');
+      formActividad.reset();
+      document.getElementById('actTipo').value = 'ACTIVIDAD';
+      document.getElementById('actResponsable').value = 'DECE';
+      await loadDashboard();
+      alert('Actividad registrada correctamente');
+    } catch (error) {
+      console.error(error);
+      alert(error.message || 'No se pudo registrar la actividad');
+    }
+  });
+}
+
+const formDerivacion = document.getElementById('formDerivacion');
+if (formDerivacion) {
+  formDerivacion.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const token = getToken();
+    if (!token) {
+      window.location.href = './index.html';
+      return;
+    }
+
+    const payload = {
+      estudiante: document.getElementById('derivEstudiante').value,
+      curso: document.getElementById('derivCurso').value,
+      tipo: document.getElementById('derivTipo').value,
+      area: document.getElementById('derivArea').value,
+      motivo: document.getElementById('derivMotivo').value,
+      estado: 'PENDIENTE'
+    };
+
+    try {
+      const response = await fetch(`${window.location.origin}/api/dece/derivaciones`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'No se pudo guardar la derivación');
+      formDerivacion.reset();
+      await loadDashboard();
+      alert('Derivación registrada correctamente');
+    } catch (error) {
+      console.error(error);
+      alert(error.message || 'No se pudo guardar la derivación');
+    }
+  });
+}
 
 const formAtencion = document.getElementById('formAtencion');
 if (formAtencion) {
