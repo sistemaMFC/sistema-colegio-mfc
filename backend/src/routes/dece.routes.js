@@ -110,6 +110,36 @@ async function ensureDeceTables() {
       fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS dece_violencia_protocolos (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      estudiante VARCHAR(150) NOT NULL,
+      curso VARCHAR(120) NOT NULL,
+      tipo_incidente VARCHAR(80) NOT NULL,
+      nivel_riesgo VARCHAR(30) DEFAULT 'MEDIA',
+      descripcion TEXT NOT NULL,
+      acciones TEXT,
+      responsable VARCHAR(150) DEFAULT 'DECE',
+      estado VARCHAR(40) DEFAULT 'PENDIENTE',
+      fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS dece_nee (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      estudiante VARCHAR(150) NOT NULL,
+      curso VARCHAR(120) NOT NULL,
+      tipo VARCHAR(80) NOT NULL,
+      nivel VARCHAR(30) DEFAULT 'MODERADO',
+      descripcion TEXT NOT NULL,
+      apoyo TEXT,
+      responsable VARCHAR(150) DEFAULT 'DECE',
+      estado VARCHAR(40) DEFAULT 'ACTIVO',
+      fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
 }
 
 router.get('/dashboard', authRequired, requireAnyRole(['ADMIN', 'PSICOLOGO']), async (req, res) => {
@@ -172,6 +202,132 @@ router.get('/gestion/resumen', authRequired, requireAnyRole(['ADMIN', 'PSICOLOGO
   } catch (error) {
     console.error('Error en resumen DECE:', error);
     return res.status(500).json({ error: 'Error al consultar resumen DECE' });
+  }
+});
+
+router.get('/reportes/docentes', authRequired, requireAnyRole(['ADMIN', 'PSICOLOGO']), async (req, res) => {
+  try {
+    await ensureDeceTables();
+
+    const [[totalCasosRow]] = await db.query('SELECT COUNT(*) AS total FROM dece_casos');
+    const [[totalAtencionesRow]] = await db.query('SELECT COUNT(*) AS total FROM dece_atenciones');
+    const [[casosDocentesRow]] = await db.query("SELECT COUNT(*) AS total FROM dece_casos WHERE LOWER(COALESCE(remitido_por, '')) LIKE '%docente%'");
+
+    const [prioridadRows] = await db.query(
+      'SELECT prioridad, COUNT(*) AS total FROM dece_casos GROUP BY prioridad ORDER BY total DESC'
+    );
+
+    const [tipoAtencionRows] = await db.query(
+      'SELECT tipo, COUNT(*) AS total FROM dece_atenciones GROUP BY tipo ORDER BY total DESC LIMIT 5'
+    );
+
+    const [mesRows] = await db.query(
+      "SELECT DATE_FORMAT(fecha_creacion, '%Y-%m') AS mes, COUNT(*) AS total FROM dece_casos GROUP BY DATE_FORMAT(fecha_creacion, '%Y-%m') ORDER BY mes DESC LIMIT 6"
+    );
+
+    const [remitidoRows] = await db.query(
+      "SELECT remitido_por AS origen, COUNT(*) AS total FROM dece_casos WHERE COALESCE(remitido_por, '') <> '' GROUP BY remitido_por ORDER BY total DESC LIMIT 5"
+    );
+
+    return res.json({
+      success: true,
+      reporte: {
+        totalCasos: Number(totalCasosRow.total || 0),
+        totalAtenciones: Number(totalAtencionesRow.total || 0),
+        casosDocentes: Number(casosDocentesRow.total || 0),
+        prioridad: prioridadRows.map(row => ({ prioridad: row.prioridad || 'MEDIA', total: Number(row.total || 0) })),
+        tiposAtencion: tipoAtencionRows.map(row => ({ tipo: row.tipo || 'SIN TIPO', total: Number(row.total || 0) })),
+        porMes: mesRows.map(row => ({ mes: row.mes || 'N/A', total: Number(row.total || 0) })),
+        origenes: remitidoRows.map(row => ({ origen: row.origen || 'SIN ORIGEN', total: Number(row.total || 0) }))
+      }
+    });
+  } catch (error) {
+    console.error('Error al generar reporte docente DECE:', error);
+    return res.status(500).json({ error: 'Error al generar reporte docente DECE' });
+  }
+});
+
+router.get('/violencia/protocolos', authRequired, requireAnyRole(['ADMIN', 'PSICOLOGO']), async (req, res) => {
+  try {
+    await ensureDeceTables();
+    const [rows] = await db.query('SELECT * FROM dece_violencia_protocolos ORDER BY fecha_creacion DESC LIMIT 100');
+    return res.json({ success: true, protocolos: rows });
+  } catch (error) {
+    console.error('Error al listar protocolos de violencia DECE:', error);
+    return res.status(500).json({ error: 'Error al listar protocolos de violencia DECE' });
+  }
+});
+
+router.post('/violencia/protocolos', authRequired, requireAnyRole(['ADMIN', 'PSICOLOGO']), async (req, res) => {
+  try {
+    await ensureDeceTables();
+    const { estudiante, curso, tipoIncidente, nivelRiesgo, descripcion, acciones, responsable, estado } = req.body || {};
+
+    if (!estudiante || !curso || !tipoIncidente || !descripcion) {
+      return res.status(400).json({ error: 'Estudiante, curso, tipo de incidente y descripción son obligatorios' });
+    }
+
+    const [result] = await db.query(
+      'INSERT INTO dece_violencia_protocolos (estudiante, curso, tipo_incidente, nivel_riesgo, descripcion, acciones, responsable, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        String(estudiante).trim(),
+        String(curso).trim(),
+        String(tipoIncidente).trim(),
+        String(nivelRiesgo || 'MEDIA').trim().toUpperCase(),
+        String(descripcion).trim(),
+        String(acciones || '').trim(),
+        String(responsable || 'DECE').trim(),
+        String(estado || 'PENDIENTE').trim().toUpperCase()
+      ]
+    );
+
+    const [rows] = await db.query('SELECT * FROM dece_violencia_protocolos WHERE id = ? LIMIT 1', [result.insertId]);
+    return res.status(201).json({ success: true, protocolo: rows[0] });
+  } catch (error) {
+    console.error('Error al crear protocolo de violencia DECE:', error);
+    return res.status(500).json({ error: 'Error al crear protocolo de violencia DECE' });
+  }
+});
+
+router.get('/nee', authRequired, requireAnyRole(['ADMIN', 'PSICOLOGO']), async (req, res) => {
+  try {
+    await ensureDeceTables();
+    const [rows] = await db.query('SELECT * FROM dece_nee ORDER BY fecha_creacion DESC LIMIT 100');
+    return res.json({ success: true, nee: rows });
+  } catch (error) {
+    console.error('Error al listar NEE DECE:', error);
+    return res.status(500).json({ error: 'Error al listar NEE DECE' });
+  }
+});
+
+router.post('/nee', authRequired, requireAnyRole(['ADMIN', 'PSICOLOGO']), async (req, res) => {
+  try {
+    await ensureDeceTables();
+    const { estudiante, curso, tipo, nivel, descripcion, apoyo, responsable, estado } = req.body || {};
+
+    if (!estudiante || !curso || !tipo || !descripcion) {
+      return res.status(400).json({ error: 'Estudiante, curso, tipo y descripción son obligatorios' });
+    }
+
+    const [result] = await db.query(
+      'INSERT INTO dece_nee (estudiante, curso, tipo, nivel, descripcion, apoyo, responsable, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        String(estudiante).trim(),
+        String(curso).trim(),
+        String(tipo).trim(),
+        String(nivel || 'MODERADO').trim().toUpperCase(),
+        String(descripcion).trim(),
+        String(apoyo || '').trim(),
+        String(responsable || 'DECE').trim(),
+        String(estado || 'ACTIVO').trim().toUpperCase()
+      ]
+    );
+
+    const [rows] = await db.query('SELECT * FROM dece_nee WHERE id = ? LIMIT 1', [result.insertId]);
+    return res.status(201).json({ success: true, necesidad: rows[0] });
+  } catch (error) {
+    console.error('Error al crear NEE DECE:', error);
+    return res.status(500).json({ error: 'Error al crear NEE DECE' });
   }
 });
 

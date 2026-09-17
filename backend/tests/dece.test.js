@@ -17,6 +17,9 @@ test('DECE routes expose dashboard endpoints for authorized roles', () => {
   const hasListasRoute = deceRoutes.stack.some(layer => layer.route && layer.route.path === '/listas');
   const hasFaltasRoute = deceRoutes.stack.some(layer => layer.route && layer.route.path === '/faltas');
   const hasDerivacionesRoute = deceRoutes.stack.some(layer => layer.route && layer.route.path === '/derivaciones');
+  const hasReportesRoute = deceRoutes.stack.some(layer => layer.route && layer.route.path === '/reportes/docentes');
+  const hasViolenciaRoute = deceRoutes.stack.some(layer => layer.route && layer.route.path === '/violencia/protocolos');
+  const hasNeeRoute = deceRoutes.stack.some(layer => layer.route && layer.route.path === '/nee');
 
   assert.equal(hasDashboardRoute, true);
   assert.equal(hasCasosRoute, true);
@@ -28,6 +31,9 @@ test('DECE routes expose dashboard endpoints for authorized roles', () => {
   assert.equal(hasListasRoute, true);
   assert.equal(hasFaltasRoute, true);
   assert.equal(hasDerivacionesRoute, true);
+  assert.equal(hasReportesRoute, true);
+  assert.equal(hasViolenciaRoute, true);
+  assert.equal(hasNeeRoute, true);
 });
 
 test('requireAnyRole allows DECE roles and denies others', () => {

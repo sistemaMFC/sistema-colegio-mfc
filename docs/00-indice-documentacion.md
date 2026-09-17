@@ -54,6 +54,9 @@ Este índice organiza la documentación funcional, técnica y estratégica del s
 16. `16-evolucion-profesor-y-escalabilidad.md`
     Evolucion del portal del profesor, comparativa antes/despues, principios de escalabilidad y estrategia para futuras fases.
 
+17. `18-dece-requisitos-documentados.md`
+    Estructura funcional, orden de implementación y estado de cumplimiento de los requisitos del módulo DECE.
+
 ## Documentos existentes relacionados
 
 - `funcionamiento-sistema.md`

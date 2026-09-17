@@ -135,12 +135,110 @@ function renderDerivaciones(derivaciones) {
   `).join('');
 }
 
+function renderReporteDocente(reporte) {
+  const totalCasos = document.getElementById('repTotalCasos');
+  const totalAtenciones = document.getElementById('repTotalAtenciones');
+  const casosDocentes = document.getElementById('repCasosDocentes');
+
+  if (totalCasos) totalCasos.textContent = reporte?.totalCasos ?? '0';
+  if (totalAtenciones) totalAtenciones.textContent = reporte?.totalAtenciones ?? '0';
+  if (casosDocentes) casosDocentes.textContent = reporte?.casosDocentes ?? '0';
+
+  const prioridad = document.getElementById('repPrioridad');
+  if (prioridad) {
+    const items = Array.isArray(reporte?.prioridad) ? reporte.prioridad : [];
+    prioridad.innerHTML = items.length ? items.map(item => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #e2e8f0;">
+        <strong>${item.prioridad}</strong>
+        <span style="font-weight:700; color:#0f172a;">${item.total}</span>
+      </div>
+    `).join('') : '<p>No hay datos.</p>';
+  }
+
+  const tipos = document.getElementById('repTipoAtencion');
+  if (tipos) {
+    const items = Array.isArray(reporte?.tiposAtencion) ? reporte.tiposAtencion : [];
+    tipos.innerHTML = items.length ? items.map(item => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #e2e8f0;">
+        <strong>${item.tipo}</strong>
+        <span style="font-weight:700; color:#0f172a;">${item.total}</span>
+      </div>
+    `).join('') : '<p>No hay datos.</p>';
+  }
+
+  const origenes = document.getElementById('repOrigenes');
+  if (origenes) {
+    const items = Array.isArray(reporte?.origenes) ? reporte.origenes : [];
+    origenes.innerHTML = items.length ? items.map(item => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #e2e8f0;">
+        <strong>${item.origen}</strong>
+        <span style="font-weight:700; color:#0f172a;">${item.total}</span>
+      </div>
+    `).join('') : '<p>No hay datos.</p>';
+  }
+
+  const porMes = document.getElementById('repPorMes');
+  if (porMes) {
+    const items = Array.isArray(reporte?.porMes) ? reporte.porMes : [];
+    porMes.innerHTML = items.length ? items.map(item => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #e2e8f0;">
+        <strong>${item.mes}</strong>
+        <span style="font-weight:700; color:#0f172a;">${item.total}</span>
+      </div>
+    `).join('') : '<p>No hay datos.</p>';
+  }
+}
+
+function renderViolencia(protocolos) {
+  const container = document.getElementById('violenciaList');
+  if (!container) return;
+
+  if (!protocolos.length) {
+    container.innerHTML = '<p>No hay protocolos de violencia registrados.</p>';
+    return;
+  }
+
+  container.innerHTML = protocolos.map(item => `
+    <div style="border:1px solid #fee2e2; border-radius:12px; padding:12px; background:#fff7ed; margin-bottom:10px;">
+      <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center;">
+        <strong>${item.estudiante}</strong>
+        <span style="padding:4px 8px; border-radius:999px; background:#fecaca; color:#991b1b; font-size:12px; font-weight:700;">${item.estado || 'PENDIENTE'}</span>
+      </div>
+      <p style="margin:8px 0; color:#475569;">${item.curso} · ${item.tipo_incidente || 'INCIDENTE'} · ${item.nivel_riesgo || 'MEDIA'}</p>
+      <p style="margin:0 0 6px; color:#334155;">${item.descripcion || 'Sin descripción'}</p>
+      <small style="color:#64748b;">${item.acciones || 'Sin acciones registradas'} · ${item.responsable || 'DECE'}</small>
+    </div>
+  `).join('');
+}
+
+function renderNee(nee) {
+  const container = document.getElementById('neeList');
+  if (!container) return;
+
+  if (!nee.length) {
+    container.innerHTML = '<p>No hay registros de NEE.</p>';
+    return;
+  }
+
+  container.innerHTML = nee.map(item => `
+    <div style="border:1px solid #dbeafe; border-radius:12px; padding:12px; background:#f8fafc; margin-bottom:10px;">
+      <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center;">
+        <strong>${item.estudiante}</strong>
+        <span style="padding:4px 8px; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-size:12px; font-weight:700;">${item.estado || 'ACTIVO'}</span>
+      </div>
+      <p style="margin:8px 0; color:#475569;">${item.curso} · ${item.tipo || 'NEE'} · ${item.nivel || 'MODERADO'}</p>
+      <p style="margin:0 0 6px; color:#334155;">${item.descripcion || 'Sin descripción'}</p>
+      <small style="color:#64748b;">${item.apoyo || 'Sin apoyo registrado'} · ${item.responsable || 'DECE'}</small>
+    </div>
+  `).join('');
+}
+
 async function loadDashboard() {
   const token = getToken();
   if (!token) return;
 
   try {
-    const [dashboardRes, casosRes, atencionesRes, resumenRes, documentosRes, actividadesRes, derivacionesRes] = await Promise.all([
+    const [dashboardRes, casosRes, atencionesRes, resumenRes, documentosRes, actividadesRes, derivacionesRes, reportesRes, violenciaRes, neeRes] = await Promise.all([
       fetch(`${window.location.origin}/api/dece/dashboard`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -182,6 +280,24 @@ async function loadDashboard() {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
+      }),
+      fetch(`${window.location.origin}/api/dece/reportes/docentes`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }),
+      fetch(`${window.location.origin}/api/dece/violencia/protocolos`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }),
+      fetch(`${window.location.origin}/api/dece/nee`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       })
     ]);
 
@@ -192,9 +308,12 @@ async function loadDashboard() {
     const documentosData = await documentosRes.json();
     const actividadesData = await actividadesRes.json();
     const derivacionesData = await derivacionesRes.json();
+    const reportesData = await reportesRes.json();
+    const violenciaData = await violenciaRes.json();
+    const neeData = await neeRes.json();
 
-    if (!dashboardRes.ok || !casosRes.ok || !atencionesRes.ok || !resumenRes.ok || !documentosRes.ok || !actividadesRes.ok || !derivacionesRes.ok) {
-      throw new Error(dashboardData.error || casosData.error || atencionesData.error || resumenData.error || documentosData.error || actividadesData.error || derivacionesData.error || 'No se pudo cargar DECE');
+    if (!dashboardRes.ok || !casosRes.ok || !atencionesRes.ok || !resumenRes.ok || !documentosRes.ok || !actividadesRes.ok || !derivacionesRes.ok || !reportesRes.ok || !violenciaRes.ok || !neeRes.ok) {
+      throw new Error(dashboardData.error || casosData.error || atencionesData.error || resumenData.error || documentosData.error || actividadesData.error || derivacionesData.error || reportesData.error || violenciaData.error || neeData.error || 'No se pudo cargar DECE');
     }
 
     const stats = dashboardData.stats || {};
@@ -213,6 +332,9 @@ async function loadDashboard() {
     renderDocumentos(Array.isArray(documentosData.documentos) ? documentosData.documentos : []);
     renderActividades(Array.isArray(actividadesData.actividades) ? actividadesData.actividades : []);
     renderDerivaciones(Array.isArray(derivacionesData.derivaciones) ? derivacionesData.derivaciones : []);
+    renderReporteDocente(reportesData.reporte || {});
+    renderViolencia(Array.isArray(violenciaData.protocolos) ? violenciaData.protocolos : []);
+    renderNee(Array.isArray(neeData.nee) ? neeData.nee : []);
   } catch (error) {
     console.error('DECE loadDashboard error:', error);
     document.getElementById('countAtenciones').textContent = '0';
@@ -223,12 +345,66 @@ async function loadDashboard() {
     document.getElementById('resActividades').textContent = '0';
     document.getElementById('resTalleres').textContent = '0';
     document.getElementById('resFaltas').textContent = '0';
+    renderReporteDocente({
+      totalCasos: 0,
+      totalAtenciones: 0,
+      casosDocentes: 0,
+      prioridad: [],
+      tiposAtencion: [],
+      origenes: [],
+      porMes: []
+    });
+    renderViolencia([]);
+    renderNee([]);
     renderCaseList([]);
     renderAtenciones([]);
     renderDocumentos([]);
     renderActividades([]);
     renderDerivaciones([]);
   }
+}
+
+const formViolencia = document.getElementById('formViolenciaMain');
+if (formViolencia) {
+  formViolencia.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const token = getToken();
+    if (!token) {
+      window.location.href = './index.html';
+      return;
+    }
+
+    const payload = {
+      estudiante: document.getElementById('violEstudiante').value,
+      curso: document.getElementById('violCurso').value,
+      tipoIncidente: document.getElementById('violTipoIncidente').value,
+      nivelRiesgo: document.getElementById('violNivelRiesgo').value,
+      descripcion: document.getElementById('violDescripcion').value,
+      acciones: document.getElementById('violAcciones').value,
+      responsable: 'DECE',
+      estado: 'PENDIENTE'
+    };
+
+    try {
+      const response = await fetch(`${window.location.origin}/api/dece/violencia/protocolos`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'No se pudo guardar el protocolo');
+      formViolencia.reset();
+      await loadDashboard();
+      alert('Protocolo de violencia registrado correctamente');
+    } catch (error) {
+      console.error(error);
+      alert(error.message || 'No se pudo guardar el protocolo');
+    }
+  });
 }
 
 document.getElementById('btnVolverInicio').addEventListener('click', () => {
@@ -254,7 +430,7 @@ document.getElementById('btnCerrarSesion').addEventListener('click', () => {
   window.location.href = './index.html';
 });
 
-const formDocumento = document.getElementById('formDocumento');
+const formDocumento = document.getElementById('formDocumentoMain');
 if (formDocumento) {
   formDocumento.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -294,7 +470,7 @@ if (formDocumento) {
   });
 }
 
-const formActividad = document.getElementById('formActividad');
+const formActividad = document.getElementById('formActividadMain');
 if (formActividad) {
   formActividad.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -337,7 +513,7 @@ if (formActividad) {
   });
 }
 
-const formDerivacion = document.getElementById('formDerivacion');
+const formDerivacion = document.getElementById('formDerivacionMain');
 if (formDerivacion) {
   formDerivacion.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -378,7 +554,7 @@ if (formDerivacion) {
   });
 }
 
-const formAtencion = document.getElementById('formAtencion');
+const formAtencion = document.getElementById('formAtencionMain');
 if (formAtencion) {
   formAtencion.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -415,6 +591,49 @@ if (formAtencion) {
     } catch (error) {
       console.error(error);
       alert(error.message || 'No se pudo guardar la atención');
+    }
+  });
+}
+
+const formNee = document.getElementById('formNeeMain');
+if (formNee) {
+  formNee.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const token = getToken();
+    if (!token) {
+      window.location.href = './index.html';
+      return;
+    }
+
+    const payload = {
+      estudiante: document.getElementById('neeEstudiante').value,
+      curso: document.getElementById('neeCurso').value,
+      tipo: document.getElementById('neeTipo').value,
+      nivel: document.getElementById('neeNivel').value,
+      descripcion: document.getElementById('neeDescripcion').value,
+      apoyo: document.getElementById('neeApoyo').value,
+      responsable: 'DECE',
+      estado: 'ACTIVO'
+    };
+
+    try {
+      const response = await fetch(`${window.location.origin}/api/dece/nee`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'No se pudo guardar la necesidad educativa');
+      formNee.reset();
+      await loadDashboard();
+      alert('Necesidad educativa registrada correctamente');
+    } catch (error) {
+      console.error(error);
+      alert(error.message || 'No se pudo guardar la necesidad educativa');
     }
   });
 }
